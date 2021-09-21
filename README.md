@@ -1,2 +1,2 @@
-# tech notes
- 学技术时记录的笔记
+# notes
+my notes when learning programming
