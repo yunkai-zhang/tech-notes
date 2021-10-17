@@ -4,4 +4,4 @@
 
 
 ## 找工向入门学习路线
-javase->mysql->前端（html css javascript）->javaweb->ssm->git->springboot->linux->redis->docker->springcloud->vue->mybatis plus
+javase->mysql->前端三件套->javaweb->ssm->git->springboot->远程服务器购买和环境部署->linux->redis->docker->springcloud->vue->mybatis plus
