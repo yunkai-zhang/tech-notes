@@ -3,5 +3,5 @@
 项目和课程来源：[bilibili遇见狂神说](https://space.bilibili.com/95256449/)
 
 
-## 入门学习路线
-mysql->javase->javaweb->ssm->springboot->redis->linux->docker->springcloud->vue
+## 找工向入门学习路线
+javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远程服务器购买和环境部署->linux->redis->docker->vue->mybatis plus
