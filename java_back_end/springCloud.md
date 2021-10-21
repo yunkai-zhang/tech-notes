@@ -1,4 +1,4 @@
-# SpringCloud
+SpringCloud
 
 ## 前言
 
@@ -1366,9 +1366,291 @@ http://localhost/consumer/dept/getDeptById/6
 
 
 
-## Eureka
+## Eureka服务注册与发现
 
 ### 什么是Eureka
 
-https://www.bilibili.com/video/BV1jJ411S7xr?p=6
+#### Eureka简介
 
+- Eureka:怎么读?
+
+  “尤里卡”
+
+- Netflix在设计Eureka时，遵循的就是AP原则
+
+- Eureka是Netflix的一个子模块，也是核心模块之一。Eureka是一个基于REST的服务，用于定位服务，以实现云端中间层服务发现和故障转移，服务注册与发现对于微服务来说是非常重要的，有了服务发现与注册，只需要使用服务的标识符，就可以访问到服务，而不需要修改服务调用的配置文件了，功能类似于Dubbo的注册中心，比如Zookeeper;
+
+
+
+#### 原理讲解
+
+Eureka基本架构
+
+- SpringCloud封装了NetFlix公司开发的Eureka模块来实现服务注册和发现(对比Zookeeper)
+
+- Eureka采用了C-S的架构设计，EurekaServer作为服务注册功能的服务器，他是服务注册中心。
+
+- 而系统中的其他微服务。使用Eureka的客户端连接到EurekaServer并维持心跳（五秒没有心跳则认为死了）连接。这样系统的维护人员就可以通过EurekaServer来监控系统中各个微服务是否正常运行，SpringCloud的
+  一些其他模块（比如Zuul)就可以通过EurekaServer来发现系统中的其他微服务，并执行相关的逻辑;
+
+- 和Dubbo架构对比
+
+  ![image-20211021180557365](springCloud.assets/image-20211021180557365.png)
+
+  ![dubbo_arch](springCloud.assets/dubbo_arch.png)
+
+- Eureka 包含两个组件：**Eureka Server** 和 **Eureka Client**.
+- Eureka Server 提供服务注册，各个节点启动后，回在EurekaServer中进行注册，这样Eureka Server中的服务注册表中将会储存所有课用服务节点的信息，服务节点的信息可以在界面中直观的看到.
+- Eureka Client 是一个Java客户端，用于简化EurekaServer的交互，客户端同时也具备一个内置的，使用轮询负载算法的负载均衡器。在应用启动后，将会向EurekaServer发送心跳 (默认周期为30秒) 。**如果Eureka Server在多个心跳周期内没有接收到某个节点的心跳**，EurekaServer将会从服务注册表中把这个服务节点**移除**掉 (默认周期为90s)。
+
+
+
+三大角色
+
+- Eureka Server:提供服务的注册与发现。
+- Service Provider:将自身服务注册到Eureka中，从而使消费方能够找到。
+- Service Consumer:服务消费方从Eureka中获取注册服务列表，从而找到消费服务。
+
+
+
+#### 实战新建子module
+
+*可以发现建项目大多是一个顺序：*
+
+1. *导入依赖*
+2. *编写配置文件*
+3. *开启这个功能@EnableXXX*
+4. *配置类编写*
+
+
+
+新建子module
+
+![image-20211021195802678](springCloud.assets/image-20211021195802678.png)
+
+![image-20211021195915643](springCloud.assets/image-20211021195915643.png)
+
+创建好子module后，项目中出现pom，java，resource无颜色的问题，应该是项目没有被maven托管。点击右上角maven果然看不到当前子module。
+
+![image-20211021200723258](springCloud.assets/image-20211021200723258.png)
+
+![image-20211021200755330](springCloud.assets/image-20211021200755330.png)
+
+解决方案：右键pom文件，add as maven project。
+
+![image-20211021200837620](springCloud.assets/image-20211021200837620.png)
+
+pom，java，resource文件（夹）的颜色变正常了。不过pom文件名“pom”还是红色的，暂时不知道为什么，也没发现不良影响，先不管。
+
+![image-20211021201138538](springCloud.assets/image-20211021201138538.png)
+
+![image-20211021201359483](springCloud.assets/image-20211021201359483.png)
+
+往pom导入依赖
+
+- Baidu可以查到springcloud常用的依赖。比如这里可以点击rureka去mvn仓库下载即可。
+
+  ![image-20211021200303588](springCloud.assets/image-20211021200303588.png)
+
+- 先导入eureka的server
+
+  ![image-20211021200429675](springCloud.assets/image-20211021200429675.png)
+
+完整pom如下：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud</artifactId>
+        <groupId>com.zhangyun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>springcloud-eureka-7001</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-eureka-server -->
+        <!--导入Eureka Server依赖-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-eureka-server</artifactId>
+            <version>1.4.6.RELEASE</version>
+        </dependency>
+        <!--热部署工具-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
+```
+
+现在开始编写子mudule配置文件application.yml
+
+```yaml
+# Eureka监控页面访问：http://localhost:7001/
+server:
+  port: 7001
+
+
+# Eureka配置
+eureka:
+  instance:
+    # Eureka服务端的实例名字。本机地址也可以写为“localhost”
+    hostname: 127.0.0.1
+  client:
+    # 表示是否向 Eureka 注册中心注册自己(这个模块本身是服务器,所以不需要)
+    register-with-eureka: false
+    # fetch-registry如果为false,则表示本module自己为注册中心（服务器）,客户端的话则为 ture
+    fetch-registry: false
+    # Eureka客户端往本server注册时用的地址，自定义url且url地址不写死而是用application.yml中的配置项填入。
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+```
+
+编写主启动类
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+//@EnableEurekaServer表示当前类是一个eureka server（服务端）的启动类，当前module的EurekaServer可以接收别人注册进来。
+@EnableEurekaServer
+@SpringBootApplication
+public class EurekaServer_7001 {
+    public static void main(String[] args) {
+        SpringApplication.run(EurekaServer_7001.class,args);
+    }
+}
+```
+
+启动子module的主启动类，访问http://localhost:7001/，成功来到Eureka的监视页面。
+
+![image-20211021203613600](springCloud.assets/image-20211021203613600.png)
+
+
+
+### 服务注册+信息配置+自我保护机制
+
+#### 现在干什么
+
+重新看一下mvnrepository中和是spring cloud Eureka相关的依赖
+
+![image-20211021214221824](springCloud.assets/image-20211021214221824.png)
+
+- 本章的第一节已经使用Spring Cloud starter Eureka Server依赖构建了Eureka服务器，应用可以往Eureka服务器中注册和提取服务。
+- Spring Cloud starter Eureka依赖允许微服务往Eureka Server中注册自己提供的服务
+- Spring Cloud starter Netflix Eureka Client依赖允许微服务从Eureka Server中提取服务。
+
+
+
+*重新强调：可以发现建项目大多是一个顺序：*
+
+1. *导入依赖*
+2. *编写配置文件*
+3. *开启这个功能@EnableXXX*
+4. *配置类编写*
+
+
+
+本节使用Spring Cloud starter Eureka来实现Eureka注册服务。
+
+
+
+#### 实战
+
+回到springcloud-provider-dept-8001子module，为它加上Spring Cloud starter Eureka依赖，用eureka（而不是第二章http-restful）的方式实现远程通信。
+
+```xml
+<!--Eureka依赖-->
+<!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-eureka -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-eureka</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+springcloud-provider-dept-8001子module的配置文件application.yml中配置Eureka的相关配置
+
+```yaml
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer（即服务注册中心）中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:7001/eureka/
+```
+
+在springcloud-provider-dept-8001子module的启动类中添加@EnableXXX（Eureka）注解
+
+```java
+/*Eureka是C-S架构，主启动类添加该注解后，在子module启动后会自动注册本module的服务到Eureka中
+* 
+* 可能有人会问“提供服务不应该用server吗？怎么用client？”。答：服务的提供者和消费者在Eureka C-S架构中
+* 都属于客户端client，两client都需要与服务端server（Eureka-server）交互。
+* */
+@EnableEurekaClient
+```
+
+![image-20211021220103073](springCloud.assets/image-20211021220103073.png)
+
+现在测试Eureka是否成功实现了服务注册的功能。
+
+1. 先启动springcloud-eureka-7001，即开启EurekaServer
+2. 再启动springcloud-provider-dept-8001，即开启往EurekaServer注册服务的服务注册方。
+
+![image-20211021220514468](springCloud.assets/image-20211021220514468.png)
+
+重新访问代表Eureka-Server监视网址：http://localhost:7001/。可以看到服务注册成功。
+
+- Application：是提供服务的子module在自己的application.yml中注册的spring.application.name: springcloud-provider-dept。
+
+![image-20211021220834251](springCloud.assets/image-20211021220834251.png)
+
+看到监控页面，注册的服务在Status栏中名字很丑，可以自己修改。更新springcloud-provider-dept-8001子module的配置文件（application.yml）中关于Eureka的配置。
+
+```yml
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:7001/eureka/
+  # 修改Eureka上的默认描述信息
+  instance:
+    instance-id: springcloud-provider-dept8001
+```
+
+![image-20211021221513599](springCloud.assets/image-20211021221513599.png)
+
+重启springcloud-provider-dept-8001子module，并再次访问http://localhost:7001/。可以看到Status栏的描述成功改为自己配置的文字。
+
+- 网页上有两行红色英文的是因为Eureka有自我保护机制，**重启一下7001服务器**(springcloud-eureka-7001)，再重启8001服务注册者（springcloud-provider-dept-8001）就行了。
+
+  ```
+  EMERGENCY! EUREKA MAY BE INCORRECTLY CLAIMING INSTANCES ARE UP WHEN THEY'RE NOT. RENEWALS ARE LESSER THAN THRESHOLD AND HENCE THE INSTANCES ARE NOT BEING EXPIRED JUST TO BE SAFE.
+  ```
+
+  - 在开启EurekaServer的情况下，关闭或重启服务提供者，等待一次心跳后，刷新Eureka页面就会出现红色警告。因为旧服务被Eureka认定为死掉的，但是说不定还有模块在调用服务，所以Eureka不能挂掉服务，而先展示出警告让人排查是不是有服务挂了或者重启了。
+
+![image-20211021221856526](springCloud.assets/image-20211021221856526.png)
+
+在服务提供者（springcloud-provider-dept-8001）添加Eureka监控信息
+
+
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=7&spm_id_from=pageDriver
+
+10.40
