@@ -1570,7 +1570,7 @@ public class EurekaServer_7001 {
 
 
 
-#### 实战
+#### 服务注册实战
 
 回到springcloud-provider-dept-8001子module，为它加上Spring Cloud starter Eureka依赖，用eureka（而不是第二章http-restful）的方式实现远程通信。
 
@@ -1620,6 +1620,8 @@ eureka:
 
 ![image-20211021220834251](springCloud.assets/image-20211021220834251.png)
 
+#### 信息配置实战
+
 看到监控页面，注册的服务在Status栏中名字很丑，可以自己修改。更新springcloud-provider-dept-8001子module的配置文件（application.yml）中关于Eureka的配置。
 
 ```yml
@@ -1647,10 +1649,215 @@ eureka:
 
 ![image-20211021221856526](springCloud.assets/image-20211021221856526.png)
 
-在服务提供者（springcloud-provider-dept-8001）添加Eureka监控信息
+点击上图红框中的链接会报错。为了不报错，先添加依赖；添加如下依赖后，点击status栏的链接就不会报错，点击后还能看到当前module在application.yml中配置的info信息（这个info让所有人知道该子module是干嘛的）。
+
+```xml
+<!--完善监控信息-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+![image-20211022191926756](springCloud.assets/image-20211022191926756.png)
+
+在子module配置文件中添加自定义配置，配置的信息将在点击Eureka监视页面的status栏的链接后显示。
+
+```yaml
+# info配置
+info:
+  app.name: zhangyun-springcloud
+  company.name: github.zhangyun.com
+```
+
+![image-20211022192217364](springCloud.assets/image-20211022192217364.png)
+
+重启EurekaServer（7001module），再重启服务注册者（8001module），访问Eureka监控页面：http://localhost:7001/
+
+![image-20211022192516751](springCloud.assets/image-20211022192516751.png)
+
+点击status栏的instanceid链接。可以看到我们在服务提供者module的application.yml中做的info配置的内容。且是以json字符串相应回来。
+
+![image-20211022192606394](springCloud.assets/image-20211022192606394.png)
+
+#### 自我保护机制实战
+
+EureKa自我保护机制：好死不如赖活着。
 
 
 
-https://www.bilibili.com/video/BV1jJ411S7xr?p=7&spm_id_from=pageDriver
+一句话总结就是：**某时刻某一个微服务不可用，eureka不会立即清理，依旧会对该微服务的信息进行保存！**
 
-10.40
+- 默认情况下，当eureka server在一定时间内没有收到实例的心跳，便会把该实例从注册表中删除（**默认是90秒**），但是，如果短时间内丢失大量的实例心跳，便会触发eureka server的自我保护机制，比如在开发测试时，需要频繁地重启微服务实例，**但是我们很少会把eureka server一起重启**（因为在开发过程中不会修改eureka注册中心），**当一分钟内收到的心跳数大量减少时，会触发该保护机制**。可以在eureka管理界面看到Renews threshold和Renews(last min)，当后者（最后一分钟收到的心跳数）小于前者（心跳阈值）的时候，触发保护机制，会出现红色的警告：`EMERGENCY!EUREKA MAY BE INCORRECTLY CLAIMING INSTANCES ARE UP WHEN THEY'RE NOT.RENEWALS ARE LESSER THAN THRESHOLD AND HENCE THE INSTANCES ARE NOT BEGING EXPIRED JUST TO BE SAFE.`从警告中可以看到，eureka认为虽然收不到实例的心跳，但它认为实例还是健康的，eureka会保护这些实例，不会把它们从注册表中删掉。
+- 该保护机制的目的是避免网络连接故障，在发生网络故障时，微服务和注册中心之间无法正常通信，但服务本身是健康的，不应该注销该服务，如果eureka因网络故障而把微服务误删了，那即使网络恢复了，该微服务也不会重新注册到eureka server了，因为只有在微服务启动的时候才会发起注册请求，后面只会发送心跳和服务列表请求，这样的话，该实例虽然是运行着，但永远不会被其它服务所感知。所以，eureka server在短时间内丢失过多的客户端心跳时，会进入自我保护模式，该模式下，eureka会保护注册表中的信息，不在注销任何微服务，当网络故障恢复后，eureka会自动退出保护模式。综上，自我保护模式是一种应对网络异常的安全保护措施。它的架构哲学是宁可同时保留所有微服务（健康的微服务和不健康的微服务都会保留），也不盲目注销任何健康的微服务。使用自我保护模式，可以让Eureka集群更加的健壮和稳定。
+- 但是我们在开发测试阶段，需要频繁地重启发布，如果触发了保护机制，则旧的服务实例没有被删除，这时请求有可能跑到旧的实例中，而该实例已经关闭了，这就导致请求错误，影响开发测试。所以，在开发测试阶段，我们可以把自我保护模式关闭，只需在eureka server配置文件中加上如下配置即可：`eureka.server.enable-self-preservation=false`【不推荐关闭自我保护机制】
+  - 不想关闭“自我保护机制”，又担心跑到旧的实例的话，可以连着EurekaServer一起重启；即先重启EurekaServer，再重启服务提供者。但其实重启EurekaServer可能不符合业务测试逻辑，所以推荐暂时禁用保护机制。
+
+详细内容可以参考下这篇博客内容：https://blog.csdn.net/wudiyong22/article/details/80827594
+
+
+
+#### 展示已注册服务的控制器函数
+
+在服务提供者的controller中添加请求处理函数，函数展示全部或单个注册到EurekaServer的服务的一些信息，团队开发会用到。
+
+- 有网友问“这个获取服务列表的控制器函数不应该写在EurekaServer_7001中吗？”。我觉得就暂时按照老师的，写在每个服务提供者module中。
+- 核心是使用DiscoveryClient接口，不需要自己注入spring容器。导入springcloud或Eureka相关依赖后，下载的jar包` Maven: org.springframework.cloud:spring-cloud-netflix-eureka-client:2.1.1.RELEASE
+  185`的`EurekaDiscoveryClient.class`类的自动配置类`EurekaClientAutoConfiguration.class`中有@bean就把EurekaDiscoveryClient.class注入到spring容器中。我们使用时直接@autowired或@Resource拿来用即可。
+
+```java
+package com.zhangyun.springcloud.controller;
+
+import com.zhangyun.springcloud.pojo.Dept;
+import com.zhangyun.springcloud.service.DeptService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+//提供restful服务
+//@RestController使返回字符串不走视图解析器，直接以字符串形式输出在浏览器上
+@RestController
+public class DeptController {
+    //controller层调用service层,从spring容器中拿到bean。
+    @Autowired
+    private DeptService deptService;
+    //获取一些配置的信息，得到具体的微服务。DiscoveryClient已通过依赖引入了项目。
+    @Autowired
+    private DiscoveryClient client;
+
+    //提交带对象参数请求一般都用post提交，安全一点
+    @PostMapping("/dept/add")
+    //restful的对象参数前面要用@RequestBody，否则可能restful传输的时候出问题
+    public boolean addDept(@RequestBody Dept dept){
+        return deptService.addDept(dept);
+    }
+    //restful风格携带参数
+    @GetMapping("/dept/qbid/{id}")
+    public Dept queryById(@PathVariable("id") long id){
+        return deptService.queryById(id);
+    }
+
+    @GetMapping("/dept/qall")
+    public List<Dept> queryAll(){
+        return deptService.queryAll();
+    }
+
+    /*
+    * 通过请求获取一些Eureka信息：
+    * 1. 注册进EurekaServer的微服务。
+    * 2. 获取一些本子module的application.yml中配置的Eureka消息（Info）。
+    *
+    * 和别人联合开发时能用上
+    * */
+    @GetMapping("/dept/discovery")
+    public Object discovery(){
+        //获取微服务列表的清单
+        List<String> services = client.getServices();
+        System.out.println("discovery=>service:"+services);
+
+        //得到一个具体的微服务信息,通过applicationname来取；服务提供者的application.yml中配置了applicationname
+        List<ServiceInstance> instances = client.getInstances("SPRINGCLOUD-PROVIDER-DEPT");
+        for (ServiceInstance instance : instances) {
+            System.out.println(
+                    instance.getHost()+"\t"+
+                    instance.getPort()+"\t"+
+                    instance.getUri()+"\t"+
+                    instance.getServiceId()+"\t"
+            );
+        }
+
+        return this.client;
+
+    }
+}
+```
+
+在服务提供者的启动类上加上@EnableXXX（discovery）
+
+```java
+//服务发现
+@EnableDiscoveryClient
+```
+
+![image-20211023134921965](springCloud.assets/image-20211023134921965.png)
+
+确保EurekaServer7001和服务提供者8001都启动了，访问http://localhost:8001/dept/discovery。成功展示了想要展示的内容。
+
+![image-20211023140511703](springCloud.assets/image-20211023140511703.png)
+
+![image-20211023140551144](springCloud.assets/image-20211023140551144.png)
+
+
+
+### 集群环境配置
+
+把EurekaServer7001子module（Eureka注册中心）复制两份，构建三个集群，注意端口号要改一下别重复。
+
+复制的module的pom是橙色的，应该是没有纳入maven项目，纳入一下
+
+![image-20211023143509463](springCloud.assets/image-20211023143509463.png)
+
+纳入成功后，图标变正常了
+
+![image-20211023143554887](springCloud.assets/image-20211023143554887.png)
+
+
+
+为何要多个EurekaServer集群？
+
+- 不然一个集群崩了所有服务都没了。
+
+- 不同集群应该和其他所有集群绑定，建立联系。
+
+  ![image-20211023144109854](springCloud.assets/image-20211023144109854.png)
+
+
+
+为了更真实的模拟异地计算机集群，我们去计算机的hosts文件（C:\Windows\System32\drivers\etc）做一下域名映射。
+
+- hosts文件不能修改的话，参考网上的一些解决方法：https://blog.csdn.net/weixin_42096620/article/details/110437568
+
+![image-20211023145150168](springCloud.assets/image-20211023145150168.png)
+
+把三个EurekaServer的hostname修改成不同的域名，虽然这三个域名映射到同一个ip。
+
+同时修改defaultzone配置，通过defaultzone把不同关联EurekaServer起来。因为之前是单机配置，没有关联其他的EurekaServer集群。
+
+![image-20211023150752733](springCloud.assets/image-20211023150752733.png)
+
+![image-20211023150817015](springCloud.assets/image-20211023150817015.png)
+
+![image-20211023150838504](springCloud.assets/image-20211023150838504.png)
+
+修改服务提供者的目标发布地址，往全部的EurekaServer都发布
+
+![image-20211023151027155](springCloud.assets/image-20211023151027155.png)
+
+测试。先启动三个EurekaServer；启动好后，再启动服务提供者。（16g缓存有点吃不消了）
+
+![image-20211023151457480](springCloud.assets/image-20211023151457480.png)
+
+访问http://eureka7001.com:7001/
+
+- 可以看到EurekaServer7001关联的其他EurekaServer
+- 可以看到EurekaServer中注册的所有服务
+
+![image-20211023151659363](springCloud.assets/image-20211023151659363.png)
+
+访问http://eureka7002.com:7002/
+
+![image-20211023151728545](springCloud.assets/image-20211023151728545.png)
+
+访问http://eureka7003.com:7003/
+
+![image-20211023151749938](springCloud.assets/image-20211023151749938.png)
+
+
+
+### CAP原则+对比ZK
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=9&spm_id_from=pageDriver
+
