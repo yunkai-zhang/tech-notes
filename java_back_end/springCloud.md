@@ -1857,7 +1857,520 @@ public class DeptController {
 
 
 
+#### 服务使用者
+
+restful-http服务的使用者的演示暂时不做，因为http方式总是访问一个连接即可。具体演示，一会负载均衡的时候再做。
+
+
+
 ### CAP原则+对比ZK
 
-https://www.bilibili.com/video/BV1jJ411S7xr?p=9&spm_id_from=pageDriver
+回顾CAP原则：
 
+- RDBMS (MySQL\Oracle\sqlServer) ===> ACID
+
+- NoSQL (Redis\MongoDB) ===> CAP
+
+
+
+ACID是什么？
+
+- A (Atomicity) 原子性
+- C (Consistency) 一致性
+- I (Isolation) 隔离性
+- D (Durability) 持久性
+
+
+
+CAP是什么?
+
+- C (Consistency) 强一致性
+- A (Availability) 可用性
+- P (Partition tolerance) 分区容错性
+
+CAP的三进二：CA、AP、CP
+
+- zk和Eureka的本质区别在这。
+
+CAP理论的核心
+
+- 一个分布式系统不可能同时很好的满足一致性，可用性和分区容错性这三个需求
+- 根据CAP原理，将NoSQL数据库分成了满足CA原则，满足CP原则和满足AP原则三大类
+  - CA：单点集群，满足一致性，可用性的系统，通常可扩展性较差
+  - CP：满足一致性，分区容错的系统，通常性能不是特别高
+  - AP：满足可用性，分区容错的系统，通常可能对一致性要求低一些
+
+
+
+作为分布式服务注册中心，Eureka比Zookeeper好在哪里？
+
+著名的CAP理论指出，一个分布式系统不可能同时满足C (一致性) 、A (可用性) 、P (容错性)，由于分区容错性P再分布式系统中是必须要保证的，因此我们只能再A和C之间进行权衡。
+
+- Zookeeper 保证的是 CP —> 满足一致性，分区容错的系统，通常性能不是特别高
+- Eureka 保证的是 AP —> 满足可用性，分区容错的系统，通常可能对一致性要求低一些
+
+
+
+Zookeeper保证的是CP
+
+- 用户心理学分析的话，zk不是首选。当向注册中心查询服务列表时，用户可以容忍注册中心返回的是几分钟以前的注册信息，但不能接收服务直接down掉不可用；也就是说，对用户而言**服务注册功能对可用性的要求要高于一致性**（但ZK保证的是CP，所以用户应该不喜欢zk）。
+- zookeeper会出现这样一种情况，当master节点因为网络故障与其他节点失去联系时，剩余节点会重新进行leader选举。问题在于，选举leader的时间太长，30-120s，且选举期间整个zookeeper集群是不可用的，这就导致在选举期间注册服务瘫痪。在云部署的环境下，因为网络问题使得zookeeper集群失去master节点是较大概率发生的事件，虽然服务最终能够恢复，但是，漫长的选举时间导致注册长期不可用，是不可容忍的。
+
+Eureka保证的是AP
+
+- Eureka看明白了这一点，因此在设计时就优先保证可用性。**Eureka各个节点都是平等的**，几个节点挂掉不会影响正常节点的工作，剩余的节点依然可以提供注册和查询服务。而Eureka的客户端在向某个Eureka注册时，如果发现连接失败，则会自动切换至其他节点，只要有一台Eureka还在，就能保住注册服务的可用性，只不过查到的信息可能不是最新的，除此之外，Eureka还有之中自我保护机制，如果在15分钟内超过85%的节点都没有正常的心跳，那么Eureka就认为客户端与注册中心出现了网络故障，此时会出现以下几种情况：
+  - Eureka不在从注册列表中移除因为长时间没收到心跳而应该过期的服务
+  - Eureka仍然能够接受新服务的注册和查询请求，但是不会被同步到其他节点上 (即保证当前节点依然可用)
+  - 当网络稳定时，当前实例新的注册信息会被同步到其他节点中
+
+因此，Eureka可以很好的应对因网络故障导致部分节点失去联系的情况，而不会像zookeeper那样使整个注册服务瘫痪。
+
+网友：**ZooKeeper是老实人**，挂了就是挂了，但用户不喜欢；EureKa更圆滑，虽然撒谎了，但用户更喜欢。
+
+
+
+## Ribbon客户端负载均衡
+
+### Ribbon介绍
+
+Ribbon是什么？
+
+- Spring Cloud Ribbon 是基于Netflix Ribbon 实现的一套**客户端负载均衡的工具**。
+- 简单的说，Ribbon 是 Netflix 发布的开源项目，主要功能是提供客户端的软件负载均衡算法，将 Netflix 的中间层服务连接在一起。Ribbon 的客户端组件提供一系列完整的配置项，如：连接超时、重试等。简单的说，就是在配置文件中列出 LoadBalancer (简称LB：负载均衡) 后面所有的机器，Ribbon 会自动的帮助你基于某种规则 (如简单轮询，随机连接等等) 去连接这些机器。我们也容易使用 Ribbon 实现自定义的负载均衡算法！
+- 常见负载均衡算法有：
+  - 轮询：给每个服务器挨个送连接请求。
+  - 随机：随机给某个服务器送连接请求。
+  - 权重：（猜测是给不同服务器不同的负载权重）
+
+
+
+Ribbon能干嘛？
+
+![在这里插入图片描述](springCloud.assets/lb_image.png)
+
+- LB，即负载均衡 (LoadBalancer) ，在微服务或分布式集群中经常用的一种应用。
+- **负载均衡简单的说就是将用户的请求平摊的分配到多个服务上，从而达到系统的HA (高用)。**
+- 常见的负载均衡软件有 Nginx、Lvs 等等。
+- Dubbo、SpringCloud 中均给我们提供了负载均衡，**SpringCloud 的负载均衡算法可以自定义**。
+- 负载均衡简单分类：
+  - 集中式LB
+    - 即在服务的提供方和消费方之间使用独立的LB设施，如**Nginx(反向代理服务器)**，由该设施负责把访问请求通过某种策略转发至服务的提供方！
+  - 进程式 LB
+    - 将LB逻辑集成到消费方，消费方从服务注册中心获知有哪些地址可用，然后自己再从这些地址中选出一个合适的服务器。
+    - **Ribbon 就属于进程内LB**，它只是一个类库，集成于消费方进程，消费方通过它来获取到服务提供方的地址！
+
+
+
+### 服务端集成ribbon实现负载均衡
+
+springcloud-consumer-dept-80子module向pom.xml中添加Ribbon和Eureka依赖
+
+```xml
+<!--Ribbon-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-ribbon</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+<!--Eureka: Ribbon需要从Eureka服务中心获取要拿什么-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-eureka</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+![image-20211024195324426](springCloud.assets/image-20211024195324426.png)
+
+springcloud-consumer-dept-80子module的配置文件application.yml中配置Eureka
+
+```yaml
+# Eureka配置
+eureka:
+  client:
+    register-with-eureka: false # 不向 Eureka注册自己
+    service-url: # 从三个注册中心中随机取一个去访问。消费者直接拿就行，不用注册自己；提供者才要注册自己。
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+```
+
+![image-20211024195351922](springCloud.assets/image-20211024195351922.png)
+
+springcloud-consumer-dept-80子module的主启动类加上[@EnableEurekaClient](https://github.com/EnableEurekaClient)注解，开启Eureka。
+
+![image-20211024195714552](springCloud.assets/image-20211024195714552.png)
+
+springcloud-consumer-dept-80子module的java配置类ConfigBean.java配置一下负载均衡的设置，在getRestTemplate()加上下面的注解即可
+
+- 配置完毕后，服务使用方（springcloud-consumer-dept-80子module）会随机从三个EurekaServer中选一个去使用服务。
+- 有网友说：“注解有先后顺序，@LoadBalanced 如果写在 @Bean 前面，则负载均衡不生效”。但是我的生效了。不过以后还是最好@Bean写在前面
+
+```java
+@LoadBalanced//Ribbon
+```
+
+![image-20211024200351201](springCloud.assets/image-20211024200351201.png)
+
+修改服务使用者的controller中的REST_URL_PREFIX，使之符合负载均衡的用法
+
+- REST_URL_PREFIX应为服务注册后，application那一栏，即host name（服务提供者的yml中可配置）
+
+![image-20211024201114497](springCloud.assets/image-20211024201114497.png)
+
+![](springCloud.assets/image-20211023151749938.png)
+
+负载均衡配置好了，现在先启动EurekaServer7001,7002,7003；再启动服务提供者8001；再启动服务使用者80。
+
+- 一些常见错误：
+  - “注意，Ribbon 服务名不支持下划线！！！排错找了1个多小时”
+
+试着查询所有dept，成功。这个时候因为只有一个服务和一个数据库，负载均衡的效果不明显；后续多创建两个服务，每个服务有自己单独的数据库，这样就可以明显看出负载均衡。
+
+![image-20211024202341929](springCloud.assets/image-20211024202341929.png)
+
+Ribbon和Eureka整合后，服务使用者可以直接调用application栏下的applicationname（REST_URL_PREFIX），不用关心具体去哪个ip地址和端口号；可用的ip和端口号统一都配置在服务使用者的yml中了。
+
+### 多建两个服务突出负载均衡
+
+Ribbon是对服务提供者进行负载均衡，不是对Eureka集群的访问进行负载均衡。
+
+![](springCloud.assets/ribbon_lb_multiprovider.png)
+
+启动navicat先导出dept表的结构和数据
+
+![image-20211024204933903](springCloud.assets/image-20211024204933903.png)
+
+![image-20211024204952483](springCloud.assets/image-20211024204952483.png)
+
+```mysql
+/*
+ Navicat Premium Data Transfer
+
+ Source Server         : 本地
+ Source Server Type    : MySQL
+ Source Server Version : 80026
+ Source Host           : localhost:3306
+ Source Schema         : db01
+
+ Target Server Type    : MySQL
+ Target Server Version : 80026
+ File Encoding         : 65001
+
+ Date: 24/10/2021 20:49:54
+*/
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for dept
+-- ----------------------------
+DROP TABLE IF EXISTS `dept`;
+CREATE TABLE `dept`  (
+  `deptno` bigint NOT NULL AUTO_INCREMENT,
+  `dname` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `db_source` varchar(60) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`deptno`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of dept
+-- ----------------------------
+INSERT INTO `dept` VALUES (1, '开发部', 'db01');
+INSERT INTO `dept` VALUES (2, '人事部', 'db01');
+INSERT INTO `dept` VALUES (3, '财务部', 'db01');
+INSERT INTO `dept` VALUES (4, '市场部', 'db01');
+INSERT INTO `dept` VALUES (5, '运维部', 'db01');
+INSERT INTO `dept` VALUES (6, '\"游戏部\"', 'db01');
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+```
+
+添加数据库创建语句，修改插入语句，删除`AUTO_INCREMENT = 7`后为：
+
+```mysql
+/*
+创建库
+*/
+CREATE DATABASE `db01`;
+USE`db01`;
+
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for dept
+-- ----------------------------
+DROP TABLE IF EXISTS `dept`;
+CREATE TABLE `dept`  (
+  `deptno` bigint NOT NULL AUTO_INCREMENT,
+  `dname` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `db_source` varchar(60) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`deptno`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of dept
+-- ----------------------------
+insert into dept(dname, db_source) VALUES ('开发部',database());
+insert into dept(dname, db_source) VALUES ('人事部',database());
+insert into dept(dname, db_source) VALUES ('财务部',database());
+insert into dept(dname, db_source) VALUES ('市场部',database());
+insert into dept(dname, db_source) VALUES ('运维部',database());
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+```
+
+修改数据库名，后执行上述语句，分别创建db02，db03
+
+- 推荐分段运行，注意运行顺序：建库-》建表-》插入。
+
+![image-20211024210030202](springCloud.assets/image-20211024210030202.png)
+
+在idea中连接好db01，db02，db03，方便展示.
+
+![image-20211024210745473](springCloud.assets/image-20211024210745473.png)
+
+![image-20211024210818676](springCloud.assets/image-20211024210818676.png)
+
+![image-20211024210831481](springCloud.assets/image-20211024210831481.png)
+
+复制服务提供者(springcloud-provider-dept-8001)并修改相关配置使之为独立服务。
+
+- 三个服务的applicationname一致，但是instanceid不同。
+
+- 注意不要忘记修改application.yml中url中的数据库名。
+
+  ![image-20211024211953130](springCloud.assets/image-20211024211953130.png)
+
+添加为maven工程
+
+![image-20211024211400705](springCloud.assets/image-20211024211400705.png)
+
+启动新建的服务提供者8002和8003，可以看到同一个applicationname对应了三个instanceid。每个instance有自己的数据库。
+
+![image-20211024212412095](springCloud.assets/image-20211024212412095.png)
+
+确定EurekaServer\*3，服务提供者\*3，服务消费者*1都开启了
+
+![image-20211024213326721](springCloud.assets/image-20211024213326721.png)
+
+浏览器执行请求`http://localhost/consumer/dept/getDeptAll`三次，可以看到服务消费者经过Eureka请求applicationname对应的服务时，ribbon会轮询该applicationname对应的三个instance来提供服务（每次展示不同的dname）。再次强调，**ribbon是对服务的不同实例做负载均衡，而不是对eureka集群**。
+
+![image-20211024213431714](springCloud.assets/image-20211024213431714.png)
+
+![image-20211024213457880](springCloud.assets/image-20211024213457880.png)
+
+![image-20211024213509160](springCloud.assets/image-20211024213509160.png)
+
+
+
+### 自定义负载均衡算法
+
+ConfigBean中添加自定义的负载均衡配置函数myRule()，先让myRule()执行系统的随机策略负载均衡看看
+
+- 注意，myRule()放在ConfigBean.java只是为了演示，正常应该放到专门的负载均衡配置类中，稍后就讲。
+
+```java
+package com.zhangyun.springcloud.config;
+
+import com.netflix.loadbalancer.IRule;
+import com.netflix.loadbalancer.RandomRule;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+/*
+* @Configuration相当于spring中的applicationContext.xml。
+* 最开始spring在applicationContext.xml中配置bean，但是springboot和cloud偏好java配置类来配置bean，java配置类需要有@Configuration注解。
+* */
+@Configuration
+public class ConfigBean {
+    
+    @Bean
+    //配置负载均衡实现RestTemplate
+    @LoadBalanced//Ribbon
+    public RestTemplate getRestTemplate(){
+        return new RestTemplate();
+    }
+
+    /*
+     * IRule:通过这个接口去实现自定义负载均衡。这个接口有很多实现类，可以看看实现类来照猫画虎。
+     * RoundRobinRule：轮询策略（默认）
+     * RandomRule：随机策略
+     * AvailabilityFilteringRule ： 会先过滤掉跳闸的or访问故障的服务~，对剩下的进行轮询~。本质还是轮询，只不过优化了。
+     * RetryRule ： 重试；会先按照轮询获取服务~，如果服务获取失败，则会在指定的时间内进行。
+     * */
+    //自定义负载均衡规则。@Bean把配置类注入到spring容器中。
+    @Bean
+    public IRule myRule(){
+        return new RandomRule();
+    }
+
+}
+```
+
+启动EurekaServer+三个服务提供者+服务消费者。不停地刷新，看dname可以感觉到负载均衡策略编程随机策略了。
+
+![image-20211025205953226](springCloud.assets/image-20211025205953226.png)
+
+现在开始正规的写法：编写自定义负载均衡策略配置类ZhangRuleConfig.java，一定不能放在启动类同级目录下。再把myRule()放到ZhangRule.java中。
+
+- 关于IRule自定义配置类为什么不能放在启动类同级目录下
+  - 我们自定义的轮询配置类，不要让spring自动的扫到bean里，不然我们不配置也会生效，我们应该放到外面，需要用的的时候，我们自己通过配置让他生效。
+  - 放到启动类同级目录下会被beanScan扫描**变成全局的配置**，但我们这里希望是单针对一个服务（对应Eureka中一个applicationname），服务由@RibbonClient注解的name属性限定。
+
+```java
+package com.zhangyun.myrule;
+
+import com.netflix.loadbalancer.IRule;
+import com.netflix.loadbalancer.RandomRule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ZhangRuleConfig {
+
+    /*
+     * IRule:通过这个接口去实现自定义负载均衡。这个接口有很多实现类，可以看看实现类来照猫画虎。
+     * RoundRobinRule：轮询策略（默认）
+     * RandomRule：随机策略
+     * AvailabilityFilteringRule ： 会先过滤掉跳闸的or访问故障的服务~，对剩下的进行轮询~。本质还是轮询，只不过优化了。
+     * RetryRule ： 重试；会先按照轮询获取服务~，如果服务获取失败，则会在指定的时间内进行。
+     * */
+    //使用自定义负载均衡规则ZhangRandomRule。@Bean把配置类注入到spring容器中。
+    @Bean
+    public IRule myRule(){
+        return new ZhangRandomRule();
+    }
+
+}
+```
+
+删掉ConfigBean.java中的myRule()
+
+![image-20211025215103864](springCloud.assets/image-20211025215103864.png)
+
+编写自定义的负载均衡规则定义类ZhangRandomRule.java，根据官方的RandomRule.java改写。
+
+```java
+package com.zhangyun.myrule;
+
+import com.netflix.client.config.IClientConfig;
+import com.netflix.loadbalancer.AbstractLoadBalancerRule;
+import com.netflix.loadbalancer.ILoadBalancer;
+import com.netflix.loadbalancer.Server;
+//import edu.umd.cs.findbugs.annotations.SuppressWarnings;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+/*
+* 自定义为：每个服务访问五次后换下一个服务。（三个服务，要实现回头，大于3置零）
+*
+* 指针total默认为0，如果=5，指向下一个服务节点。
+* index标记节点，如果total=5则index+1；total等于3的时候要置零。
+* */
+public class ZhangRandomRule extends AbstractLoadBalancerRule {
+    public ZhangRandomRule() {
+    }
+
+    //当前节点已被调用的次数
+    private int total=0;
+    //当前是哪个节点在提供服务
+    private int currentIndex=0;
+
+    @SuppressWarnings({"RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE"})
+    public Server choose(ILoadBalancer lb, Object key) {
+        if (lb == null) {
+            return null;
+        } else {
+            Server server = null;
+
+            while(server == null) {
+                if (Thread.interrupted()) {
+                    return null;
+                }
+
+                //获得还活着的服务
+                List<Server> upList = lb.getReachableServers();
+                //获得全部的服务
+                List<Server> allList = lb.getAllServers();
+                int serverCount = allList.size();
+                if (serverCount == 0) {
+                    return null;
+                }
+/*======================================自定义访问算法==========================================
+* 算法有缺陷，因为upList.get的获取在一头一尾；三个服务阶段用完置零的时候，total=0,currindex=i会被打印两次，服务也被用两次。
+* 解决方案就是else中发现循环完毕后getcurrent直接为0，再total++，那么走到total<5就使用的是total=1，不会重复total=0了
+* */
+//                //获得区间随机数
+//                int index = this.chooseRandomInt(serverCount);
+//                //从活着的服务列表中随机获取一个服务
+//                server = (Server)upList.get(index);
+                if(total<5){
+                    server=upList.get(currentIndex);
+                    total++;
+                }else{
+                    total=0;
+                    currentIndex++;
+                    if(currentIndex>=upList.size()){
+                        currentIndex=0;
+                    }
+                    server=upList.get(currentIndex);
+                }
+/*======================================自定义访问算法==========================================*/
+
+                if (server == null) {
+                    Thread.yield();
+                } else {
+                    if (server.isAlive()) {
+                        return server;
+                    }
+
+                    server = null;
+                    Thread.yield();
+                }
+            }
+
+            return server;
+        }
+    }
+
+    protected int chooseRandomInt(int serverCount) {
+        return ThreadLocalRandom.current().nextInt(serverCount);
+    }
+
+    public Server choose(Object key) {
+        return this.choose(this.getLoadBalancer(), key);
+    }
+
+    public void initWithNiwsConfig(IClientConfig clientConfig) {
+    }
+}
+```
+
+主启动类添加@RibbonClient注解
+
+**再次强调：负载均衡策略指定某个服务（eureka中applicatinname）的负载均衡。**
+
+```java
+//在微服务启动时就能加载一些自定义的ribbon类。可以方便看到我们针对某个服务用了哪个负载均衡的配置；而不像在ConfigBean.java中配置的那样对所有服务生效。
+@RibbonClient(name="SPRINGCLOUD-PROVIDER-DEPT",configuration = ZhangRuleConfig.class)
+```
+
+![image-20211025215322562](springCloud.assets/image-20211025215322562.png)
+
+启动项目并测试，可以发现一个数据库出现六次后（不是五次的原因和解决见代码注解），变成下一个数据库。
+
+
+
+### Ribbon的代替品Feign
+
+feign是使用接口的方式调用服务。
+
+https://www.kuangstudy.com/bbs/1374942542566551554
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=13&spm_id_from=pageDriver
