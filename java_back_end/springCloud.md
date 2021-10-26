@@ -2250,6 +2250,8 @@ public class ZhangRuleConfig {
 }
 ```
 
+![image-20211026162515981](springCloud.assets/image-20211026162515981.png)
+
 删掉ConfigBean.java中的myRule()
 
 ![image-20211025215103864](springCloud.assets/image-20211025215103864.png)
@@ -2363,7 +2365,7 @@ public class ZhangRandomRule extends AbstractLoadBalancerRule {
 
 ![image-20211025215322562](springCloud.assets/image-20211025215322562.png)
 
-启动项目并测试，可以发现一个数据库出现六次后（不是五次的原因和解决见代码注解），变成下一个数据库。
+启动项目并测试，可以发现一个数据库出现六次后（不是五次的原因和解决见代码注释），变成下一个数据库。
 
 
 
@@ -2374,3 +2376,221 @@ feign是使用接口的方式调用服务。
 https://www.kuangstudy.com/bbs/1374942542566551554
 
 https://www.bilibili.com/video/BV1jJ411S7xr?p=13&spm_id_from=pageDriver
+
+#### feign简介
+
+Feign是声明式Web Service客户端，它让微服务之间的调用变得更简单，类似controller调用service。SpringCloud集成了Ribbon和Eureka，可以使用Feigin提供负载均衡的http客户端。**只需要创建一个接口，然后添加注解即可~**
+
+
+
+Feign，主要是社区版，大家都习惯面向接口编程。这个是很多开发人员的规范。调用微服务访问两种方法
+
+- 微服务名字 【ribbon】
+- 接口和注解 【feign】
+
+
+
+Feign能干什么？：
+
+- Feign旨在使编写Java Http客户端变得更容易
+- 前面在使用**Ribbon** + **RestTemplate**时，利用**RestTemplate**对Http请求的封装处理，形成了一套模板化的调用方法。但是在实际开发中，由于对服务依赖的调用可能不止一处，往往一个接口会被多处调用，所以通常都会针对每个微服务自行封装一个客户端类来包装这些依赖服务的调用。所以，**Feign**在此基础上做了进一步的封装，由他来帮助我们定义和实现依赖服务接口的定义，在Feign的实现下，我们只需要创建一个接口并使用注解的方式来配置它 (类似以前Dao接口上标注Mapper注解，现在是一个微服务接口上面标注一个Feign注解)，即可完成对服务提供方的接口绑定，简化了使用Spring Cloud Ribbon 时，自动封装服务调用客户端的开发量。
+
+
+
+Feign默认集成了Ribbon
+
+- 利用**Ribbon**维护了MicroServiceCloud-Dept的服务列表信息，并且通过轮询实现了客户端的负载均衡，而与**Ribbon**不同的是，通过**Feign**只需要定义服务绑定接口且以声明式的方法，优雅而简单的实现了服务调用。
+- feign整合了ribbon和hytrix。
+
+
+
+#### Feign实战
+
+![image-20211026174606484](springCloud.assets/image-20211026174606484.png)
+
+springcloud-api子module导入Feign的依赖
+
+```xml
+<!--feign依赖，依赖类似ribbon-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-feign</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+springcloud-api的目录下，创建service文件夹，好让所有使用springcloud-api的服务都能使用该service文件夹中的内容。并创建`DeptClientService.java`接口。
+
+- 但其实把 service 写到 feign 项目中更好理解
+- 注意 service下的GetMapping的url要和 服务名下controller 请求url一致，不然找不到
+
+```java
+package com.zhangyun.springcloud.service;
+
+import com.zhangyun.springcloud.pojo.Dept;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.Mapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import java.util.List;
+
+/*
+* 写了这个注解后，就和RPC的refernece注解一样，可以对服务直接调用了。
+*
+* value填applicationname
+* */
+@FeignClient(value="SPRINGCLOUD-PROVIDER-DEPT")
+public interface DeptClientService {
+
+    /*方法和服务提供者的接口中的一致
+    *
+    * 请求路径和服务提供者（springcloud-provider-dept-8001，8002,8003）的controller的路径也得一致，不然报错！！！
+    * */
+
+    @PostMapping("/dept/add")
+    public boolean addDept(Dept dept);
+
+    //这里@pathcariable里面必须写上id要不然会出错
+    @GetMapping("/dept/qbid/{id}")
+    public Dept queryById(@PathVariable("id") long id);
+
+    @GetMapping("/dept/qall")
+    public List<Dept> queryAll();
+}
+
+```
+
+创建springcloud-consumer-dept-feign子module，内容从springcloud-consumer-dept-80复制，功能也是服务消费者的作用，但是体现了feign的作用。同时做以下操作
+
+- 删除myrule文件夹，不用自己定义的负载均衡配置。
+- 修改pom文件的artifactid为`springcloud-consumer-dept-feign`
+
+- 把主启动类改名为`FeignDeptConsumer_80`,并删除@RibbonClient，因为不用自己定义的负载均衡配置。
+
+- pom导入Feign的依赖
+
+  ```xml
+  <!--feign依赖，依赖类似ribbon-->
+  <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-feign</artifactId>
+      <version>1.4.6.RELEASE</version>
+  </dependency>
+  ```
+
+现在启动springcloud-consumer-dept-feign的话，ConfigBean.java中@LoadBalanced导致负载均衡策略为默认的轮询。
+
+现在修改FeignDeptConsumerController.java（由DeptConsumerController.java重命名而来）
+
+```java
+package com.zhangyun.springcloud.controller;
+
+
+import com.zhangyun.springcloud.pojo.Dept;
+import com.zhangyun.springcloud.service.DeptClientService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+
+//@RestController标记的类是一个控制器。分发处理器将会扫描使用了该注解的类的方法,且不走视图解析器。
+@RestController
+public class FeignDeptConsumerController {
+
+    //使用ribbon做负载均衡后，这里的地址是一个变量，通过服务名来访问。但是现在用Feign，就用接口的方式（更像java）
+    //private static final String REST_URL_PREFIX="http://SPRINGCLOUD-PROVIDER-DEPT";
+    /*
+    feign实现负载均衡的Controller，比ribbonfeign实现负载均衡的Controller（springcloud-consumer-dept-80中）清爽很多。
+
+    1. 如果deptClientService爆红，那么把@Autowired换成@Resource即可。
+    2. 关于=null，@Mapper 也没有自己写实现类，运行中会自动生成，这个应该也一样，可以自动注入，爆红不影响运行
+    * */
+    @Autowired
+    private DeptClientService deptClientService=null;
+
+    /*
+    * 使用feign的话不需要RestTemplate
+    * */
+    //    @Autowired
+    //    private RestTemplate restTemplate;
+
+    @RequestMapping("fconsumer/dept/getDeptById/{id}")
+    public Dept getDeptById(@PathVariable("id") long id){
+        return this.deptClientService.queryById(id);
+    }
+
+    @RequestMapping("fconsumer/dept/getDeptAll")
+    public List<Dept> getDeptAll(){
+        return this.deptClientService.queryAll();
+    }
+
+    @RequestMapping("fconsumer/dept/addDept")
+    public boolean addDept(Dept dept){
+        return this.deptClientService.addDept(dept);
+    }
+
+
+}
+
+```
+
+因为使用了Feign，删掉FeignConfigBean.java中注入RestTemplate的操作。用了Feign不仅用不上RestTemplate，而且这里的注入和Springcloud-api子module的注入还重复了，重复注入会报错。
+
+- 实际上整个FeignConfigBean.java都可以删掉，但是这里还是先保留吧。
+
+![image-20211026174443076](springCloud.assets/image-20211026174443076.png)
+
+
+
+编辑主启动类，启动Feign
+
+```java
+package com.zhangyun.springcloud;
+
+import com.zhangyun.myrule.ZhangRuleConfig;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@EnableEurekaClient
+@SpringBootApplication
+/*
+* 老实说，这个注解可以扫描到springcloud-api子module下的DeptClientService.java，但是为什么可以跨module扫描？：
+* 因为api是公共模块，每个子模块都有引入这个公共模块，就没有跨模块编程。
+* */
+@EnableFeignClients(basePackages = {"com.zhangyun.springcloud"})
+/*
+* 有人问：这里需要@ComponentScan去扫描自己的FeignConfigBean.java吗？：
+* 其实不用，因为冗余的声明，springbootapplication已应用给定的@componentscan
+* */
+public class FeignDeptConsumer_80 {
+    public static void main(String[] args) {
+        SpringApplication.run(FeignDeptConsumer_80.class,args);
+    }
+}
+```
+
+启动EurekaServer7001,服务提供者8001， 服务提供者8002，服务消费者springcloud-consumer-dept-feign，访问`http://localhost/fconsumer/dept/getDeptAll`，但是跑的效果是springcloud-consumer-dept-80自定义的轮询策略ZhangRandomRule。这是因为复制springcloud-consumer-dept-80并重命名为springcloud-consumer-dept-feign后，没有在idea的project structure中修改sourceroot为springcloud-consumer-dept-feign自己的目录，而使用了springcloud-consumer-dept-80的目录，导致错误。修改source root完毕后重新启动springcloud-consumer-dept-feign。成功，现在确实是Feign默认的轮询负载均衡。
+
+- 所有**复制项目的时候要谨慎**，以后宁可重建项目+一个个复制文件。
+
+![image-20211026184947782](springCloud.assets/image-20211026184947782.png)
+
+![image-20211026185002094](springCloud.assets/image-20211026185002094.png)
+
+
+
+## Hystrix
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=14&spm_id_from=pageDriver
+
+https://www.kuangstudy.com/bbs/1374942542566551554
+
