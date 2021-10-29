@@ -2422,7 +2422,8 @@ springcloud-api子module导入Feign的依赖
 springcloud-api的目录下，创建service文件夹，好让所有使用springcloud-api的服务都能使用该service文件夹中的内容。并创建`DeptClientService.java`接口。
 
 - 但其实把 service 写到 feign 项目中更好理解
-- 注意 service下的GetMapping的url要和 服务名下controller 请求url一致，不然找不到
+- **注意** service下的GetMapping的url要和远程服务名对应的服务提供者（springcloud-provider-dept-8001，8002,8003）的controller 中请求url一致，不然找不到。
+- 关于**@Component用在接口**上的情况，见下面代码的注解。
 
 ```java
 package com.zhangyun.springcloud.service;
@@ -2440,6 +2441,10 @@ import java.util.List;
 * 写了这个注解后，就和RPC的refernece注解一样，可以对服务直接调用了。
 *
 * value填applicationname
+* 
+* 老师给这个接口也加上@Component注解，但是我没加也能正常运行。我上网找了一下资料，@Component可以放在接口上，但是
+* 不是放在普通接口上，而是定义注解接口上（每个注解都是以接口的形式定义）；被@Component所注解的注解相当于拥有了@Component
+* 的功能，比如public @interface Service{}，即@Service注解。所以我私以为此接口不需要加@Component。
 * */
 @FeignClient(value="SPRINGCLOUD-PROVIDER-DEPT")
 public interface DeptClientService {
@@ -2586,11 +2591,1370 @@ public class FeignDeptConsumer_80 {
 
 ![image-20211026185002094](springCloud.assets/image-20211026185002094.png)
 
+#### 用Feign还是Ribbon？
+
+**根据个人习惯而定，如果喜欢REST风格使用Ribbon；如果喜欢社区版的面向接口风格使用Feign.**
+
+Feign 本质上也是实现了 Ribbon，只不过后者是在调用方式上，为了满足一些开发者习惯的接口调用习惯！
+
 
 
 ## Hystrix
 
 https://www.bilibili.com/video/BV1jJ411S7xr?p=14&spm_id_from=pageDriver
+
+https://www.kuangstudy.com/bbs/1374942542566551554
+
+### 前言
+
+重要网址：
+
+- Hystrix的wiki：https://github.com/Netflix/Hystrix/wiki/
+
+
+
+分布式面临的问题：
+
+- 复杂分布式体系结构中的应用程序有数十个依赖关系，每个依赖关系在某些时候将不可避免失败！
+
+
+
+服务雪崩：
+
+- 多个微服务之间调用的时候，假设微服务A调用微服务B和微服务C，微服务B和微服务C又调用其他的微服务，这就是所谓的“扇出”，如果扇出的链路上**某个微服务的调用响应时间过长，或者不可用**，对微服务A的调用就会占用越来越多的系统资源，进而引起系统崩溃，所谓的“雪崩效应”。
+
+- 对于高流量的应用来说，单一的后端依赖可能会导致所有服务器上的所有资源都在几十秒内饱和。比失败更糟糕的是，这些应用程序还可能导致服务之间的延迟增加，备份队列，线程和其他系统资源紧张，导致整个系统发生更多的级联故障，**这些都表示需要对故障和延迟进行隔离和管理，以达到单个依赖关系的失败而不影响整个应用程序或系统运行**。
+
+- 我们需要，**弃车保帅**！
+
+![](springCloud.assets/snowrush.png)
+
+
+
+什么是Hystrix？：
+
+Hystrix是一个应用于处理分布式系统的延迟和容错的开源库，在分布式系统里，许多依赖不可避免的会调用失败，比如超时，异常等。Hystrix 能够保证在一个依赖出问题的情况下，不会导致整个体系服务失败，避免级联故障，以提高分布式系统的弹性。
+
+“**断路器**”本身是一种开关装置，当某个服务单元发生故障之后，通过断路器的故障监控 (类似熔断保险丝) ，**向调用方返回一个服务预期的，可处理的备选响应 (FallBack) ，而不是长时间的等待或者抛出调用方法无法处理的异常，这样就可以保证了服务调用方的线程不会被长时间，不必要的占用**，从而避免了故障在分布式系统中的蔓延，乃至雪崩。
+
+![](springCloud.assets/hystrix.png)
+
+
+
+Hystrix能干嘛？：
+
+- 服务降级
+- 服务熔断
+- 服务限流
+- 接近实时的监控
+- …
+
+
+
+### 服务熔断
+
+#### 什么是服务熔断
+
+熔断机制是赌赢雪崩效应的一种微服务链路保护机制。
+
+当扇出链路的某个微服务不可用或者响应时间太长时，会进行服务的降级，**进而熔断该节点微服务的调用，快速返回错误的响应信息**。检测到该节点微服务调用响应正常后恢复调用链路。在SpringCloud框架里熔断机制通过Hystrix实现。Hystrix会监控微服务间调用的状况，当**失败的调用到一定阀值**缺省是5秒内20次调用失败，就会启动熔断机制。熔断机制的注解是：`@HystrixCommand`。
+
+
+
+#### 实战
+
+新建springcloud-provider-dept-hystrix-8001子module，把服务提供者springcloud-provider-dept-8001改造成实现Hystrix的服务提供者。
+
+- 吸取昨天复制module导致的projectstructure的错误经验，现在还是新建module而不是复制。
+
+![image-20211027113721763](springCloud.assets/image-20211027113721763.png)
+
+![image-20211027113838823](springCloud.assets/image-20211027113838823.png)
+
+![image-20211027113936905](springCloud.assets/image-20211027113936905.png)
+
+新建好后做以下几步
+
+- 复制8001的pom的dependencies
+
+- 复制8001下的resource目录下的内容
+- 复制8001下的java目录下的内容
+  - 启动类改名为DeptProviderHystrix_8001.java
+
+
+
+回顾springboot新增功能的步骤
+
+1. 导入依赖
+2. 编写配置文件
+3. 开启这个功能@EnableXXXXX
+4. 配置类
+
+
+
+现在开始新增功能的第一步：springcloud-provider-dept-hystrix-8001子module导入依赖
+
+```xml
+<!--hystrix依赖,artifact长相类似eureka-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-hystrix</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+新增功能的第二步：配置文件
+
+- 修改instanceid，和同一applicationname下的其他服务实例相区别。
+
+  ![image-20211027115313270](springCloud.assets/image-20211027115313270.png)
+
+新增功能的第三步：@EnableXXX
+
+```java
+//启动类添加对hystrix熔断的支持
+@EnableCircuitBreaker
+```
+
+新增功能的第四步：编写配置类，本例不需要。
+
+编写控制器，使用新增的功能。
+
+- 删掉controller中，从8001复制过来的内容。
+
+  ![image-20211027120116351](springCloud.assets/image-20211027120116351.png)
+
+- **注意：**服务提供者（springcloud-provider-dept-hystrix-8001）的controller中的服务url地址，要和消费者的restTemplate.getForObject中的url一致；否则消费者无法调用“服务提供者”的服务。
+
+```java
+package com.zhangyun.springcloud.controller;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.zhangyun.springcloud.pojo.Dept;
+import com.zhangyun.springcloud.service.DeptService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.remoting.RemoteTimeoutException;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+//提供restful服务
+//@RestController使返回字符串不走视图解析器，直接以字符串形式输出在浏览器上
+@RestController
+public class DeptController {
+    @Autowired
+    private DeptService deptService;
+
+    //服务提供者的服务url地址，要和消费者的restTemplate.getForObject中的url一致。
+    @GetMapping("/dept/qbid/{id}")
+    //为controller1方法添加熔断保护机制。本方法失败了就会调用fallbackMethod指定的方法。
+    @HystrixCommand(fallbackMethod = "hystrixGet")
+    public Dept get(@PathVariable("id") long id){
+        Dept dept = deptService.queryById(id);
+
+        //捕获完异常后程序能正常执行，不影响原有代码。
+        if (dept==null){
+            throw new RemoteTimeoutException("id=>"+id+"，不存在该用户，或信息无法找到");
+        }
+
+        return dept;
+    }
+    //get的备选方案。这个方案更棒，对象能拿到，但是信息是记录了不存在。这个会在get失败时直接被调用，不需要写自己的url绑定
+    public Dept hystrixGet(@PathVariable("id") long id){
+        return new Dept()
+                .setDeptno(id).setDname("id=>"+id+"，没有对应的信息，null--@Hystrix")
+                .setDb_source("this database doesnot exist in Mysql");
+    }
+}
+
+```
+
+启动springcloud-eureka-7001，启动springcloud-provider-dept-hystrix-8001子module，启动springcloud-consumer-dept-80。访问`http://localhost/consumer/dept/getDeptById/3`，成功得到结果。
+
+![image-20211027123835231](springCloud.assets/image-20211027123835231.png)
+
+访问`http://localhost/consumer/dept/getDeptById/8`,由于数据库中没有这个dept（抛出异常，异常被hystrix捕捉），会启用@HystrixCommand定义的服务熔断时执行的服务，成功。
+
+- 一千个服务要写一千个备选熔断方法，听起来很麻烦，但是这就是业务要做的事。
+- 利用hystrix熔断，用户能看到错误信息的同时，不会影响其他服务的崩坏。不用hystrix的话，前端用户会直接看到错误码和一堆错误信息提示查不到dept，并且服务崩坏可能会影响其他服务。
+
+![image-20211027124103597](springCloud.assets/image-20211027124103597.png)
+
+
+
+### 服务降级
+
+#### 概念讲解
+
+什么是服务降级?：
+
+- 服务降级是指 当服务器压力剧增的情况下，根据实际业务情况及流量，对一些服务和页面有策略的不处理，或换种简单的方式处理，从而释放服务器资源以保证核心业务正常运作或高效运作。说白了，**就是尽可能的把系统资源让给优先级高的服务**。
+
+- 资源有限，而请求是无限的。如果在并发高峰期，不做服务降级处理，一方面肯定会影响整体服务的性能，严重的话可能会导致宕机某些重要的服务不可用。所以，一般在高峰期，为了保证核心功能服务的可用性，都要对某些服务降级处理。比如当双11活动时，把交易无关的服务统统降级，如查看蚂蚁深林，查看历史订单等等。
+
+- 服务降级主要用于什么场景呢？当整个微服务架构整体的负载超出了预设的上限阈值或即将到来的流量预计将会超过预设的阈值时，为了保证重要或基本的服务能正常运行，可以将一些 不重要 或 不紧急 的服务或任务进行服务的 延迟使用 或 暂停使用。
+
+- 降级的方式可以根据业务来，可以延迟服务，比如延迟给用户增加积分，只是放到一个缓存中，等服务平稳之后再执行 ；或者在粒度范围内关闭服务，比如关闭相关文章的推荐。
+
+
+
+服务降级图示：
+
+![](springCloud.assets/serviceLowerRank.png)
+
+由上图可得，当某一时间内服务A的访问量暴增，而B和C的访问量较少，为了缓解A服务的压力，这时候需要B和C暂时关闭一些服务功能，去承担A的部分服务，从而为A分担压力，叫做服务降级。
+
+
+
+服务降级需要考虑的问题：
+
+- 那些服务是核心服务，哪些服务是非核心服务
+
+- 那些服务可以支持降级，那些服务不能支持降级，降级策略是什么
+- 除服务降级之外是否存在更复杂的业务放通场景，策略是什么？
+
+
+
+自动降级分类：
+
+1）超时降级：主要配置好超时时间和超时重试次数和机制，并使用异步机制探测回复情况
+
+2）失败次数降级：主要是一些不稳定的api，当失败调用次数达到一定阀值自动降级，同样要使用异步机制探测回复情况
+
+3）故障降级：比如要调用的远程服务挂掉了（网络故障、DNS故障、http服务返回错误的状态码、rpc服务抛出异常），则可以直接降级。降级后的处理方案有：默认值（比如库存服务挂了，返回默认现货）、兜底数据（比如广告挂了，返回提前准备好的一些静态页面）、缓存（之前暂存的一些缓存数据）
+
+4）限流降级：秒杀或者抢购一些限购商品时，此时可能会因为访问量太大而导致系统崩溃，此时会使用限流来进行限制访问量，当达到限流阀值，后续请求会被降级；降级后的处理方案可以是：排队页面（将用户导流到排队页面等一会重试）、无货（直接告知用户没货了）、错误页（如活动太火爆了，稍后重试）。
+
+
+
+#### 实战
+
+springcloud-api子module新建类DeptClientServiceFallbackFactory.java去实现FallbackFactory(失败回调)接口
+
+```java
+package com.zhangyun.springcloud.service;
+
+import com.zhangyun.springcloud.pojo.Dept;
+import feign.hystrix.FallbackFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/*
+* DeptClientService()服务失败时通过create函数返回自定义的降级版的DeptClientService()
+*
+* 熔断和降级都写在api里确实容易让人误解，熔断是在服务提供者里用的，降级是在服务消费者里用的。
+* 比如或者说再讲个服务降级的例子，你去售楼处买房子你是VIP客户，他就分配一个高级客户经理给你介绍，一看是个老头又没钱了他就找个实习生来给你讲解。
+*
+* 熔断就是对微服务中的一个方法配置回调函数，降级是对整个微服务配置回调函数。
+* */
+//@Component把DeptClientServiceFallbackFactory装到容器中
+@Component
+public class DeptClientServiceFallbackFactory implements FallbackFactory {
+    @Override
+    public DeptClientService create(Throwable throwable) {
+        //使用了匿名内部类，因为接口不能返回，必须用匿名内部类实现接口的方法再返回。
+        return new DeptClientService() {
+            @Override
+            public boolean addDept(Dept dept) {
+                return false;
+            }
+
+            @Override
+            public Dept queryById(long id) {
+                return new Dept()
+                        .setDeptno(id)
+                        .setDname("id=>"+id+"没有对应的信息，客户端提供了降级的信息，这个服务现在已经被关闭")
+                        .setDb_source("没有数据");
+            }
+
+            @Override
+            public List<Dept> queryAll() {
+                return null;
+            }
+        };
+    }
+}
+```
+
+DeptClientService.java接口中绑定一下DeptClientServiceFallbackFactory.java
+
+```java
+@FeignClient(value="SPRINGCLOUD-PROVIDER-DEPT", fallbackFactory=DeptClientServiceFallbackFactory.class)
+```
+
+![image-20211028112206957](springCloud.assets/image-20211028112206957.png)
+
+在实现了Feign的服务消费者（springcloud-consumer-dept-feign）中，开启降级
+
+```yaml
+# 开启Feign
+feign:
+  hystrix:
+    enabled: true
+```
+
+![image-20211028112237079](springCloud.assets/image-20211028112237079.png)
+
+开始测试，启动EurekaServer7001，启动没在服务器端做hystrix熔断机制的8001服务提供者（springcloud-provider-dept-8001）（因为本例要测试hystrix降级，控制变量），开启实现feign的服务消费者（springcloud-consumer-dept-feign）（因为hystrix在feign包下，推荐借助feign实现负载均衡）
+
+- 再次降调：**熔断是在服务提供者里用的，降级是在服务消费者里用的**。
+  - 降级是主动的，手动开启降级
+
+使用springcloud-consumer-dept-feign（服务消费者）的controller中配置的url请求路径请求dept，即`http://localhost/fconsumer/dept/getDeptById/1`，能正常使用服务。
+
+![image-20211028113308975](springCloud.assets/image-20211028113308975.png)
+
+现在为了腾出服务器资源给别的更重要的服务，我们手动把springcloud-provider-dept-8001服务关闭。
+
+![image-20211028113536118](springCloud.assets/image-20211028113536118.png)
+
+再次访问`http://localhost/fconsumer/dept/getDeptById/3`, springcloud-provider-dept-8001服务关闭触发了hystrix降级；客户端调用springcloud-api的DeptClientService.java中的方法时，被转移为调用DeptClientServiceFallbackFactory.java中的方法（即服务降级）。客户端正常运行，且返回我们的预订信息！！！
+
+![image-20211028113716967](springCloud.assets/image-20211028113716967.png)
+
+
+
+#### 总结
+
+服务熔断：
+
+- 服务提供者
+- 某个服务超时或者异常，引发熔断（类似保险丝），直到服务恢复正常。
+
+
+
+服务降级：
+
+- 服务消费者
+- 从网站整体请求负载的角度考虑，当某个服务熔断或者关闭后，服务不在被调用，此时在客户端可以准备一个自己的FallbackFactory，这时候返回一个默认值（缺省值）。服务水平下降了，**但是好歹能用**，比直接挂掉好。
+  - 好处是整体的负载降低
+  - 坏处是整体的服务水平下降了
+
+
+
+服务降级：释放服务器资源的资源以保证核心业务的正常高效运行的措施
+
+
+
+### Dashboard流监控
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=16&spm_id_from=pageDriver
+
+https://www.kuangstudy.com/bbs/1374942542566551554
+
+#### 实战
+
+新建springcloud-consumer-hystrix-dashboard子module，dashboard是和服务消费者有关，和服务提供者无关。
+
+![image-20211028202921301](springCloud.assets/image-20211028202921301.png)
+
+springcloud-consumer-hystrix-dashboard子module是服务消费者（？存疑？），把springcloud-consumer-dept-80的dependencies拿来
+
+```xml
+<!--消费者不需要连数据库，只需要实体类子module+web。分工明确。-->
+<dependencies>
+    <!--Ribbon-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-ribbon</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+    <!--Eureka: Ribbon需要从Eureka服务中心获取要拿什么-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-eureka</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.zhangyun</groupId>
+        <artifactId>springcloud-api</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!--热部署工具-->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-devtools</artifactId>
+    </dependency>
+</dependencies>
+```
+
+springcloud-consumer-hystrix-dashboard子module同时添加hystrix的依赖。服务端相关用它（但是当前不是写客户端吗？还不懂这块）。没有就加上。
+
+```xml
+<!--hystrix依赖,artifact长相类似eureka-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-hystrix</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+springcloud-consumer-hystrix-dashboard子module再添加hystrix监控页面的依赖
+
+```xml
+<!--hystrix-dashboard依赖-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-hystrix-dashboard</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+springcloud-consumer-hystrix-dashboard子module再写一个简单的module配置
+
+```yaml
+# hystrix监控页面的端口
+server:
+  port: 9001
+```
+
+springcloud-consumer-hystrix-dashboard子module编写module启动类，整个公司的包名得一致，否则可能调不到服务。启动类中注意要开启hystrix监控注解。
+
+![image-20211028204031018](springCloud.assets/image-20211028204031018.png)
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.hystrix.dashboard.EnableHystrixDashboard;
+
+@SpringBootApplication
+//开启hystrix监控的注解
+@EnableHystrixDashboard
+public class DeptConsumerDashboard_9001 {
+    public static void main(String[] args) {
+        SpringApplication.run(DeptConsumerDashboard_9001.class,args);
+    }
+}
+```
+
+**确认服务提供者**springcloud-provider-dept-hystrix-8001有没有监控信息相关的依赖，比如如下。没有的话要添加。
+
+```xml
+<!--完善监控信息-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+![image-20211028213117316](springCloud.assets/image-20211028213117316.png)
+
+开始测试，尝试启动springcloud-consumer-hystrix-dashboard的启动类，可能会有一些报错，但是不是致命错误，可能是监控不到一些东西导致的。虽然有一些error但是成功启动了。
+
+![image-20211028204855733](springCloud.assets/image-20211028204855733.png)
+
+访问`http://localhost:9001/hystrix`，来到了豪猪的页面。
+
+![image-20211028204932086](springCloud.assets/image-20211028204932086.png)
+
+
+
+确认springcloud-provider-dept-hystrix-8001的pom中有hystrix依赖
+
+```xml
+<!--hystrix依赖,artifact长相类似eureka-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-hystrix</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+在服务提供者springcloud-provider-dept-hystrix-8001的启动类中添加bean。
+
+同时确认配置了hystrix熔断注解。
+
+- 一直显示ping也可能是因为服务提供者未配置熔断
+- 因为Dashboard是需要有进行了Hystrix处理的服务，所以应该在有Hystrix的服务提供者启动类中注入Bean
+
+```java
+package com.zhangyun.springcloud;
+
+import com.netflix.hystrix.contrib.metrics.eventstream.HystrixMetricsStreamServlet;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.context.annotation.Bean;
+
+/*Eureka是C-S架构，主启动类添加该注解后，在子module启动后会自动注册本module的服务到Eureka中
+*
+* 可能有人会问“提供服务不应该用server吗？怎么用client？”。答：服务的提供者和消费者在Eureka C-S架构中
+* 都属于客户端client，两client都需要与服务端server（Eureka-server）交互。
+* */
+@EnableEurekaClient
+//@SpringBootApplication注解让当前类编程子module的主启动类
+@SpringBootApplication
+//服务发现
+@EnableDiscoveryClient
+//启动类添加对hystrix熔断的支持
+@EnableCircuitBreaker
+public class DeptProviderHystrix_8001 {
+    public static void main(String[] args) {
+        //第一页参数为启动类的类名，第二个参数为main函数的输入参数args
+        SpringApplication.run(DeptProviderHystrix_8001.class,args);
+    }
+
+    //对hystrix-dashboard来说，下面的代码是死代码，为了配合监控使用。
+    //增加一个Servlet
+    @Bean
+    public ServletRegistrationBean a(){
+        ServletRegistrationBean registrationBean = new ServletRegistrationBean(new HystrixMetricsStreamServlet());
+        //像servlet一样添加访问路径。路径为http://localhost:9001/hystrix页面中，
+        // “Single Hystrix App: http://hystrix-app:port/actuator/hystrix.stream”字段的“/actuator/hystrix.stream”。
+        //访问这个页面就可以被监控了
+        registrationBean.addUrlMappings("/actuator/hystrix.stream");
+        return registrationBean;
+    }
+}
+
+```
+
+![image-20211028214019456](springCloud.assets/image-20211028214019456.png)
+
+重启EurekaServer7001，再重启hystrixdashboard9001（监控页面），再启动springcloud-provider-dept-hystrix-8001
+
+![image-20211028214234565](springCloud.assets/image-20211028214234565.png)
+
+先访问`http://localhost:8001/dept/qbid/1`，这是服务提供者springcloud-provider-dept-hystrix-8001的控制器的一个url处理函数的url，服务提供者启动成功。
+
+![image-20211028215228572](springCloud.assets/image-20211028215228572.png)
+
+访问`http://localhost:8001/actuator/hystrix.stream`,看流存不存在。
+
+- 服务端每发一个请求，此页面就会多一条数据，类似心跳包那种
+- 页面只有ping的，浏览器另起一个页面发一次get请求，内容就有了。
+  - 一直显示ping也可能是因为服务提供者未配置熔断，所以要使用springcloud-provider-dept-hystrix-8001而不是springcloud-provider-dept-8001作为服务提供者。
+
+![image-20211028214349430](springCloud.assets/image-20211028214349430.png)
+
+回到`http://localhost:9001/hystrix`,配置页面，点击“monitor system”
+
+![image-20211028211518703](springCloud.assets/image-20211028211518703.png)
+
+![image-20211028214954923](springCloud.assets/image-20211028214954923.png)
+
+现在不停刷新访问`http://localhost:8001/dept/qbid/1`（狂点至少30下）。再回到hystrix监控页面，看到圆圈变大了，心跳线陡然上升。
+
+![image-20211028215809016](springCloud.assets/image-20211028215809016.png)
+
+停止点击，并停留在页面上看，发现圆圈逐渐变小，心跳线逐渐下降。
+
+![image-20211028220136875](springCloud.assets/image-20211028220136875.png)
+
+读懂此图，就可以可视化监控很多很多的服务。比如页面中看到圈圈红色就要注意对应服务了。
+
+![image-20211028220803676](springCloud.assets/image-20211028220803676.png)
+
+
+
+## Zuul路由网关
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=17&spm_id_from=pageDriver
+
+https://www.kuangstudy.com/bbs/1374942542566551554
+
+### 前言
+
+zuul实体图：
+
+![image-20211029114836320](springCloud.assets/image-20211029114836320.png)
+
+所有请求要先经过zuul才能到达springcloud服务区。
+
+
+
+什么是zuul：
+
+- Zuul包含了对请求的**路由**(用来跳转的)和**过滤**两个最主要功能
+  - 最早的路由是在a链接中写，后面在controller中写，现在有zuul可以用zuul做一个总的路由配置。
+  - 比如没有**zuul总路由**的时候，我们链接要手动访问不同的域名和端口（http://localhost:8001/dept/qbid/1）（http://localhost:8002/dept/qall），但是像`localhost:port`是不该直接暴露出来的。我们应该实现的是点击页面后，页面url只展示`zhangyun.com/dept/qall`并实现请求，但是这个就需要zuul把请求分发到不同”域名“+”端口号“组合的微服务实例了。
+  - 而且，可以使用**zuul过滤**的功能，让用户不能通过`http://localhost:8002/dept/qall`直接访问内容，而只允许访问`zhangyun.com/dept/qall`经过zuul路由再访问内容。
+
+- 其中**路由功能负责将外部请求转发到具体的微服务实例上，是实现外部访问统一入口的基础**，而过**滤器功能则负责对请求的处理过程进行干预，是实现请求校验，服务聚合等功能的基础**。Zuul和Eureka进行整合，将Zuul自身注册为Eureka服务治理下的应用，同时从Eureka中获得其他服务的消息，也即以后的访问微服务都是通过Zuul跳转后获得。
+
+
+
+注意：
+
+- zuul服务最终还是会注册进Eureka。不注册的话无法发现其他的服务，也就无法路由。
+- zuul提供 代理+路由+过滤 三大功能。
+- [zuul的官网](https://github.com/Netflix/zuul/)
+
+
+
+### 实战
+
+新建springcloud-zuul-9527子module，为总路由。
+
+![image-20211029121235334](springCloud.assets/image-20211029121235334.png)
+
+![image-20211029121321019](springCloud.assets/image-20211029121321019.png)
+
+导入依赖
+
+- zuul和Eureka是核心依赖
+
+先把springcloud-consumer-hystrix-dashboard的依赖拿来，其中包含了Eureka依赖。
+
+```xml
+<dependencies>
+
+    <!--hystrix依赖,artifact长相类似eureka-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-hystrix</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+    <!--hystrix-dashboard依赖-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-hystrix-dashboard</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+    <!--Ribbon-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-ribbon</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+    <!--Eureka: Ribbon需要从Eureka服务中心获取要拿什么-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-eureka</artifactId>
+        <version>1.4.6.RELEASE</version>
+    </dependency>
+
+    <dependency>
+        <groupId>com.zhangyun</groupId>
+        <artifactId>springcloud-api</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!--热部署工具-->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-devtools</artifactId>
+    </dependency>
+</dependencies>
+```
+
+加上zuul自己的依赖
+
+```xml
+<!--zuul依赖,artifact长相类似eureka-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-zuul</artifactId>
+    <version>1.4.6.RELEASE</version>
+</dependency>
+```
+
+新建子module的配置文件
+
+```yaml
+# 配置项目（本微服务）端口号
+server:
+  port: 9527
+# 配置微服务在Eureka中的applicationname，一个applicationname会对应多个instanceid
+spring:
+  application:
+    name: springcloud-zuul
+# 配置本微服务往哪些EurekaServer去注册
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+  # 配置本微服务的instanceid，以和其他有相同applicationname的微服务相区别
+  instance:
+    instance-id: zuul9527.com
+    # 隐藏Eureka监控界面左下角的，每个instance的ip地址
+    prefer-ip-address: true
+# 配置Eurekainfo信息，就是本微服务提供者想让别人直到什么信息就在这写
+info:
+  app.name: zhangyun-springcloud
+  company.name: github.zhangyun.com
+  
+```
+
+在hosts文件`C:\Windows\System32\drivers\etc`添加springcloud-zull-9527的域名ip映射
+
+- 注：localhost等于127.0.0.1，所以访问`zhangyun.com`就等价于访问`localhost`了.
+
+- 注意，出于一种未知的原因，host中写`127.0.0.1   www.zhangyun.com`会导致`www.zhangyun.com`无法和127.0.0.1绑定，域名必须写成不带`www`的`zhangyun.com`.
+
+  **下图为错误范例**
+
+  ![image-20211029124008208](springCloud.assets/image-20211029124008208.png)
+
+**下图为正确范例**
+
+![image-20211029131848054](springCloud.assets/image-20211029131848054.png)
+
+编写主启动类，并开启Zuul`@EnableZuulProxy`
+
+![image-20211029124804464](springCloud.assets/image-20211029124804464.png)
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+import org.springframework.cloud.netflix.zuul.EnableZuulServer;
+
+@SpringBootApplication
+//和zuul有关的有@EnableZuulServer和@EnableZuulProxy，一般用@EnableZuulProxy，因为虽然当前微服务本质上是服务，但是功能上是代理。
+@EnableZuulProxy
+public class ZuulApplication_9527 {
+    public static void main(String[] args) {
+        SpringApplication.run(ZuulApplication_9527.class, args);
+    }
+}
+```
+
+开始测试，启动EurekaServer7001，再启动springcloud-provider-dept-hystrix-8001（带熔断机制的服务提供者），再启动springcloud-zull-9527
+
+![image-20211029125518158](springCloud.assets/image-20211029125518158.png)
+
+先访问`http://eureka7001.com:7001/`,看到两个微服务都注册进来了
+
+![image-20211029125632632](springCloud.assets/image-20211029125632632.png)
+
+使用一下服务提供者提供的功能`http://localhost:8001/dept/qbid/1`,服务能正常使用。
+
+![image-20211029125920401](springCloud.assets/image-20211029125920401.png)
+
+使用zuul网关`http://zhangyun.com:9527/springcloud-provider-dept/dept/qbid/1`来间接调用服务，成功。
+
+- 服务名注意大小写要和服务提供者在自己的application.yaml中注册的一致
+
+![image-20211029132338783](springCloud.assets/image-20211029132338783.png)
+
+此时目标微服务的applicationname被暴露出来了，我们要做一下隐藏或换成其他的名字，这个只要在zuul的application.yaml中添加一下配置即可。
+
+```yaml
+# 加上路由网关的配置
+zuul:
+  routes:
+    # 点击routes进去看到setRoutes(Map<String, ZuulProperties.ZuulRoute> routes)，所以可以随意定义kv键值对
+    mydept.serviceId: springcloud-provider-dept
+    # 把applicationname（Eureka中注册的）替换为下面的链接，来访问服务。从而实现隐藏applicationname的目的。
+    mydept.path: /mydept/**
+  # url不能用原路径即含applicationname的会泄露信息的路径访问服务，只能用zuul中新配置的mydept.path指定路径访问了。可以用通配符"*"阻拦所有原有路径。
+  ignored-services: springcloud-provider-dept
+  # 设置位于mydept.path位置前面的，可缺省的，公共的前缀。用得上的时候可以加。
+  #prefix: /zhangyun
+```
+
+![image-20211029172343630](springCloud.assets/image-20211029172343630.png)
+
+重启springcloud-zull-9527，使用更新zuul配置后的链接`http://zhangyun.com:9527/mydept/dept/qbid/1`访问，成功。
+
+![image-20211029170231124](springCloud.assets/image-20211029170231124.png)
+
+并且此时我们不能通过原来的链接`http://zhangyun.com:9527/springcloud-provider-dept/dept/qbid/1`来访问服务了。
+
+![image-20211029171430357](springCloud.assets/image-20211029171430357.png)
+
+## Spring Cloud Config 分布式配置
+
+### 前言
+
+分布式系统面临的–配置文件问题：
+
+- 微服务意味着要将单体应用中的业务拆分成一个个子服务，每个服务的粒度相对较小，因此系统中会出现大量的服务，由于每个服务都需要必要的配置信息才能运行，所以一套集中式的，动态的配置管理设施是必不可少的。spring cloud提供了configServer来解决这个问题，我们每一个微服务自己带着一个application.yml，那上百个的配置文件修改起来，令人头疼！
+
+
+
+什么是SpringCloud config分布式配置中心？：
+
+- 配置可以放在本地（local git repository），也可以放在远程（remote git repository）
+
+![image-20211029173127562](springCloud.assets/image-20211029173127562.png)
+
+
+
+Spring Cloud Config不属于netflix，netflix那一套已经完毕了。spring cloud config 为微服务架构中的微服务提供集中化的外部支持，配置服务器为各个不同微服务应用的所有环节提供了一个**中心化的外部配置**。
+
+spring cloud config 分为**服务端**和**客户端**两部分：
+
+- 服务端也称为 **分布式配置中心**，它是一个独立的微服务应用，用来连接配置服务器并为客户端提供获取配置信息，加密，解密信息等访问接口。
+
+- 客户端则是**通过指定的配置中心来管理应用资源，以及与业务相关的配置内容，并在启动的时候从配置中心获取和加载配置信息**。配置服务器默认采用git来存储配置信息，这样就有助于对环境配置进行版本管理。并且可用通过git客户端工具来方便的管理和访问配置内容。
+
+
+
+spring cloud config 分布式配置中心能干嘛？：
+
+- 集中式管理配置文件
+- 不同环境，不同配置，动态化的配置更新，分环境部署，比如 /dev /test /prod /beta /release
+- 运行期间动态调整配置，不再需要在每个服务部署的机器上编写配置文件，服务会向配置中心统一拉取配置自己的信息
+- 当配置发生变动时，服务不需要重启，即可感知到配置的变化，并应用新的配置
+- 将配置信息以REST接口的形式暴露
+
+
+
+spring cloud config 分布式配置中心与GitHub整合：
+
+- 由于spring cloud config 默认使用git来存储配置文件 (也有其他方式，比如自持SVN 和本地文件)，但是最推荐的还是git ，而且使用的是 http / https 访问的形式。
+
+
+
+### git环境搭建实战
+
+clone的时候选ssh可能会要求配置私钥公钥很麻烦，建议用https的链接克隆仓库。
+
+github或者gitee上新建git仓库
+
+![image-20211029180411180](springCloud.assets/image-20211029180411180.png)
+
+![image-20211029180321090](springCloud.assets/image-20211029180321090.png)
+
+![image-20211029180344898](springCloud.assets/image-20211029180344898.png)
+
+下载git（过程不在这写），下载成功后，在电脑任意区域点击右键可以看到如下两个选项。
+
+- GUI是图形化界面
+- Bash是命令行界面，一般用这个
+
+![image-20211029180840342](springCloud.assets/image-20211029180840342.png)
+
+来到我们想要存放git仓库本地分库的位置，点击右键
+
+![image-20211029181103063](springCloud.assets/image-20211029181103063.png)
+
+![image-20211029181138848](springCloud.assets/image-20211029181138848.png)
+
+进入github的远程仓库，按下图所示复制git仓库的https格式的链接
+
+![image-20211029181313448](springCloud.assets/image-20211029181313448.png)
+
+回到本地仓库的git命令页面，输入`git clone`+`复制的远程git仓库地址`
+
+![image-20211029181518454](springCloud.assets/image-20211029181518454.png)
+
+![image-20211029181751256](springCloud.assets/image-20211029181751256.png)
+
+进入本地的git仓库，新建application.yaml，并添加配置内容且保存。
+
+![image-20211029182001125](springCloud.assets/image-20211029182001125.png)
+
+```yaml
+spring:
+    profiles:
+        active: dev
+---
+spring:
+    profiles: dev
+    application: 
+        name: springcloud-config-dev
+---
+spring:
+    profiles: test
+    application: 
+        name: springcloud-config-test
+```
+
+在本地仓库内，即包含.git文件夹的位置,右键打开gitbash
+
+![image-20211029182504325](springCloud.assets/image-20211029182504325.png)
+
+输入`$ git add .`,把所有变更添加到缓存区
+
+![image-20211029182624886](springCloud.assets/image-20211029182624886.png)
+
+用`$ git status`,查看缓存区有哪些文件
+
+![image-20211029182734741](springCloud.assets/image-20211029182734741.png)
+
+用`$ git commit -m "zhang first commit"`,把缓冲区的内容提交到本地仓库变更
+
+![image-20211029183016904](springCloud.assets/image-20211029183016904.png)
+
+用`$ git push origin`,把本地变更提交到远程git仓库
+
+![image-20211029183717479](springCloud.assets/image-20211029183717479.png)
+
+刷新远程仓库页面，成功看到提交的配置文件
+
+![image-20211029183853408](springCloud.assets/image-20211029183853408.png)
+
+至此，springcloud config的远程git仓库搭建成功
+
+
+
+### 服务端连接git配置
+
+springcloud config一般是C-S（client-server）架构，所以要写两个module。
+
+
+
+重新强调，springboot新增功能的步骤：
+
+1. 导入依赖
+2. 编写配置
+3. @EnableXXX启动
+4. 。。
+
+#### 实战
+
+新建springcloud-config-server-3344子module来连接远程git仓库
+
+![image-20211029202310646](springCloud.assets/image-20211029202310646.png)
+
+![image-20211029202359206](springCloud.assets/image-20211029202359206.png)
+
+添加依赖
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud</artifactId>
+        <groupId>com.zhangyun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>springcloud-config-server-3344</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+    <dependencies>
+        <!--springcould-config的server的配置
+        我用2.1.1.RELEASE的版本会导入失败，改成当前版本可以成功导入-->
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-config-server -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-config-server</artifactId>
+            <version>2.1.2.RELEASE</version>
+        </dependency>
+
+        <!--要有web依赖，module才能启动起来-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--eureka注册服务与发现-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-eureka</artifactId>
+            <version>1.4.6.RELEASE</version>
+        </dependency>
+    </dependencies>
+
+</project>
+```
+
+编写配置，新增springcloud-config-server-3344的配置文件applicaiton.yml
+
+```yaml
+server:
+  port: 3344
+spring:
+  application:
+    name: springcloud-config-server
+  # 连接远程仓库,具体有哪些属性可以配置可以在springcloud的官网上看。通过config-server可以连接到git，访问其中的资源和配置。
+  cloud:
+    config:
+      server:
+        git:
+          # uri选github上https的克隆链接
+          uri: https://github.com/yunkai-zhang/spring-cloud-config.git
+          skip-ssl-validation: true
+          username: 用户名
+          password: 密码
+        # 一定要加这个，不然会报错“fatal: unable to access Failed to connect to github.com port 443 after 21040 ms: Timed out”
+        default-label: main
+# 不加这个配置会报Cannot execute request on any known server 这个错：连接Eureka服务端地址不对
+# 或者直接注释掉eureka依赖 这里暂时用不到eureka
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+```
+
+编写主启动类Config_Server_3344.java。并用注解开启springcloud-config。
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.config.server.EnableConfigServer;
+
+@SpringBootApplication
+//开启springcloud-config的server的服务
+@EnableConfigServer
+public class Config_Server_3344 {
+    public static void main(String[] args) {
+        SpringApplication.run(Config_Server_3344.class,args);
+    }
+}
+```
+
+启动主启动类，访问`http://localhost:3344/`,成功展示了期待的404错误页面，说明服务成功启动。
+
+![image-20211029205337857](springCloud.assets/image-20211029205337857.png)
+
+**HTTP服务具有以下格式的资源**:
+
+```
+/{application}/{profile}[/{label}]
+/{application}-{profile}.yml
+/{label}/{application}-{profile}.yml
+/{application}-{profile}.properties
+/{label}/{application}-{profile}.properties
+```
+
+- application：写死（因为一般配置文件名就位application.yaml）。profile：文件子分区的名字。label：分支(如master分支)。
+- 可以用下面的url格式从远程仓库读配置文件
+- 不同的url格式返回的结果的格式可能略有差异，比如`/{application}/{profile}[/{label}]`方式得到json；`/{application}-{profile}.yml`方式得到纯文本。
+- 本实战用的是`/{application}-{profile}.yml`方式访问。
+
+
+
+试着访问`http://localhost:3344/application-dev.yaml`,看能否读到github上存的配置文件,失败了。猜测是因为我把github的spring-cloud-config仓库**设为了私有**。
+
+- 建议设置为公有，否则可能会报错
+
+![image-20211029205909403](springCloud.assets/image-20211029205909403.png)
+
+把spring-cloud-config仓库设为公有
+
+![image-20211029210027751](springCloud.assets/image-20211029210027751.png)
+
+![image-20211029210108062](springCloud.assets/image-20211029210108062.png)
+
+![image-20211029210134422](springCloud.assets/image-20211029210134422.png)
+
+
+
+结合报错，和网上一些解决方案后，总结以下修改注意点：
+
+- yaml中要有username和password
+- yaml中要有skip-ssl-validation: true
+- yaml中要有default-label: main
+- github的config库设置为public
+- spring-cloud-config-server的依赖选择2.1.1.RELEASE或者2.1.2.RELEASE。不要小于2.1.1.RELEASE。
+
+做到以上几点（修改application.yaml）后，**访问成功了一次**。控制台命令打印，和访问成果截图如下：
+
+```
+"C:\Program Files\Java\jdk1.8.0_301\bin\java.exe" -XX:TieredStopAtLevel=1 -noverify -Dspring.output.ansi.enabled=always "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\lib\idea_rt.jar=1594:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\bin" -Dcom.sun.management.jmxremote -Dspring.jmx.enabled=true -Dspring.liveBeansView.mbeanDomain -Dspring.application.admin.enabled=true -Dfile.encoding=UTF-8 -classpath "C:\Program Files\Java\jdk1.8.0_301\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\deploy.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\access-bridge-64.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\cldrdata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\dnsns.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jaccess.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jfxrt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\localedata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\nashorn.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunec.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunjce_provider.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunmscapi.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunpkcs11.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\zipfs.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\javaws.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfxswt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\management-agent.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\plugin.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\rt.jar;D:\CodeProjects\GitHub\BUPT\small_projects_when_learning_java_backend\springcloud\springcloud-config-server-3344\target\classes;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-server\2.1.2.RELEASE\spring-cloud-config-server-2.1.2.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-client\2.1.1.RELEASE\spring-cloud-config-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\2.1.4.RELEASE\spring-boot-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-commons\2.1.1.RELEASE\spring-cloud-commons-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-context\2.1.1.RELEASE\spring-cloud-context-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.9.0\jackson-annotations-2.9.0.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.9.8\jackson-databind-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.9.8\jackson-core-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\2.1.4.RELEASE\spring-boot-starter-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\2.1.4.RELEASE\spring-boot-actuator-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator\2.1.4.RELEASE\spring-boot-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\io\micrometer\micrometer-core\1.1.4\micrometer-core-1.1.4.jar;C:\Users\15831\.m2\repository\org\hdrhistogram\HdrHistogram\2.1.9\HdrHistogram-2.1.9.jar;C:\Users\15831\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-crypto\5.1.5.RELEASE\spring-security-crypto-5.1.5.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-rsa\1.0.7.RELEASE\spring-security-rsa-1.0.7.RELEASE.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcpkix-jdk15on\1.60\bcpkix-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcprov-jdk15on\1.60\bcprov-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit\5.1.3.201810200350-r\org.eclipse.jgit-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\com\jcraft\jsch\0.1.54\jsch-0.1.54.jar;C:\Users\15831\.m2\repository\com\jcraft\jzlib\1.1.1\jzlib-1.1.1.jar;C:\Users\15831\.m2\repository\com\googlecode\javaewah\JavaEWAH\1.1.6\JavaEWAH-1.1.6.jar;C:\Users\15831\.m2\repository\org\slf4j\slf4j-api\1.7.26\slf4j-api-1.7.26.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit.http.apache\5.1.3.201810200350-r\org.eclipse.jgit.http.apache-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpclient\4.5.8\httpclient-4.5.8.jar;C:\Users\15831\.m2\repository\commons-codec\commons-codec\1.11\commons-codec-1.11.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpcore\4.4.11\httpcore-4.4.11.jar;C:\Users\15831\.m2\repository\org\yaml\snakeyaml\1.23\snakeyaml-1.23.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-web\2.1.4.RELEASE\spring-boot-starter-web-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter\2.1.4.RELEASE\spring-boot-starter-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot\2.1.4.RELEASE\spring-boot-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-logging\2.1.4.RELEASE\spring-boot-starter-logging-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.11.2\log4j-to-slf4j-2.11.2.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-api\2.11.2\log4j-api-2.11.2.jar;C:\Users\15831\.m2\repository\org\slf4j\jul-to-slf4j\1.7.26\jul-to-slf4j-1.7.26.jar;C:\Users\15831\.m2\repository\javax\annotation\javax.annotation-api\1.3.2\javax.annotation-api-1.3.2.jar;C:\Users\15831\.m2\repository\org\springframework\spring-core\5.1.6.RELEASE\spring-core-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-jcl\5.1.6.RELEASE\spring-jcl-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-json\2.1.4.RELEASE\spring-boot-starter-json-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.9.8\jackson-datatype-jdk8-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.9.8\jackson-datatype-jsr310-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.9.8\jackson-module-parameter-names-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\2.1.4.RELEASE\spring-boot-starter-tomcat-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\9.0.17\tomcat-embed-core-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\9.0.17\tomcat-embed-el-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\9.0.17\tomcat-embed-websocket-9.0.17.jar;C:\Users\15831\.m2\repository\org\hibernate\validator\hibernate-validator\6.0.16.Final\hibernate-validator-6.0.16.Final.jar;C:\Users\15831\.m2\repository\javax\validation\validation-api\2.0.1.Final\validation-api-2.0.1.Final.jar;C:\Users\15831\.m2\repository\org\jboss\logging\jboss-logging\3.3.2.Final\jboss-logging-3.3.2.Final.jar;C:\Users\15831\.m2\repository\com\fasterxml\classmate\1.4.0\classmate-1.4.0.jar;C:\Users\15831\.m2\repository\org\springframework\spring-web\5.1.6.RELEASE\spring-web-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-beans\5.1.6.RELEASE\spring-beans-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-webmvc\5.1.6.RELEASE\spring-webmvc-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-aop\5.1.6.RELEASE\spring-aop-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-context\5.1.6.RELEASE\spring-context-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-expression\5.1.6.RELEASE\spring-expression-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-eureka\1.4.6.RELEASE\spring-cloud-starter-eureka-1.4.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-starter-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter\2.1.1.RELEASE\spring-cloud-starter-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-hystrix\2.1.1.RELEASE\spring-cloud-netflix-hystrix-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-aop\2.1.4.RELEASE\spring-boot-starter-aop-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\aspectj\aspectjweaver\1.9.2\aspectjweaver-1.9.2.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-client\1.9.8\eureka-client-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\jettison\jettison\1.3.7\jettison-1.3.7.jar;C:\Users\15831\.m2\repository\stax\stax-api\1.0.1\stax-api-1.0.1.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-eventbus\0.3.0\netflix-eventbus-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-infix\0.3.0\netflix-infix-0.3.0.jar;C:\Users\15831\.m2\repository\commons-jxpath\commons-jxpath\1.3\commons-jxpath-1.3.jar;C:\Users\15831\.m2\repository\joda-time\joda-time\2.10.1\joda-time-2.10.1.jar;C:\Users\15831\.m2\repository\org\antlr\antlr-runtime\3.4\antlr-runtime-3.4.jar;C:\Users\15831\.m2\repository\org\antlr\stringtemplate\3.2.1\stringtemplate-3.2.1.jar;C:\Users\15831\.m2\repository\antlr\antlr\2.7.7\antlr-2.7.7.jar;C:\Users\15831\.m2\repository\com\google\code\gson\gson\2.8.5\gson-2.8.5.jar;C:\Users\15831\.m2\repository\org\apache\commons\commons-math\2.2\commons-math-2.2.jar;C:\Users\15831\.m2\repository\com\netflix\archaius\archaius-core\0.7.6\archaius-core-0.7.6.jar;C:\Users\15831\.m2\repository\com\google\guava\guava\16.0\guava-16.0.jar;C:\Users\15831\.m2\repository\javax\ws\rs\jsr311-api\1.1.1\jsr311-api-1.1.1.jar;C:\Users\15831\.m2\repository\com\netflix\servo\servo-core\0.12.21\servo-core-0.12.21.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-core\1.19.1\jersey-core-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-client\1.19.1\jersey-client-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\contribs\jersey-apache-client4\1.19.1\jersey-apache-client4-1.19.1.jar;C:\Users\15831\.m2\repository\com\google\inject\guice\4.1.0\guice-4.1.0.jar;C:\Users\15831\.m2\repository\javax\inject\javax.inject\1\javax.inject-1.jar;C:\Users\15831\.m2\repository\aopalliance\aopalliance\1.0\aopalliance-1.0.jar;C:\Users\15831\.m2\repository\com\github\vlsi\compactmap\compactmap\1.2.1\compactmap-1.2.1.jar;C:\Users\15831\.m2\repository\com\github\andrewoma\dexx\dexx-collections\0.2\dexx-collections-0.2.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-core\1.9.8\eureka-core-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\woodstox-core-asl\4.4.1\woodstox-core-asl-4.4.1.jar;C:\Users\15831\.m2\repository\javax\xml\stream\stax-api\1.0-2\stax-api-1.0-2.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\stax2-api\3.1.4\stax2-api-3.1.4.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-archaius\2.1.1.RELEASE\spring-cloud-starter-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-ribbon\2.1.1.RELEASE\spring-cloud-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-archaius\2.1.1.RELEASE\spring-cloud-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\commons-configuration\commons-configuration\1.8\commons-configuration-1.8.jar;C:\Users\15831\.m2\repository\commons-lang\commons-lang\2.6\commons-lang-2.6.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-ribbon\2.1.1.RELEASE\spring-cloud-starter-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon\2.3.0\ribbon-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-transport\2.3.0\ribbon-transport-2.3.0.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-contexts\0.4.9\rxnetty-contexts-0.4.9.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-servo\0.4.9\rxnetty-servo-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\hystrix\hystrix-core\1.5.18\hystrix-core-1.5.18.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty\0.4.9\rxnetty-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-core\2.3.0\ribbon-core-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-httpclient\2.3.0\ribbon-httpclient-2.3.0.jar;C:\Users\15831\.m2\repository\commons-collections\commons-collections\3.2.2\commons-collections-3.2.2.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-commons-util\0.3.0\netflix-commons-util-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-loadbalancer\2.3.0\ribbon-loadbalancer-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-statistics\0.1.1\netflix-statistics-0.1.1.jar;C:\Users\15831\.m2\repository\io\reactivex\rxjava\1.2.0\rxjava-1.2.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-eureka\2.3.0\ribbon-eureka-2.3.0.jar;C:\Users\15831\.m2\repository\com\thoughtworks\xstream\xstream\1.4.10\xstream-1.4.10.jar;C:\Users\15831\.m2\repository\xmlpull\xmlpull\1.1.3.1\xmlpull-1.1.3.1.jar;C:\Users\15831\.m2\repository\xpp3\xpp3_min\1.1.4c\xpp3_min-1.1.4c.jar" com.zhangyun.springcloud.Config_Server_3344
+2021-10-29 22:56:41.496  INFO 81188 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$a4218ca6] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.4.RELEASE)
+
+2021-10-29 22:56:41.827  INFO 81188 --- [           main] c.z.springcloud.Config_Server_3344       : No active profile set, falling back to default profiles: default
+2021-10-29 22:56:42.235  WARN 81188 --- [           main] o.s.boot.actuate.endpoint.EndpointId     : Endpoint ID 'service-registry' contains invalid characters, please migrate to a valid format.
+2021-10-29 22:56:42.338  INFO 81188 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=c38e9048-5605-3f94-bcc5-9434d19adac7
+2021-10-29 22:56:42.391  INFO 81188 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$a4218ca6] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2021-10-29 22:56:42.554  INFO 81188 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 3344 (http)
+2021-10-29 22:56:42.568  INFO 81188 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2021-10-29 22:56:42.568  INFO 81188 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.17]
+2021-10-29 22:56:42.689  INFO 81188 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2021-10-29 22:56:42.689  INFO 81188 --- [           main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 855 ms
+2021-10-29 22:56:42.774  WARN 81188 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 22:56:42.775  INFO 81188 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 22:56:42.781  INFO 81188 --- [           main] c.netflix.config.DynamicPropertyFactory  : DynamicPropertyFactory is initialized with configuration sources: com.netflix.config.ConcurrentCompositeConfiguration@38d17d80
+2021-10-29 22:56:43.630  WARN 81188 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 22:56:43.630  INFO 81188 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 22:56:43.714  INFO 81188 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-10-29 22:56:44.188  WARN 81188 --- [           main] arterDeprecationWarningAutoConfiguration : spring-cloud-starter-eureka is deprecated as of Spring Cloud Netflix 1.4.0, please migrate to spring-cloud-starter-netflix-eureka
+2021-10-29 22:56:44.192  INFO 81188 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2021-10-29 22:56:44.244  INFO 81188 --- [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2021-10-29 22:56:44.265  INFO 81188 --- [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2021-10-29 22:56:44.265  INFO 81188 --- [           main] com.netflix.discovery.DiscoveryClient    : Client configured to neither register nor query for data.
+2021-10-29 22:56:44.269  INFO 81188 --- [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1635519404269 with initial instances count: 0
+2021-10-29 22:56:44.273  INFO 81188 --- [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application SPRINGCLOUD-CONFIG-SERVER with eureka with status UP
+2021-10-29 22:56:44.296  INFO 81188 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 3344 (http) with context path ''
+2021-10-29 22:56:44.297  INFO 81188 --- [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 3344
+2021-10-29 22:56:44.298  INFO 81188 --- [           main] c.z.springcloud.Config_Server_3344       : Started Config_Server_3344 in 3.444 seconds (JVM running for 4.217)
+2021-10-29 22:56:44.729  INFO 81188 --- [-10.128.209.125] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2021-10-29 22:56:44.730  INFO 81188 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2021-10-29 22:56:44.734  INFO 81188 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
+2021-10-29 22:56:53.775  WARN 81188 --- [-10.128.209.125] .c.s.e.MultipleJGitEnvironmentRepository : Could not fetch remote for main remote: https://github.com/yunkai-zhang/spring-cloud-config.git
+2021-10-29 22:56:54.080  INFO 81188 --- [-10.128.209.125] o.s.c.c.s.e.NativeEnvironmentRepository  : Adding property source: file:/C:/Users/15831/AppData/Local/Temp/config-repo-1796823391819157826/application.yaml (document #0)
+2021-10-29 22:57:09.790  WARN 81188 --- [nio-3344-exec-1] .c.s.e.MultipleJGitEnvironmentRepository : Could not fetch remote for main remote: https://github.com/yunkai-zhang/spring-cloud-config.git
+2021-10-29 22:57:10.063  INFO 81188 --- [nio-3344-exec-1] o.s.c.c.s.e.NativeEnvironmentRepository  : Adding property source: file:/C:/Users/15831/AppData/Local/Temp/config-repo-1796823391819157826/application.yaml (document #1)
+2021-10-29 22:57:10.064  INFO 81188 --- [nio-3344-exec-1] o.s.c.c.s.e.NativeEnvironmentRepository  : Adding property source: file:/C:/Users/15831/AppData/Local/Temp/config-repo-1796823391819157826/application.yaml (document #0)
+```
+
+![image-20211029225933408](springCloud.assets/image-20211029225933408.png)
+
+![image-20211029230013187](springCloud.assets/image-20211029230013187.png)
+
+
+
+但是重启springcloud-config-server-3344后访问又失败了。**猜测和国内github连接不稳定有关**，同时有其他同学说github库不行，**只能用码云的库**。控制台的主要报错和全部打印分别如下：
+
+```
+org.eclipse.jgit.api.errors.TransportException: https://github.com/yunkai-zhang/spring-cloud-config.git: cannot open git-upload-pack
+```
+
+```
+"C:\Program Files\Java\jdk1.8.0_301\bin\java.exe" -XX:TieredStopAtLevel=1 -noverify -Dspring.output.ansi.enabled=always "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\lib\idea_rt.jar=11088:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\bin" -Dcom.sun.management.jmxremote -Dspring.jmx.enabled=true -Dspring.liveBeansView.mbeanDomain -Dspring.application.admin.enabled=true -Dfile.encoding=UTF-8 -classpath "C:\Program Files\Java\jdk1.8.0_301\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\deploy.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\access-bridge-64.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\cldrdata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\dnsns.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jaccess.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jfxrt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\localedata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\nashorn.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunec.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunjce_provider.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunmscapi.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunpkcs11.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\zipfs.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\javaws.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfxswt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\management-agent.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\plugin.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\rt.jar;D:\CodeProjects\GitHub\BUPT\small_projects_when_learning_java_backend\springcloud\springcloud-config-server-3344\target\classes;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-server\2.1.2.RELEASE\spring-cloud-config-server-2.1.2.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-client\2.1.1.RELEASE\spring-cloud-config-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\2.1.4.RELEASE\spring-boot-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-commons\2.1.1.RELEASE\spring-cloud-commons-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-context\2.1.1.RELEASE\spring-cloud-context-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.9.0\jackson-annotations-2.9.0.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.9.8\jackson-databind-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.9.8\jackson-core-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\2.1.4.RELEASE\spring-boot-starter-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\2.1.4.RELEASE\spring-boot-actuator-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator\2.1.4.RELEASE\spring-boot-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\io\micrometer\micrometer-core\1.1.4\micrometer-core-1.1.4.jar;C:\Users\15831\.m2\repository\org\hdrhistogram\HdrHistogram\2.1.9\HdrHistogram-2.1.9.jar;C:\Users\15831\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-crypto\5.1.5.RELEASE\spring-security-crypto-5.1.5.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-rsa\1.0.7.RELEASE\spring-security-rsa-1.0.7.RELEASE.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcpkix-jdk15on\1.60\bcpkix-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcprov-jdk15on\1.60\bcprov-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit\5.1.3.201810200350-r\org.eclipse.jgit-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\com\jcraft\jsch\0.1.54\jsch-0.1.54.jar;C:\Users\15831\.m2\repository\com\jcraft\jzlib\1.1.1\jzlib-1.1.1.jar;C:\Users\15831\.m2\repository\com\googlecode\javaewah\JavaEWAH\1.1.6\JavaEWAH-1.1.6.jar;C:\Users\15831\.m2\repository\org\slf4j\slf4j-api\1.7.26\slf4j-api-1.7.26.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit.http.apache\5.1.3.201810200350-r\org.eclipse.jgit.http.apache-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpclient\4.5.8\httpclient-4.5.8.jar;C:\Users\15831\.m2\repository\commons-codec\commons-codec\1.11\commons-codec-1.11.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpcore\4.4.11\httpcore-4.4.11.jar;C:\Users\15831\.m2\repository\org\yaml\snakeyaml\1.23\snakeyaml-1.23.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-web\2.1.4.RELEASE\spring-boot-starter-web-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter\2.1.4.RELEASE\spring-boot-starter-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot\2.1.4.RELEASE\spring-boot-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-logging\2.1.4.RELEASE\spring-boot-starter-logging-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.11.2\log4j-to-slf4j-2.11.2.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-api\2.11.2\log4j-api-2.11.2.jar;C:\Users\15831\.m2\repository\org\slf4j\jul-to-slf4j\1.7.26\jul-to-slf4j-1.7.26.jar;C:\Users\15831\.m2\repository\javax\annotation\javax.annotation-api\1.3.2\javax.annotation-api-1.3.2.jar;C:\Users\15831\.m2\repository\org\springframework\spring-core\5.1.6.RELEASE\spring-core-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-jcl\5.1.6.RELEASE\spring-jcl-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-json\2.1.4.RELEASE\spring-boot-starter-json-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.9.8\jackson-datatype-jdk8-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.9.8\jackson-datatype-jsr310-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.9.8\jackson-module-parameter-names-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\2.1.4.RELEASE\spring-boot-starter-tomcat-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\9.0.17\tomcat-embed-core-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\9.0.17\tomcat-embed-el-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\9.0.17\tomcat-embed-websocket-9.0.17.jar;C:\Users\15831\.m2\repository\org\hibernate\validator\hibernate-validator\6.0.16.Final\hibernate-validator-6.0.16.Final.jar;C:\Users\15831\.m2\repository\javax\validation\validation-api\2.0.1.Final\validation-api-2.0.1.Final.jar;C:\Users\15831\.m2\repository\org\jboss\logging\jboss-logging\3.3.2.Final\jboss-logging-3.3.2.Final.jar;C:\Users\15831\.m2\repository\com\fasterxml\classmate\1.4.0\classmate-1.4.0.jar;C:\Users\15831\.m2\repository\org\springframework\spring-web\5.1.6.RELEASE\spring-web-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-beans\5.1.6.RELEASE\spring-beans-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-webmvc\5.1.6.RELEASE\spring-webmvc-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-aop\5.1.6.RELEASE\spring-aop-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-context\5.1.6.RELEASE\spring-context-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-expression\5.1.6.RELEASE\spring-expression-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-eureka\1.4.6.RELEASE\spring-cloud-starter-eureka-1.4.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-starter-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter\2.1.1.RELEASE\spring-cloud-starter-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-hystrix\2.1.1.RELEASE\spring-cloud-netflix-hystrix-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-aop\2.1.4.RELEASE\spring-boot-starter-aop-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\aspectj\aspectjweaver\1.9.2\aspectjweaver-1.9.2.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-client\1.9.8\eureka-client-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\jettison\jettison\1.3.7\jettison-1.3.7.jar;C:\Users\15831\.m2\repository\stax\stax-api\1.0.1\stax-api-1.0.1.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-eventbus\0.3.0\netflix-eventbus-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-infix\0.3.0\netflix-infix-0.3.0.jar;C:\Users\15831\.m2\repository\commons-jxpath\commons-jxpath\1.3\commons-jxpath-1.3.jar;C:\Users\15831\.m2\repository\joda-time\joda-time\2.10.1\joda-time-2.10.1.jar;C:\Users\15831\.m2\repository\org\antlr\antlr-runtime\3.4\antlr-runtime-3.4.jar;C:\Users\15831\.m2\repository\org\antlr\stringtemplate\3.2.1\stringtemplate-3.2.1.jar;C:\Users\15831\.m2\repository\antlr\antlr\2.7.7\antlr-2.7.7.jar;C:\Users\15831\.m2\repository\com\google\code\gson\gson\2.8.5\gson-2.8.5.jar;C:\Users\15831\.m2\repository\org\apache\commons\commons-math\2.2\commons-math-2.2.jar;C:\Users\15831\.m2\repository\com\netflix\archaius\archaius-core\0.7.6\archaius-core-0.7.6.jar;C:\Users\15831\.m2\repository\com\google\guava\guava\16.0\guava-16.0.jar;C:\Users\15831\.m2\repository\javax\ws\rs\jsr311-api\1.1.1\jsr311-api-1.1.1.jar;C:\Users\15831\.m2\repository\com\netflix\servo\servo-core\0.12.21\servo-core-0.12.21.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-core\1.19.1\jersey-core-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-client\1.19.1\jersey-client-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\contribs\jersey-apache-client4\1.19.1\jersey-apache-client4-1.19.1.jar;C:\Users\15831\.m2\repository\com\google\inject\guice\4.1.0\guice-4.1.0.jar;C:\Users\15831\.m2\repository\javax\inject\javax.inject\1\javax.inject-1.jar;C:\Users\15831\.m2\repository\aopalliance\aopalliance\1.0\aopalliance-1.0.jar;C:\Users\15831\.m2\repository\com\github\vlsi\compactmap\compactmap\1.2.1\compactmap-1.2.1.jar;C:\Users\15831\.m2\repository\com\github\andrewoma\dexx\dexx-collections\0.2\dexx-collections-0.2.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-core\1.9.8\eureka-core-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\woodstox-core-asl\4.4.1\woodstox-core-asl-4.4.1.jar;C:\Users\15831\.m2\repository\javax\xml\stream\stax-api\1.0-2\stax-api-1.0-2.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\stax2-api\3.1.4\stax2-api-3.1.4.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-archaius\2.1.1.RELEASE\spring-cloud-starter-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-ribbon\2.1.1.RELEASE\spring-cloud-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-archaius\2.1.1.RELEASE\spring-cloud-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\commons-configuration\commons-configuration\1.8\commons-configuration-1.8.jar;C:\Users\15831\.m2\repository\commons-lang\commons-lang\2.6\commons-lang-2.6.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-ribbon\2.1.1.RELEASE\spring-cloud-starter-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon\2.3.0\ribbon-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-transport\2.3.0\ribbon-transport-2.3.0.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-contexts\0.4.9\rxnetty-contexts-0.4.9.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-servo\0.4.9\rxnetty-servo-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\hystrix\hystrix-core\1.5.18\hystrix-core-1.5.18.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty\0.4.9\rxnetty-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-core\2.3.0\ribbon-core-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-httpclient\2.3.0\ribbon-httpclient-2.3.0.jar;C:\Users\15831\.m2\repository\commons-collections\commons-collections\3.2.2\commons-collections-3.2.2.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-commons-util\0.3.0\netflix-commons-util-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-loadbalancer\2.3.0\ribbon-loadbalancer-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-statistics\0.1.1\netflix-statistics-0.1.1.jar;C:\Users\15831\.m2\repository\io\reactivex\rxjava\1.2.0\rxjava-1.2.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-eureka\2.3.0\ribbon-eureka-2.3.0.jar;C:\Users\15831\.m2\repository\com\thoughtworks\xstream\xstream\1.4.10\xstream-1.4.10.jar;C:\Users\15831\.m2\repository\xmlpull\xmlpull\1.1.3.1\xmlpull-1.1.3.1.jar;C:\Users\15831\.m2\repository\xpp3\xpp3_min\1.1.4c\xpp3_min-1.1.4c.jar" com.zhangyun.springcloud.Config_Server_3344
+2021-10-29 23:19:23.529  INFO 49592 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$90165522] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.4.RELEASE)
+
+2021-10-29 23:19:23.857  INFO 49592 --- [           main] c.z.springcloud.Config_Server_3344       : No active profile set, falling back to default profiles: default
+2021-10-29 23:19:24.243  WARN 49592 --- [           main] o.s.boot.actuate.endpoint.EndpointId     : Endpoint ID 'service-registry' contains invalid characters, please migrate to a valid format.
+2021-10-29 23:19:24.346  INFO 49592 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=c38e9048-5605-3f94-bcc5-9434d19adac7
+2021-10-29 23:19:24.397  INFO 49592 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$90165522] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2021-10-29 23:19:24.555  INFO 49592 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 3344 (http)
+2021-10-29 23:19:24.569  INFO 49592 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2021-10-29 23:19:24.569  INFO 49592 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.17]
+2021-10-29 23:19:24.688  INFO 49592 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2021-10-29 23:19:24.688  INFO 49592 --- [           main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 825 ms
+2021-10-29 23:19:24.771  WARN 49592 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 23:19:24.771  INFO 49592 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 23:19:24.778  INFO 49592 --- [           main] c.netflix.config.DynamicPropertyFactory  : DynamicPropertyFactory is initialized with configuration sources: com.netflix.config.ConcurrentCompositeConfiguration@6403e24c
+2021-10-29 23:19:25.627  WARN 49592 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 23:19:25.627  INFO 49592 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 23:19:25.710  INFO 49592 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-10-29 23:19:26.174  WARN 49592 --- [           main] arterDeprecationWarningAutoConfiguration : spring-cloud-starter-eureka is deprecated as of Spring Cloud Netflix 1.4.0, please migrate to spring-cloud-starter-netflix-eureka
+2021-10-29 23:19:26.178  INFO 49592 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2021-10-29 23:19:26.225  INFO 49592 --- [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2021-10-29 23:19:26.243  INFO 49592 --- [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2021-10-29 23:19:26.244  INFO 49592 --- [           main] com.netflix.discovery.DiscoveryClient    : Client configured to neither register nor query for data.
+2021-10-29 23:19:26.248  INFO 49592 --- [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1635520766247 with initial instances count: 0
+2021-10-29 23:19:26.250  INFO 49592 --- [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application SPRINGCLOUD-CONFIG-SERVER with eureka with status UP
+2021-10-29 23:19:26.271  INFO 49592 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 3344 (http) with context path ''
+2021-10-29 23:19:26.272  INFO 49592 --- [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 3344
+2021-10-29 23:19:26.273  INFO 49592 --- [           main] c.z.springcloud.Config_Server_3344       : Started Config_Server_3344 in 3.399 seconds (JVM running for 4.123)
+2021-10-29 23:19:26.642  INFO 49592 --- [-10.128.209.125] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2021-10-29 23:19:26.642  INFO 49592 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2021-10-29 23:19:26.646  INFO 49592 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
+2021-10-29 23:19:32.980  WARN 49592 --- [-10.128.209.125] .c.s.e.MultipleJGitEnvironmentRepository : Error occured cloning to base directory.
+
+org.eclipse.jgit.api.errors.TransportException: https://github.com/yunkai-zhang/spring-cloud-config.git: cannot open git-upload-pack
+	at org.eclipse.jgit.api.FetchCommand.call(FetchCommand.java:254) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.api.CloneCommand.fetch(CloneCommand.java:306) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.api.CloneCommand.call(CloneCommand.java:200) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.springframework.cloud.config.server.environment.JGitEnvironmentRepository.cloneToBasedir(JGitEnvironmentRepository.java:589) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.JGitEnvironmentRepository.copyRepository(JGitEnvironmentRepository.java:564) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.JGitEnvironmentRepository.createGitClient(JGitEnvironmentRepository.java:547) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.JGitEnvironmentRepository.refresh(JGitEnvironmentRepository.java:268) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.JGitEnvironmentRepository.getLocations(JGitEnvironmentRepository.java:246) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.MultipleJGitEnvironmentRepository.getLocations(MultipleJGitEnvironmentRepository.java:146) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.AbstractScmEnvironmentRepository.findOne(AbstractScmEnvironmentRepository.java:51) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.MultipleJGitEnvironmentRepository.findOne(MultipleJGitEnvironmentRepository.java:186) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.environment.CompositeEnvironmentRepository.findOne(CompositeEnvironmentRepository.java:52) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.cloud.config.server.config.ConfigServerHealthIndicator.doHealthCheck(ConfigServerHealthIndicator.java:73) [spring-cloud-config-server-2.1.2.RELEASE.jar:2.1.2.RELEASE]
+	at org.springframework.boot.actuate.health.AbstractHealthIndicator.health(AbstractHealthIndicator.java:84) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at org.springframework.boot.actuate.health.CompositeHealthIndicator.health(CompositeHealthIndicator.java:98) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at org.springframework.boot.actuate.health.HealthEndpoint.health(HealthEndpoint.java:50) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:1.8.0_301]
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[na:1.8.0_301]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:1.8.0_301]
+	at java.lang.reflect.Method.invoke(Method.java:498) ~[na:1.8.0_301]
+	at org.springframework.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:282) [spring-core-5.1.6.RELEASE.jar:5.1.6.RELEASE]
+	at org.springframework.boot.actuate.endpoint.invoke.reflect.ReflectiveOperationInvoker.invoke(ReflectiveOperationInvoker.java:76) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at org.springframework.boot.actuate.endpoint.annotation.AbstractDiscoveredOperation.invoke(AbstractDiscoveredOperation.java:61) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at org.springframework.boot.actuate.endpoint.jmx.EndpointMBean.invoke(EndpointMBean.java:126) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at org.springframework.boot.actuate.endpoint.jmx.EndpointMBean.invoke(EndpointMBean.java:99) [spring-boot-actuator-2.1.4.RELEASE.jar:2.1.4.RELEASE]
+	at com.sun.jmx.interceptor.DefaultMBeanServerInterceptor.invoke(DefaultMBeanServerInterceptor.java:819) [na:1.8.0_301]
+	at com.sun.jmx.mbeanserver.JmxMBeanServer.invoke(JmxMBeanServer.java:801) [na:1.8.0_301]
+	at javax.management.remote.rmi.RMIConnectionImpl.doOperation(RMIConnectionImpl.java:1468) [na:1.8.0_301]
+	at javax.management.remote.rmi.RMIConnectionImpl.access$300(RMIConnectionImpl.java:76) [na:1.8.0_301]
+	at javax.management.remote.rmi.RMIConnectionImpl$PrivilegedOperation.run(RMIConnectionImpl.java:1309) [na:1.8.0_301]
+	at javax.management.remote.rmi.RMIConnectionImpl.doPrivilegedOperation(RMIConnectionImpl.java:1401) [na:1.8.0_301]
+	at javax.management.remote.rmi.RMIConnectionImpl.invoke(RMIConnectionImpl.java:829) [na:1.8.0_301]
+	at sun.reflect.GeneratedMethodAccessor77.invoke(Unknown Source) ~[na:na]
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:1.8.0_301]
+	at java.lang.reflect.Method.invoke(Method.java:498) ~[na:1.8.0_301]
+	at sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:357) [na:1.8.0_301]
+	at sun.rmi.transport.Transport$1.run(Transport.java:200) [na:1.8.0_301]
+	at sun.rmi.transport.Transport$1.run(Transport.java:197) [na:1.8.0_301]
+	at java.security.AccessController.doPrivileged(Native Method) [na:1.8.0_301]
+	at sun.rmi.transport.Transport.serviceCall(Transport.java:196) [na:1.8.0_301]
+	at sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:573) [na:1.8.0_301]
+	at sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:834) [na:1.8.0_301]
+	at sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:688) [na:1.8.0_301]
+	at java.security.AccessController.doPrivileged(Native Method) [na:1.8.0_301]
+	at sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:687) [na:1.8.0_301]
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149) ~[na:1.8.0_301]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624) ~[na:1.8.0_301]
+	at java.lang.Thread.run(Thread.java:748) ~[na:1.8.0_301]
+Caused by: org.eclipse.jgit.errors.TransportException: https://github.com/yunkai-zhang/spring-cloud-config.git: cannot open git-upload-pack
+	at org.eclipse.jgit.transport.TransportHttp.connect(TransportHttp.java:600) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.TransportHttp.openFetch(TransportHttp.java:362) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.FetchProcess.executeImp(FetchProcess.java:137) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.FetchProcess.execute(FetchProcess.java:123) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.Transport.fetch(Transport.java:1271) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.api.FetchCommand.call(FetchCommand.java:243) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	... 47 common frames omitted
+Caused by: java.net.SocketTimeoutException: Read timed out
+	at java.net.SocketInputStream.socketRead0(Native Method) ~[na:1.8.0_301]
+	at java.net.SocketInputStream.socketRead(SocketInputStream.java:116) ~[na:1.8.0_301]
+	at java.net.SocketInputStream.read(SocketInputStream.java:171) ~[na:1.8.0_301]
+	at java.net.SocketInputStream.read(SocketInputStream.java:141) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketInputRecord.read(SSLSocketInputRecord.java:475) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketInputRecord.readHeader(SSLSocketInputRecord.java:469) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketInputRecord.bytesInCompletePacket(SSLSocketInputRecord.java:69) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketImpl.readApplicationRecord(SSLSocketImpl.java:1239) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketImpl.access$300(SSLSocketImpl.java:75) ~[na:1.8.0_301]
+	at sun.security.ssl.SSLSocketImpl$AppInputStream.read(SSLSocketImpl.java:926) ~[na:1.8.0_301]
+	at org.apache.http.impl.io.SessionInputBufferImpl.streamRead(SessionInputBufferImpl.java:137) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.io.SessionInputBufferImpl.fillBuffer(SessionInputBufferImpl.java:153) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.io.SessionInputBufferImpl.readLine(SessionInputBufferImpl.java:280) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:138) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:56) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.io.AbstractMessageParser.parse(AbstractMessageParser.java:259) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.DefaultBHttpClientConnection.receiveResponseHeader(DefaultBHttpClientConnection.java:163) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.conn.CPoolProxy.receiveResponseHeader(CPoolProxy.java:157) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.protocol.HttpRequestExecutor.doReceiveResponse(HttpRequestExecutor.java:273) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.protocol.HttpRequestExecutor.execute(HttpRequestExecutor.java:125) ~[httpcore-4.4.11.jar:4.4.11]
+	at org.apache.http.impl.execchain.MainClientExec.execute(MainClientExec.java:272) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.execchain.ProtocolExec.execute(ProtocolExec.java:186) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.execchain.RetryExec.execute(RetryExec.java:89) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.execchain.RedirectExec.execute(RedirectExec.java:110) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.client.InternalHttpClient.doExecute(InternalHttpClient.java:185) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:83) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:108) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:56) ~[httpclient-4.5.8.jar:4.5.8]
+	at org.eclipse.jgit.transport.http.apache.HttpClientConnection.execute(HttpClientConnection.java:254) ~[org.eclipse.jgit.http.apache-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.http.apache.HttpClientConnection.getResponseCode(HttpClientConnection.java:231) ~[org.eclipse.jgit.http.apache-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.util.HttpSupport.response(HttpSupport.java:207) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	at org.eclipse.jgit.transport.TransportHttp.connect(TransportHttp.java:514) ~[org.eclipse.jgit-5.1.3.201810200350-r.jar:5.1.3.201810200350-r]
+	... 52 common frames omitted
+
+
+```
+
+现在尝试使用码云，注册好码云，和github同样步骤本地新建application.yaml推送到远程仓库，结果如下。
+
+![image-20211029235404414](springCloud.assets/image-20211029235404414.png)
+
+
+
+把springcloud-config-server-3344子module注册文件中，和github相关的改成和gitee相关，代码如下
+
+```yaml
+server:
+  port: 3344
+spring:
+  application:
+    name: springcloud-config-server
+  # 连接远程仓库,具体有哪些属性可以配置可以在springcloud的官网上看。通过config-server可以连接到git，访问其中的资源和配置。
+  cloud:
+    config:
+      server:
+        git:
+          # uri选码云上https的克隆链接
+          uri: https://gitee.com/yunkai-zhang/spring-cloud-config.git
+          skip-ssl-validation: true
+          username: 用户名（一般是链接中自己名字的拼音）
+          password: 密码
+        # 一定要加这个，不然会报错“fatal: unable to access Failed to connect to github.com port 443 after 21040 ms: Timed out”。github上是main，gitee上是master。
+        default-label: master
+# 不加这个配置会报Cannot execute request on any known server 这个错：连接Eureka服务端地址不对
+# 或者直接注释掉eureka依赖 这里暂时用不到eureka
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+```
+
+重启springcloud-config-server-3344子module，成功。控制台打印如下：
+
+```
+"C:\Program Files\Java\jdk1.8.0_301\bin\java.exe" -XX:TieredStopAtLevel=1 -noverify -Dspring.output.ansi.enabled=always "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\lib\idea_rt.jar=7860:C:\Program Files\JetBrains\IntelliJ IDEA 2021.2\bin" -Dcom.sun.management.jmxremote -Dspring.jmx.enabled=true -Dspring.liveBeansView.mbeanDomain -Dspring.application.admin.enabled=true -Dfile.encoding=UTF-8 -classpath "C:\Program Files\Java\jdk1.8.0_301\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\deploy.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\access-bridge-64.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\cldrdata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\dnsns.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jaccess.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\jfxrt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\localedata.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\nashorn.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunec.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunjce_provider.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunmscapi.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\sunpkcs11.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\ext\zipfs.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\javaws.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jce.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfr.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jfxswt.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\management-agent.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\plugin.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\resources.jar;C:\Program Files\Java\jdk1.8.0_301\jre\lib\rt.jar;D:\CodeProjects\GitHub\BUPT\small_projects_when_learning_java_backend\springcloud\springcloud-config-server-3344\target\classes;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-server\2.1.2.RELEASE\spring-cloud-config-server-2.1.2.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-config-client\2.1.1.RELEASE\spring-cloud-config-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\2.1.4.RELEASE\spring-boot-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-commons\2.1.1.RELEASE\spring-cloud-commons-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-context\2.1.1.RELEASE\spring-cloud-context-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.9.0\jackson-annotations-2.9.0.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.9.8\jackson-databind-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.9.8\jackson-core-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-actuator\2.1.4.RELEASE\spring-boot-starter-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator-autoconfigure\2.1.4.RELEASE\spring-boot-actuator-autoconfigure-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-actuator\2.1.4.RELEASE\spring-boot-actuator-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\io\micrometer\micrometer-core\1.1.4\micrometer-core-1.1.4.jar;C:\Users\15831\.m2\repository\org\hdrhistogram\HdrHistogram\2.1.9\HdrHistogram-2.1.9.jar;C:\Users\15831\.m2\repository\org\latencyutils\LatencyUtils\2.0.3\LatencyUtils-2.0.3.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-crypto\5.1.5.RELEASE\spring-security-crypto-5.1.5.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\security\spring-security-rsa\1.0.7.RELEASE\spring-security-rsa-1.0.7.RELEASE.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcpkix-jdk15on\1.60\bcpkix-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\bouncycastle\bcprov-jdk15on\1.60\bcprov-jdk15on-1.60.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit\5.1.3.201810200350-r\org.eclipse.jgit-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\com\jcraft\jsch\0.1.54\jsch-0.1.54.jar;C:\Users\15831\.m2\repository\com\jcraft\jzlib\1.1.1\jzlib-1.1.1.jar;C:\Users\15831\.m2\repository\com\googlecode\javaewah\JavaEWAH\1.1.6\JavaEWAH-1.1.6.jar;C:\Users\15831\.m2\repository\org\slf4j\slf4j-api\1.7.26\slf4j-api-1.7.26.jar;C:\Users\15831\.m2\repository\org\eclipse\jgit\org.eclipse.jgit.http.apache\5.1.3.201810200350-r\org.eclipse.jgit.http.apache-5.1.3.201810200350-r.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpclient\4.5.8\httpclient-4.5.8.jar;C:\Users\15831\.m2\repository\commons-codec\commons-codec\1.11\commons-codec-1.11.jar;C:\Users\15831\.m2\repository\org\apache\httpcomponents\httpcore\4.4.11\httpcore-4.4.11.jar;C:\Users\15831\.m2\repository\org\yaml\snakeyaml\1.23\snakeyaml-1.23.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-web\2.1.4.RELEASE\spring-boot-starter-web-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter\2.1.4.RELEASE\spring-boot-starter-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot\2.1.4.RELEASE\spring-boot-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-logging\2.1.4.RELEASE\spring-boot-starter-logging-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\15831\.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.11.2\log4j-to-slf4j-2.11.2.jar;C:\Users\15831\.m2\repository\org\apache\logging\log4j\log4j-api\2.11.2\log4j-api-2.11.2.jar;C:\Users\15831\.m2\repository\org\slf4j\jul-to-slf4j\1.7.26\jul-to-slf4j-1.7.26.jar;C:\Users\15831\.m2\repository\javax\annotation\javax.annotation-api\1.3.2\javax.annotation-api-1.3.2.jar;C:\Users\15831\.m2\repository\org\springframework\spring-core\5.1.6.RELEASE\spring-core-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-jcl\5.1.6.RELEASE\spring-jcl-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-json\2.1.4.RELEASE\spring-boot-starter-json-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.9.8\jackson-datatype-jdk8-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.9.8\jackson-datatype-jsr310-2.9.8.jar;C:\Users\15831\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.9.8\jackson-module-parameter-names-2.9.8.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\2.1.4.RELEASE\spring-boot-starter-tomcat-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\9.0.17\tomcat-embed-core-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\9.0.17\tomcat-embed-el-9.0.17.jar;C:\Users\15831\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\9.0.17\tomcat-embed-websocket-9.0.17.jar;C:\Users\15831\.m2\repository\org\hibernate\validator\hibernate-validator\6.0.16.Final\hibernate-validator-6.0.16.Final.jar;C:\Users\15831\.m2\repository\javax\validation\validation-api\2.0.1.Final\validation-api-2.0.1.Final.jar;C:\Users\15831\.m2\repository\org\jboss\logging\jboss-logging\3.3.2.Final\jboss-logging-3.3.2.Final.jar;C:\Users\15831\.m2\repository\com\fasterxml\classmate\1.4.0\classmate-1.4.0.jar;C:\Users\15831\.m2\repository\org\springframework\spring-web\5.1.6.RELEASE\spring-web-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-beans\5.1.6.RELEASE\spring-beans-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-webmvc\5.1.6.RELEASE\spring-webmvc-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-aop\5.1.6.RELEASE\spring-aop-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-context\5.1.6.RELEASE\spring-context-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\spring-expression\5.1.6.RELEASE\spring-expression-5.1.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-eureka\1.4.6.RELEASE\spring-cloud-starter-eureka-1.4.6.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-starter-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter\2.1.1.RELEASE\spring-cloud-starter-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-hystrix\2.1.1.RELEASE\spring-cloud-netflix-hystrix-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\boot\spring-boot-starter-aop\2.1.4.RELEASE\spring-boot-starter-aop-2.1.4.RELEASE.jar;C:\Users\15831\.m2\repository\org\aspectj\aspectjweaver\1.9.2\aspectjweaver-1.9.2.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-eureka-client\2.1.1.RELEASE\spring-cloud-netflix-eureka-client-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-client\1.9.8\eureka-client-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\jettison\jettison\1.3.7\jettison-1.3.7.jar;C:\Users\15831\.m2\repository\stax\stax-api\1.0.1\stax-api-1.0.1.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-eventbus\0.3.0\netflix-eventbus-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-infix\0.3.0\netflix-infix-0.3.0.jar;C:\Users\15831\.m2\repository\commons-jxpath\commons-jxpath\1.3\commons-jxpath-1.3.jar;C:\Users\15831\.m2\repository\joda-time\joda-time\2.10.1\joda-time-2.10.1.jar;C:\Users\15831\.m2\repository\org\antlr\antlr-runtime\3.4\antlr-runtime-3.4.jar;C:\Users\15831\.m2\repository\org\antlr\stringtemplate\3.2.1\stringtemplate-3.2.1.jar;C:\Users\15831\.m2\repository\antlr\antlr\2.7.7\antlr-2.7.7.jar;C:\Users\15831\.m2\repository\com\google\code\gson\gson\2.8.5\gson-2.8.5.jar;C:\Users\15831\.m2\repository\org\apache\commons\commons-math\2.2\commons-math-2.2.jar;C:\Users\15831\.m2\repository\com\netflix\archaius\archaius-core\0.7.6\archaius-core-0.7.6.jar;C:\Users\15831\.m2\repository\com\google\guava\guava\16.0\guava-16.0.jar;C:\Users\15831\.m2\repository\javax\ws\rs\jsr311-api\1.1.1\jsr311-api-1.1.1.jar;C:\Users\15831\.m2\repository\com\netflix\servo\servo-core\0.12.21\servo-core-0.12.21.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-core\1.19.1\jersey-core-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\jersey-client\1.19.1\jersey-client-1.19.1.jar;C:\Users\15831\.m2\repository\com\sun\jersey\contribs\jersey-apache-client4\1.19.1\jersey-apache-client4-1.19.1.jar;C:\Users\15831\.m2\repository\com\google\inject\guice\4.1.0\guice-4.1.0.jar;C:\Users\15831\.m2\repository\javax\inject\javax.inject\1\javax.inject-1.jar;C:\Users\15831\.m2\repository\aopalliance\aopalliance\1.0\aopalliance-1.0.jar;C:\Users\15831\.m2\repository\com\github\vlsi\compactmap\compactmap\1.2.1\compactmap-1.2.1.jar;C:\Users\15831\.m2\repository\com\github\andrewoma\dexx\dexx-collections\0.2\dexx-collections-0.2.jar;C:\Users\15831\.m2\repository\com\netflix\eureka\eureka-core\1.9.8\eureka-core-1.9.8.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\woodstox-core-asl\4.4.1\woodstox-core-asl-4.4.1.jar;C:\Users\15831\.m2\repository\javax\xml\stream\stax-api\1.0-2\stax-api-1.0-2.jar;C:\Users\15831\.m2\repository\org\codehaus\woodstox\stax2-api\3.1.4\stax2-api-3.1.4.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-archaius\2.1.1.RELEASE\spring-cloud-starter-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-ribbon\2.1.1.RELEASE\spring-cloud-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-netflix-archaius\2.1.1.RELEASE\spring-cloud-netflix-archaius-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\commons-configuration\commons-configuration\1.8\commons-configuration-1.8.jar;C:\Users\15831\.m2\repository\commons-lang\commons-lang\2.6\commons-lang-2.6.jar;C:\Users\15831\.m2\repository\org\springframework\cloud\spring-cloud-starter-netflix-ribbon\2.1.1.RELEASE\spring-cloud-starter-netflix-ribbon-2.1.1.RELEASE.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon\2.3.0\ribbon-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-transport\2.3.0\ribbon-transport-2.3.0.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-contexts\0.4.9\rxnetty-contexts-0.4.9.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty-servo\0.4.9\rxnetty-servo-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\hystrix\hystrix-core\1.5.18\hystrix-core-1.5.18.jar;C:\Users\15831\.m2\repository\io\reactivex\rxnetty\0.4.9\rxnetty-0.4.9.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-core\2.3.0\ribbon-core-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-httpclient\2.3.0\ribbon-httpclient-2.3.0.jar;C:\Users\15831\.m2\repository\commons-collections\commons-collections\3.2.2\commons-collections-3.2.2.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-commons-util\0.3.0\netflix-commons-util-0.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-loadbalancer\2.3.0\ribbon-loadbalancer-2.3.0.jar;C:\Users\15831\.m2\repository\com\netflix\netflix-commons\netflix-statistics\0.1.1\netflix-statistics-0.1.1.jar;C:\Users\15831\.m2\repository\io\reactivex\rxjava\1.2.0\rxjava-1.2.0.jar;C:\Users\15831\.m2\repository\com\netflix\ribbon\ribbon-eureka\2.3.0\ribbon-eureka-2.3.0.jar;C:\Users\15831\.m2\repository\com\thoughtworks\xstream\xstream\1.4.10\xstream-1.4.10.jar;C:\Users\15831\.m2\repository\xmlpull\xmlpull\1.1.3.1\xmlpull-1.1.3.1.jar;C:\Users\15831\.m2\repository\xpp3\xpp3_min\1.1.4c\xpp3_min-1.1.4c.jar" com.zhangyun.springcloud.Config_Server_3344
+2021-10-29 23:53:13.577  INFO 80108 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$56a5114d] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.4.RELEASE)
+
+2021-10-29 23:53:13.909  INFO 80108 --- [           main] c.z.springcloud.Config_Server_3344       : No active profile set, falling back to default profiles: default
+2021-10-29 23:53:14.300  WARN 80108 --- [           main] o.s.boot.actuate.endpoint.EndpointId     : Endpoint ID 'service-registry' contains invalid characters, please migrate to a valid format.
+2021-10-29 23:53:14.403  INFO 80108 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=c38e9048-5605-3f94-bcc5-9434d19adac7
+2021-10-29 23:53:14.458  INFO 80108 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$56a5114d] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2021-10-29 23:53:14.617  INFO 80108 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 3344 (http)
+2021-10-29 23:53:14.630  INFO 80108 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2021-10-29 23:53:14.630  INFO 80108 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.17]
+2021-10-29 23:53:14.748  INFO 80108 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2021-10-29 23:53:14.748  INFO 80108 --- [           main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 832 ms
+2021-10-29 23:53:14.829  WARN 80108 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 23:53:14.830  INFO 80108 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 23:53:14.836  INFO 80108 --- [           main] c.netflix.config.DynamicPropertyFactory  : DynamicPropertyFactory is initialized with configuration sources: com.netflix.config.ConcurrentCompositeConfiguration@2849434b
+2021-10-29 23:53:15.677  WARN 80108 --- [           main] c.n.c.sources.URLConfigurationSource     : No URLs will be polled as dynamic configuration sources.
+2021-10-29 23:53:15.677  INFO 80108 --- [           main] c.n.c.sources.URLConfigurationSource     : To enable URLs as dynamic configuration sources, define System property archaius.configurationSource.additionalUrls or make config.properties available on classpath.
+2021-10-29 23:53:15.759  INFO 80108 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+2021-10-29 23:53:16.235  WARN 80108 --- [           main] arterDeprecationWarningAutoConfiguration : spring-cloud-starter-eureka is deprecated as of Spring Cloud Netflix 1.4.0, please migrate to spring-cloud-starter-netflix-eureka
+2021-10-29 23:53:16.239  INFO 80108 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2021-10-29 23:53:16.287  INFO 80108 --- [           main] o.s.c.n.eureka.InstanceInfoFactory       : Setting initial instance status as: STARTING
+2021-10-29 23:53:16.307  INFO 80108 --- [           main] com.netflix.discovery.DiscoveryClient    : Initializing Eureka in region us-east-1
+2021-10-29 23:53:16.308  INFO 80108 --- [           main] com.netflix.discovery.DiscoveryClient    : Client configured to neither register nor query for data.
+2021-10-29 23:53:16.311  INFO 80108 --- [           main] com.netflix.discovery.DiscoveryClient    : Discovery Client initialized at timestamp 1635522796311 with initial instances count: 0
+2021-10-29 23:53:16.314  INFO 80108 --- [           main] o.s.c.n.e.s.EurekaServiceRegistry        : Registering application SPRINGCLOUD-CONFIG-SERVER with eureka with status UP
+2021-10-29 23:53:16.335  INFO 80108 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 3344 (http) with context path ''
+2021-10-29 23:53:16.335  INFO 80108 --- [           main] .s.c.n.e.s.EurekaAutoServiceRegistration : Updating port to 3344
+2021-10-29 23:53:16.336  INFO 80108 --- [           main] c.z.springcloud.Config_Server_3344       : Started Config_Server_3344 in 3.445 seconds (JVM running for 4.104)
+2021-10-29 23:53:16.945  INFO 80108 --- [-10.128.209.125] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2021-10-29 23:53:16.945  INFO 80108 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2021-10-29 23:53:16.949  INFO 80108 --- [-10.128.209.125] o.s.web.servlet.DispatcherServlet        : Completed initialization in 4 ms
+2021-10-29 23:53:18.224  INFO 80108 --- [-10.128.209.125] o.s.c.c.s.e.NativeEnvironmentRepository  : Adding property source: file:/C:/Users/15831/AppData/Local/Temp/config-repo-8859495872238266978/application.yaml (document #0)
+
+```
+
+访问gitee上的application.yaml配置文件，dev和test环境的配置都成功取出
+
+![image-20211029235846834](springCloud.assets/image-20211029235846834.png)
+
+![image-20211029235909235](springCloud.assets/image-20211029235909235.png)
+
+尝试访问不存在的配置则只显示git仓库中application.yaml的最上面的主配置，因为没有匹配的配置分区。
+
+![image-20211030002407172](springCloud.assets/image-20211030002407172.png)
+
+
+
+看来就是github不稳定的锅。好坑！！
+
+
+
+### 客户端连接服务端访问远程
+
+https://www.bilibili.com/video/BV1jJ411S7xr?p=20&spm_id_from=pageDriver
 
 https://www.kuangstudy.com/bbs/1374942542566551554
 
