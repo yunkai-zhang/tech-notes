@@ -3555,11 +3555,16 @@ springcloud config一般是C-S（client-server）架构，所以要写两个modu
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <!--eureka注册服务与发现-->
+        <!--eureka注册服务与发现,用不上先暂时注释掉-->
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.cloud</groupId>-->
+<!--            <artifactId>spring-cloud-starter-eureka</artifactId>-->
+<!--            <version>1.4.6.RELEASE</version>-->
+<!--        </dependency>-->
+        <!--actuator是监控系统健康情况的工具-->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-eureka</artifactId>
-            <version>1.4.6.RELEASE</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
     </dependencies>
 
@@ -3956,7 +3961,729 @@ eureka:
 
 ### 客户端连接服务端访问远程
 
-https://www.bilibili.com/video/BV1jJ411S7xr?p=20&spm_id_from=pageDriver
+git本地仓库下新建config-client.yaml,这是客户端的配置文件，建好了要放在远程仓库。
 
-https://www.kuangstudy.com/bbs/1374942542566551554
+![image-20211030134020285](springCloud.assets/image-20211030134020285.png)
+
+从springcloud-provider-dept-8001的配置文件中拿来spring和eureka的配置，做以下修改：
+
+- spring的datasource我们不用，删掉
+- eureka中的instanceid不需要，删掉。只留下注册地址。
+- 注册地址只留下eurekaServer7001，其他的eurekaserver删掉，不然一直报找不到EurekaServer的错（虽然这个不影响项目启动和测试使用）。
+- spring添加profiles属性，即不同环境。
+- 添加主配置区
+- 给每个分配置区设置端口号
+
+最终结果如下：
+
+```yaml
+# 主配置区，指定哪个分区是当前分区
+spring:
+  profiles:
+    active: dev
+
+---
+server:
+  port: 8201
+# spring的配置
+spring:
+  profiles: dev
+  application:
+    # 给当前spring项目起名，一般名字和子module名字一致或接近
+    name: springcloud-provider-dept
+
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/
+
+---
+server:
+  port: 8202
+# spring的配置
+spring:
+  profiles: test
+  application:
+    # 给当前spring项目起名，一般名字和子module名字一致或接近
+    name: springcloud-provider-dept
+
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/
+```
+
+把新增的config-client.yaml推送到远程
+
+![image-20211030140031143](springCloud.assets/image-20211030140031143.png)
+
+idea新建客户端springcloud-config-client-3355子module，上一节建的是服务端的module，本节是客户端的module；对应了CS架构。
+
+![image-20211030141419428](springCloud.assets/image-20211030141419428.png)
+
+![image-20211030141452915](springCloud.assets/image-20211030141452915.png)
+
+重新回忆新建功能三部曲（最开始是4步曲，现浓缩为3步）：
+
+1. 导入依赖
+2. 编写配置文件
+3. @EableXXX开启功能
+
+
+
+导入依赖
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud</artifactId>
+        <groupId>com.zhangyun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>springcloud-config-client-3355</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+
+    <dependencies>
+        <!-- 导入客户端的springcloud-config依赖。注意版本最好和服务端的一致。
+        https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-config -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+            <version>2.1.2.RELEASE</version>
+        </dependency>
+
+        <!--要有web依赖，module才能启动起来-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--eureka注册服务与发现,用不上先暂时注释掉-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.cloud</groupId>-->
+        <!--            <artifactId>spring-cloud-starter-eureka</artifactId>-->
+        <!--            <version>1.4.6.RELEASE</version>-->
+        <!--        </dependency>-->
+        <!--actuator是监控系统健康情况的工具-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!--启动不了加spring-cloud-starter-bootstrap
+        https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-bootstrap -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+            <version>3.0.1</version>
+        </dependency>
+
+    </dependencies>
+
+</project>
+```
+
+编写配置文件。这次写两个配置文件，主要是为了介绍还有更高级别的bootstrap.yaml这个配置文件。
+
+- 网友说“从云端拿东西用bootstrap.yaml”
+
+先编写bootstrap.yaml
+
+```yaml
+# 系统级别的配置，“根加载器”级别的；级别大于用户级别的application.yaml。用它可以覆盖其他低级别配置，防止潜在的冲突。
+spring:
+  cloud:
+    # config表示从远程git库读配制文件的相关配置
+    config:
+      # 下面的uri+name+profile=http://localhost:3344/config-client/dev.yaml=上一节服务端直接在浏览器访问资源时的链接
+      # 根据CS架构，springcloud-config客户端连接的是springcloud-config服务端，而不应直接连接远程的git仓库（不然服务端就没有意义了）。
+      uri: http://localhost:3344
+      # 从git库的哪个分支去拿文件
+      label: master
+      # 需要从git上读取的资源名称，不需要后缀
+      name: config-client
+      # 需要从git上读取的资源的分配置区名
+      profile: dev
+```
+
+再编写application.yaml
+
+```yaml
+# 用户级别的配置。bootstrap.yaml中配置和干货，这里配置一下无关紧要的配置即可了。
+# 不需要配置端口号,因为client一启动就会从远程git库读取的配置文件中的端口号,就会用那个端口号.所以应该用8201或者8202端口(取决于bootstrap文件中配置读哪个profile)来调用服务器
+#server:
+#  port: 3355
+spring:
+  application:
+    name: springcloud-config-client-3355
+```
+
+编写启动类，springcloud-config-client**不需要**在启动类上用@EableXXX开启springcloud-config的client功能
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+//springcloud-config-client不需要在启动类上用@EableXXX
+public class Config_Client_3355 {
+
+    public static void main(String[] args) {
+        SpringApplication.run(Config_Client_3355.class,args);
+    }
+}
+```
+
+编写controller来实现功能
+
+```java
+package com.zhangyun.springcloud.controller;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+
+@RestController
+public class ConfigClientController {
+    @Value("${spring.application.name}")
+    private String applicationName;
+    @Value("${eureka.client.service-url.defaultZone}")
+    private String eurekaServer;
+    @Value("${server.port}")
+    private String port;
+
+    //如果访问下面的链接能拿到消息，说明客户端通过服务端从远程git库拿到了配置信息
+    @RequestMapping("/config")
+    public String getConfig(){
+        return "applicationName:"+applicationName+
+                "。eurekaServer:"+eurekaServer+
+                "。port:"+port;
+    }
+}
+```
+
+先启动springcloud-config-server-3344，再启动springcloud-config-client-3355
+
+启动springcloud-config-client-3355时报错如下：
+
+```
+Caused by: java.lang.IllegalArgumentException: Could not resolve placeholder 'eureka.client.service-url.defaultZone' in value "${eureka.client.service-url.defaultZone}"
+```
+
+同时浏览器直接利用已经成功启动的服务端springcloud-config-server-3344访问`http://localhost:3344/config-client-test.yaml`失败。推测是3355启动时，访问远程config-client.yaml时，因为config-client.yaml的内容配置有问题导致无法匹配`"${eureka.client.service-url.defaultZone}"`和无法被3344读取内容。
+
+我在线检查了一下内容，没发现问题。把码云上的config-client.yaml内容拷贝到idea中查看，发现两个问题：
+
+1. 之前在notepad++中编写config-client.yaml，缩进没有统一，port部被做了不合理的缩进
+2. `port`在idea中是白的的，仔细一看是port后的冒号写成了中文的冒号，改成英文冒号后颜色变正常。**yaml文件中没有红线提示，一定要注意字的颜色。**
+
+修改以上问题后，把config-client.yaml的内容从idea复制到码云，并保存;同时更新之前笔记的config-client.yaml为正确的格式。重启springcloud-config-client-3355，启动成功
+
+![image-20211030155120859](springCloud.assets/image-20211030155120859.png)
+
+利用3344服务端访问`http://localhost:3344/config-client-test.yaml`和`http://localhost:3344/config-client-dev.yaml`。
+
+虽然能访问，但是读dev时的端口号为8202而不是8201，说明config-client.yaml内容还是有点问题。
+
+![image-20211030155558893](springCloud.assets/image-20211030155558893.png)
+
+![image-20211030155629862](springCloud.assets/image-20211030155629862.png)
+
+但是我发现远程库的config-client.yaml中的主配置区用的profiles,分配置区用的profile，而老师的主配置区和分配置区都是profiles。
+
+- 没有多分区的yaml配置文件中用profile，**多分区的配置文件中用profiles**。
+  - 比如springcloud-config-client子module中的bootstrap.yaml（非多分区）就用profile。
+
+![image-20211030163528019](springCloud.assets/image-20211030163528019.png)
+
+我把远程config-client.yaml两个分配置区的profile改成profiles，保存。并更新前面笔记的config-client.yaml内容。利用服务端3344重新访问`http://localhost:3344/config-client-dev.yaml`和`http://localhost:3344/config-client-test.yaml`,这回端口号都正常了。说明现在服务端到远程库是正常的，接下来就看客户端到服务端这一段了。
+
+![image-20211030163735039](springCloud.assets/image-20211030163735039.png)
+
+![image-20211030163815262](springCloud.assets/image-20211030163815262.png)
+
+因为客户端springcloud-config-client-3355子module启动时就读取远程配置文件并配置自身的端口号并打包，所以修改了远程配置文件后**重启**springcloud-config-client-3355子module。
+
+![image-20211030164102995](springCloud.assets/image-20211030164102995.png)
+
+同时因为bootstrap.yaml选config-client.yaml（springcloud-config-client-3355子module的远程配置文件）中的dev分区作为客户端springcloud-config-client-3355的配置，对应的端口号是8201，所以springcloud-config-client-3355子module要用8201端口去使用controller。
+
+浏览器访问`http://localhost:8201/config`，成功打印了springcloud-config-client-3355子module启动时从远端git库配置文件config-client.yaml的dev配置区注入到controller中的字段（字段均为dev配置区的配置，因为客户端即本子module的bootstrap.yaml中指定了取dev配置区的配置为本子module的配置）。
+
+![image-20211030164146392](springCloud.assets/image-20211030164146392.png)
+
+
+
+**实现了配置与编码解耦！！！**
+
+
+
+### 远程配置实战测试
+
+
+
+新增eurekaserver的配置文件`config-eureka.yaml`，放在git远程库中，给各eurekaserver共用；不同EurekaServer使用不同的配置分区。
+
+![image-20211030211250677](springCloud.assets/image-20211030211250677.png)
+
+从springcloud-eureka-7001中拿到一些基础配置，并添加其他配置，得到如下文件
+
+- 这里两个配置分区只有profiles不同，但是实际开发中，肯定别的配置如hostname也会有区别，但是现在演示功能就先不动太多地方。
+
+```yaml
+# 注册中心的配置基本格式一般都是一样的，因为这是集群配置。所以可以写一份，然后复制N份并稍微修改即可。
+Spring:
+  profiles:
+    active: dev
+---
+# Eureka监控页面访问：http://localhost:7001/，配置eureka监控页面的端口号
+server:
+  port: 7001
+# spring配置
+spring:
+  profiles: dev
+  application:
+    name: springcloud-config-eureka
+# Eureka配置
+eureka:
+  instance:
+    # Eureka服务端的实例名字。本机地址也可以写为“localhost”
+    hostname: eureka7001.com
+  client:
+    # 表示是否向 Eureka 注册中心注册自己(这个模块本身是服务器,所以不需要)
+    register-with-eureka: false
+    # fetch-registry如果为false,则表示本module自己为注册中心（服务器）,客户端的话则为 ture
+    fetch-registry: false
+    # Eureka客户端往本server注册时用的地址，自定义url且url地址不写死而是用application.yml中的配置项填入。
+    service-url:
+      # 单机：defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+      # 集群：关联其他的EurekaServer
+      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+---
+# Eureka监控页面访问：http://localhost:7001/，配置eureka监控页面的端口号
+server:
+  port: 7001
+# spring配置
+spring:
+  profiles: test
+  application:
+    name: springcloud-config-eureka
+# Eureka配置
+eureka:
+  instance:
+    # Eureka服务端的实例名字。本机地址也可以写为“localhost”
+    hostname: eureka7001.com
+  client:
+    # 表示是否向 Eureka 注册中心注册自己(这个模块本身是服务器,所以不需要)
+    register-with-eureka: false
+    # fetch-registry如果为false,则表示本module自己为注册中心（服务器）,客户端的话则为 ture
+    fetch-registry: false
+    # Eureka客户端往本server注册时用的地址，自定义url且url地址不写死而是用application.yml中的配置项填入。
+    service-url:
+      # 单机：defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+      # 集群：关联其他的EurekaServer
+      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+```
+
+新增服务提供者的配置文件`config-dept.yaml`，放在git远程库中，给各服务提供者共用；不同服务提供者使用不同的配置分区。
+
+![image-20211030213056469](springCloud.assets/image-20211030213056469.png)
+
+从springcloud-provider-dept-8001中拿到一些基础配置，并添加其他配置，得到如下文件
+
+- 这里两个配置分区只有profiles和db不同，但是实际开发中，肯定别的配置如instanceid也会有区别，但是现在演示功能就先不动太多地方。
+
+- 两个分区的database分别为db01和db02，这样切换环境的时候，查数据就可以看到是从不同数据库查到的
+
+```yaml
+spring:
+  profiles:
+    active: dev
+---
+server:
+  port: 8001
+
+# mybatis配置
+mybatis:
+  type-aliases-package: com.zhangyun.springcloud.pojo
+  # 配置“mybatis核心配置文件”的地址。不过这个配置文件很久没写了。
+  config-location: classpath:mybatis/mybatis-config.xml
+  # 配置“配置文件XXXMapper.xml”的地址
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+# spring的配置
+spring:
+  profiles: dev
+  application:
+    # 给当前spring项目起名，一般名字和子module名字一致或接近
+    name: springcloud-config-dept
+  # 配置数据源
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: org.gjt.mm.mysql.Driver
+    url: jdbc:mysql://localhost:3306/db01?useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: 123456
+
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+  instance:
+    instance-id: springcloud-provider-dept8001
+
+# info配置
+info:
+  app.name: zhangyun-springcloud
+  company.name: github.zhangyun.com
+---
+server:
+  port: 8001
+
+# mybatis配置
+mybatis:
+  type-aliases-package: com.zhangyun.springcloud.pojo
+  # 配置“mybatis核心配置文件”的地址。不过这个配置文件很久没写了。
+  config-location: classpath:mybatis/mybatis-config.xml
+  # 配置“配置文件XXXMapper.xml”的地址
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+# spring的配置
+spring:
+  profiles: test
+  application:
+    # 给当前spring项目起名，一般名字和子module名字一致或接近
+    name: springcloud-config-dept
+  # 配置数据源
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: org.gjt.mm.mysql.Driver
+    url: jdbc:mysql://localhost:3306/db02?useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: 123456
+
+# Eureka配置：配置服务注册中心地址，该地址要和EurekaServer中配置的一致。子module会往这个地址注册服务。
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+  instance:
+    instance-id: springcloud-provider-dept8001
+
+# info配置
+info:
+  app.name: zhangyun-springcloud
+  company.name: github.zhangyun.com
+```
+
+把新建的两个配置文件push到远程git仓库
+
+![image-20211030213843229](springCloud.assets/image-20211030213843229.png)
+
+为了方便理解项目，新建一个EurekaServer子module（springcloud-config-eureka-7001）使它使用远程配置
+
+![image-20211030214144301](springCloud.assets/image-20211030214144301.png)
+
+![image-20211030214229371](springCloud.assets/image-20211030214229371.png)
+
+可以把springcloud-eureka-7001的java下的文件夹复制过来。resource下新建application.yaml,bootstrap.yaml。
+
+先编写application.yaml
+
+```yaml
+# 因为使用的是远程配置，所以这个文件可以不需要内容，空着。
+# 但是也可以在这配置一下applicationname。网友说“这个名字其实被bootstrap获取到名字覆盖了”
+spring:
+  application:
+    name: springcloud-config-eureka-7001
+```
+
+再编写bootstrap.yaml
+
+```yaml
+# 可以看到本地的EurekaServer都没有配置关于EurekaServer的东西。一切配置从远程拿。
+spring:
+  cloud:
+    config:
+      name: config-eureka
+      label: master
+      profile: dev
+      uri: http://localhost:3344
+```
+
+导入依赖
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud</artifactId>
+        <groupId>com.zhangyun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>springcloud-config-eureka-7001</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+    <dependencies>
+        <!--springcloud-config的客户端专用包-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+            <version>2.1.2.RELEASE</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-eureka-server -->
+        <!--导入Eureka Server依赖-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-eureka-server</artifactId>
+            <version>1.4.6.RELEASE</version>
+        </dependency>
+        <!--热部署工具-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
+```
+
+编写主启动类（如果从springcloud-eureka-7001复制过来的话就不用写了）
+
+```java
+package com.zhangyun.springcloud;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+//@EnableEurekaServer表示当前类是一个eureka server（服务端）的启动类，当前module的EurekaServer可以接收别人注册进来。
+@EnableEurekaServer
+@SpringBootApplication
+public class EurekaServer_7001 {
+    public static void main(String[] args) {
+        SpringApplication.run(EurekaServer_7001.class,args);
+    }
+}
+```
+
+开始测试，先启动`springcloud-config-server-3344`。
+
+- **springcloud-config-eureka-7001对于springcloud-config-server-3344就是客户端，但对于其它如eureka provider / consumer的就是eureka server。**
+
+浏览器访问`http://localhost:3344/config-eureka-dev.yaml`,成功通过Springcloud-config的server端即springcloud-config-server-3344访问到远程git库中的EurekaServer的配置。说明springcloud-config的服务端到远程git是没问题的，接下来就看springcloud-config的客户端到服务端了。
+
+![image-20211030232811439](springCloud.assets/image-20211030232811439.png)
+
+启动`springcloud-config-eureka-7001`,因为远程的配置文件中指定的端口为7001，所以通过7001端口访问本module，即Eureka监控页面。访问成功，说明springcloud-config-eureka-7001（springcloud-config客户端）到springcloud-config-server-3344（springcloud-config服务端）的连接也正常。
+
+- **这里的springcloud-config-eureka-7001相当于上一节的springcloud-config-client-3355，**两者都是通过springcloud-config-server-3344来得到自己在远程git仓库的配置。
+
+![image-20211030233421734](springCloud.assets/image-20211030233421734.png)
+
+EurekaServer可以通过springcloud-config的服务端（springcloud-config-server-3344）从远程拿到自己的配置了，现在尝试让服务提供者也通过springcloud-config-server-3344从远程拿到自己的配置。
+
+新建子module
+
+![image-20211030234143545](springCloud.assets/image-20211030234143545.png)
+
+![image-20211030234232407](springCloud.assets/image-20211030234232407.png)
+
+从springcloud-provider-dept-8001拷贝一下依赖
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud</artifactId>
+        <groupId>com.zhangyun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>springcloud-config-dept-8001</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+    <dependencies>
+        <!--Eureka依赖-->
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-eureka -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-eureka</artifactId>
+            <version>1.4.6.RELEASE</version>
+        </dependency>
+        <!--完善监控信息-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!--我们需要拿到实体类，所以要配置api module
+        配置好后点击springcloud-api，idea会自动跳转到springcloud-api的pom文件
+
+        只要导入了springcloud-api的依赖，我们就可以用springcloud-api中的实体类了。
+        -->
+        <dependency>
+            <groupId>com.zhangyun</groupId>
+            <artifactId>springcloud-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!--父项目中管理（约束）了各依赖的版本号，子module中不用写版本号了-->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!--test-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+        </dependency>
+        <!--jetty
+        和tomcat没什么区别，可以使用它做应用服务器-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jetty</artifactId>
+        </dependency>
+        <!--热部署工具
+        写完代码不应该把代码重启，而应该刷新一下就可以（类似thymeleaf）
+
+        有网友说：“devtools不是真正的热部署，相当于帮你重新点击了一次运行按钮，而 jrebel 才是真正的热部署”-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+        </dependency>
+
+    </dependencies>
+
+</project>
+```
+
+再添加springcloud-config的客户端专用包
+
+```xml
+<!--springcloud-config的客户端专用包-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-config</artifactId>
+    <version>2.1.2.RELEASE</version>
+</dependency>
+```
+
+从springcloud-provider-dept-8001拷贝java文件夹下的内容。
+
+从springcloud-provider-dept-8001拷贝一下resource下的内容。但是application.yaml的内容可以都删掉，因为现在从远程读取文件；同时要新建bootstrap.yaml来连接springcloud-config-server-3344，新建如下：
+
+- dev分区中，用的数据库是db01，一会可以看看是不是
+
+```yaml
+# 可以看到“服务提供者”都没有关于自身的配置。一切配置通过springcloud-config的服务端（springcloud-config-server-3344）从远程git仓库拿。
+spring:
+  cloud:
+    config:
+      name: config-dept
+      label: master
+      profile: dev
+      uri: http://localhost:3344
+```
+
+编写application.yaml(虽然不编写都可以)
+
+```yaml
+# 可以为空，因为配置文件从远程git仓库读取。就算配置applicationname也会被远程的配置覆盖
+spring:
+  application:
+    name: springcloud-config-dept-8001
+```
+
+开始测试，启动springcloud-config-dept-8001。查看EurekaServer的监控页面，可以看到注册的服务。访问`http://localhost:8001/dept/qbid/1`，也能成功拿到数据，说明springcloud-config-dept-8001成功通过springcloud-config的服务端（springcloud-config-server-3344）从远程拿到自己的配置了。
+
+- 同时看到查到的**数据是db01数据库**的，确实是用来dev配置分区的配置。
+
+![image-20211031000144097](springCloud.assets/image-20211031000144097.png)
+
+![image-20211031000214095](springCloud.assets/image-20211031000214095.png)
+
+
+
+## springcloud总结与展望
+
+springcloud回首图：
+
+![image-20211031002510657](springCloud.assets/image-20211031002510657.png)
+
+
+
+springcloud中开启一个功能的套路：
+
+1. 导入依赖
+2. 编写yml配置文件
+3. 启动类添加@EnableXXX注解，开启功能
+
+
+
+springcloud的新可能：
+
+- springcloud-alibaba
+
+- server mesh
+- serverless
+
+
+
+javabackend最难在哪？
+
+- javase
+
+
+
+java爬坡路线：
+
+![image-20211031003340143](springCloud.assets/image-20211031003340143.png)
 
