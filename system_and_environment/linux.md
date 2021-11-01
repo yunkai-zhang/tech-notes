@@ -165,7 +165,7 @@ tips：
 
 2. 上传文件用XFtp即可。
 
-   ![image-20211101191127285](linux.assets\image-20211101191127285.png)
+   ![image-20211101191127285](linux.assets/image-20211101191127285.png)
 
    - 用宝塔上传文件可能会乱码，用xshell更稳一点。
 
