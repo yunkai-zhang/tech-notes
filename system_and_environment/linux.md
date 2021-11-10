@@ -1919,5 +1919,145 @@ firewall-cmd --list-ports#只看端口信息
 
 ### Docker安装（yum法）
 
-https://www.bilibili.com/video/BV187411y7hF?p=17&spm_id_from=pageDriver
+[**docker官网链接**](https://docs.docker.com/engine/install/centos/)，教怎么在centos上安装docker。
+
+
+
+我们现在是在Linux下执行，一定要联网，yum在线安装!
+
+
+
+#### 安装
+
+1. 检测版本信息
+
+   ```bash
+   cat /etc/redhat-release
+   ```
+
+   ![image-20211108203411881](linux.assets/image-20211108203411881.png)
+
+2. 准备环境
+
+   ```bash
+   # yum install是安装命令。-y表示所有的提示都为y。
+   # 如：yum -y install 包名 
+   # 安装gcc
+   yum -y install gcc
+   yum -y install gcc-c++
+   ```
+
+   ![image-20211108203944092](linux.assets/image-20211108203944092.png)
+
+3. 清除以前的版本
+
+   这个docker官网上有
+
+   ![image-20211108204148308](linux.assets/image-20211108204148308.png)
+
+```bash
+yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+```
+
+​	因为之前没安装过docker，所以找不到要卸载的项。
+
+![image-20211108204308098](linux.assets/image-20211108204308098.png)
+
+4. 根据docker官网提示继续安装
+
+   ![image-20211108204759855](linux.assets/image-20211108204759855.png)
+
+​	先设置仓库，第一句执行完再执行第二句：
+
+```bash
+yum install -y yum-utils
+```
+
+```bash
+yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+    
+# 这里推荐使用国内的镜像，不过我已经安装了国外的了
+yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+```
+
+![image-20211108205228218](linux.assets/image-20211108205228218.png)
+
+![image-20211108205251569](linux.assets/image-20211108205251569.png)
+
+5. 更新yum软件包索引
+
+   ```
+   yum makecache fast
+   ```
+
+   ![image-20211108210044851](linux.assets/image-20211108210044851.png)
+
+6. 安装Docker CE
+
+   ```
+   yum install docker-ce docker-ce-cli containerd.io
+   ```
+
+   ![image-20211108205932624](linux.assets/image-20211108205932624.png)
+
+7. Start Docker
+
+   ```
+   systemctl start docker
+   ```
+
+   ![image-20211108210413097](linux.assets/image-20211108210413097.png)
+
+8. Verify that Docker Engine is installed correctly by running the `hello-world` image.
+
+   ```
+   docker run hello-world
+   ```
+
+   ![image-20211108210356499](linux.assets/image-20211108210356499.png)
+
+​	还有两个测试语句，可以自行测试
+
+```
+docker version
+
+docker images
+```
+
+​	![image-20211108210615578](linux.assets/image-20211108210615578.png)
+
+​	![image-20211108210640432](linux.assets/image-20211108210640432.png)
+
+
+
+宝塔面板上可以创建数据库，以后idea就可以不用localhost3306的数据库了，而用服务器上的数据库。
+
+
+
+### vmware快照+网络配置
+
+#### vmware快照
+
+保留当前系统信息为快照，随时可以恢复，相当于游戏存档，防止未来系统被玩坏。
+
+平时的话，每配置一个东西就可以拍摄一个快照，保留信息。
+
+
+
+#### 本地网络快照
+
+linux虚拟机要和本机在同一网段。
+
+桥接模式要桥接到正确的网卡。
+
+
 
