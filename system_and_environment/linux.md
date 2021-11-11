@@ -1865,7 +1865,7 @@ ssm war就需要放到tomcat中运行
 
    ```bash
    # 启动
-   ./ startup.sh
+   ./startup.sh
    # 停止
    ./shutdown.sh
    ```
@@ -1938,6 +1938,8 @@ firewall-cmd --list-ports#只看端口信息
    ![image-20211108203411881](linux.assets/image-20211108203411881.png)
 
 2. 准备环境
+
+   下面语句先执行一个，完成后再执行第二个
 
    ```bash
    # yum install是安装命令。-y表示所有的提示都为y。

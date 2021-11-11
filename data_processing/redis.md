@@ -312,7 +312,267 @@ NoSQL泛指非关系型数据库的，随着web2.0互联网的诞生，传统的
 
 
 
-## redis入门
+## Redis入门
+
+### 概述
+
+#### Redis是什么？
+
+Redis（**Re**mote **Di**ctionary **S**erver )，即远程字典服务。
+
+是一个开源的使用ANSI C语言编写、支持网络、可基于内存亦可持久化的日志型、Key-Value数据库，并提供**多种语言**的API。
+
+与memcached一样，为了保证效率，数据都是缓存在内存中。区别的是redis会周期性的把更新的数据写入磁盘或者把修改操作写入追加的记录文件，并且在此基础上实现了master-slave(主从)同步。
+
+免费和开源!是当下最热门的NoSQL技术之一!也被人们称之为结构化数据库!
+
+#### Redis能干什么？
+
+1. 内存存储、持久化，内存是断电即失的，所以需要持久化（RDB、AOF）
+2. 高效率、用于高速缓冲
+3. 发布订阅系统
+4. 地图信息分析
+5. 计时器、计数器(eg：浏览量)
+6. 。。。
+
+#### 特性
+
+1. 多样的数据类型
+2. 持久化
+3. 集群
+4. 事务
+5. ...
+
+#### 学习中用到的网站
+
+- [redis官网](https://redis.io/)
+- [redis中文网](http://redis.cn/),http连接不安全
+- [下载地址](https://redis.io/download),通过官网下载即可
+  - 但是windows系统在[github](https://github.com/microsoftarchive/redis/releases/tag/win-3.2.100)上下载（停更很久了）
+  - redis**推荐在linux**服务器上大家，接下来也基本都是基于linux学习
 
 
+
+### Windows系统安装redis
+
+1. 下载安装包
+
+   访问[网址](https://github.com/microsoftarchive/redis/releases/tag/win-3.2.100)
+
+   ![image-20211111154005354](redis.assets/image-20211111154005354.png)
+
+   
+
+2. 解压，
+
+   redis十分的小，只有5M																										
+
+   ![image-20211111154145274](redis.assets/image-20211111154145274.png)![image-20211111154313531](redis.assets/image-20211111154313531.png)
+
+3. 开启redis
+
+   双击`redis-server.exe`,运行redisserver
+
+   - 截图中看到redis默认端口号是6379
+
+   ![image-20211111154650721](redis.assets/image-20211111154650721.png)
+
+4. 使用redis客户端来连接redis
+
+   保持redis-server.exe开着，双击`redis-cli.exe`
+
+   ![image-20211111154915088](redis.assets/image-20211111154915088.png)
+
+   使用键值对存储数据，并拿取数据
+
+   ![image-20211111155514888](redis.assets/image-20211111155514888.png)
+
+   记住一句话，Window下使用确实简单，但是Redis推荐我们使用Linux去开发使用!
+
+### Linux安装redis（真企业级）
+
+实战：
+
+[来到官网](https://download.redis.io/releases/)，下载linux安装包，版本为课程中使用的redis版本
+
+![image-20211111160822681](redis.assets/image-20211111160822681.png)
+
+![image-20211111161101372](redis.assets/image-20211111161101372.png)
+
+连接服务器
+
+![image-20211111171722791](redis.assets/image-20211111171722791.png)
+
+把redis包用XFTP放到home/zhangyun目录下，zhangyun目录使我自己建的，这个目录可以专门存一些上传上来的软件。
+
+![image-20211111172704283](redis.assets/image-20211111172704283.png)
+
+程序一般放到opt目录，移动过去
+
+```
+mv redis-5.0.8.tar.gz /opt
+```
+
+![image-20211111172939217](redis.assets/image-20211111172939217.png)
+
+解压redis安装包
+
+```
+tar -zxvf redis-5.0.8.tar.gz
+```
+
+![image-20211111173111969](redis.assets/image-20211111173111969.png)
+
+进入解压后的redis文件夹，可以看到redis的配置文件。
+
+- 文件夹中没有redisserver和cli，因为文件夹解压后程序不在文件夹中；要自己安装一下
+
+![image-20211111173320809](redis.assets/image-20211111173320809.png)
+
+现在开始基本的环境安装
+
+```
+# 安装gcc环境，不过我之前安装docker已经装过，不过还是执行一下。
+yum install gcc-c++
+```
+
+![image-20211111173709864](redis.assets/image-20211111173709864.png)
+
+查看gcc的版本
+
+```
+gcc -v
+```
+
+![image-20211111173838019](redis.assets/image-20211111173838019.png)
+
+执行make命令，把所有需要的文件配置上；即进行源代码编译，以及一些功能的提供
+
+```
+make
+```
+
+![image-20211111174140145](redis.assets/image-20211111174140145.png)
+
+![image-20211111174152658](redis.assets/image-20211111174152658.png)
+
+测试make语句是否执行成功
+
+```
+make test
+```
+
+![image-20211111174639787](redis.assets/image-20211111174639787.png)
+
+执行make install，查看是不是所有东西安装好了
+
+```
+make install
+```
+
+![image-20211111175021082](redis.assets/image-20211111175021082.png)
+
+redis的默认安装路径，`/usr/local/bin`下面
+
+- 就想windows安装软件，默认路径在/usr/local/bin下面
+
+```
+cd /usr/local/bin
+```
+
+![image-20211111175825441](redis.assets/image-20211111175825441.png)
+
+在bin目录下新建文件夹`zconfig`来存放配置文件
+
+```
+mkdir zconfig
+```
+
+![image-20211111180123467](redis.assets/image-20211111180123467.png)
+
+把redis解压文件夹中的配置文件`redis.config`复制到`bin/zconfig`中
+
+- 原生的配置文件就在解压目录下不会变，想恢复初始配置随时可以恢复；以后我们使用`zconfig`中的配置文件进行启动
+
+```
+cp /opt/redis-5.0.8/redis.conf zconfig
+```
+
+![image-20211111180433172](redis.assets/image-20211111180433172.png)
+
+redis默认不是后台启动的，vim修改配置文件，使得redis后台启动
+
+![image-20211111204018575](redis.assets/image-20211111204018575.png)
+
+现在启动redis服务
+
+```
+# 来到bin目录
+cd ../
+```
+
+![image-20211111205604725](redis.assets/image-20211111205604725.png)
+
+```
+# 用zconfig/redis.conf文件启动redis-server
+redis-server zconfig/redis.conf
+```
+
+- 前面修改conf文件可能会造成文件损坏，当你启动不了redis删除配置文件重新操作一遍即可
+
+![image-20211111205655153](redis.assets/image-20211111205655153.png)
+
+现在使用redis客户端去连接redis服务端
+
+```
+# -p 6379表示指定客户端的端口号是6379
+redis-cli -p 6379
+```
+
+现在就可以使用redis来存储数据啦
+
+![image-20211111210442373](redis.assets/image-20211111210442373.png)
+
+![image-20211111210518809](redis.assets/image-20211111210518809.png)
+
+![image-20211111210612392](redis.assets/image-20211111210612392.png)
+
+查看redis的进程是否开启
+
+新开一个端口
+
+![image-20211111211149816](redis.assets/image-20211111211149816.png)
+
+```
+# 查看系统中有关redis的进程
+ps -ef|grep redis
+```
+
+看到redis-cli和redis-server的进程，说明redis服务和连接都开启了
+
+![image-20211111211903459](redis.assets/image-20211111211903459.png)
+
+现在关闭redis服务，回到redis功能页，依次执行下面命令
+
+```
+shutdown
+```
+
+```
+exit
+```
+
+![image-20211111212320002](redis.assets/image-20211111212320002.png)
+
+现在再来到新开的页面，重新查看有关redis的进程，已经没有redis的客户端和服务端的进程了。
+
+![image-20211111212846090](redis.assets/image-20211111212846090.png)
+
+后面我们会使用单机多redis启动集群测试
+
+
+
+### 测试性能
+
+https://www.bilibili.com/video/BV1S54y1R7SB?p=10&spm_id_from=pageDriver
 
