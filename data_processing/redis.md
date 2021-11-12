@@ -574,5 +574,106 @@ exit
 
 ### 测试性能
 
-https://www.bilibili.com/video/BV1S54y1R7SB?p=10&spm_id_from=pageDriver
+redis-benchmark是一个压力测试工具
+
+官方自带的性能测试工具
+
+
+
+命令参数：
+
+- 下图中-d 应该是3，图太老了。
+
+![img](redis.assets/fea09ddf2bd6acecbdb7db2ddc420faa.png)
+
+
+
+测试并发实战：
+
+- 保证redis-server和redis-cli启动了
+
+先用一个连接启动redis客户端和服务端
+
+![image-20211112172125543](redis.assets/image-20211112172125543.png)
+
+新开一个窗口，在redis软件所在的目录（bin）执行下列命令
+
+```bash
+# 来到目录
+cd /usr/local/bin
+# 使用端口号6379，100个并发链接，100000请求
+redis-benchmark -h localhost -p 6379 -c 100 -n 100000
+```
+
+![image-20211112172448803](redis.assets/image-20211112172448803.png)
+
+现在来解读一下测试结果
+
+![image-20211112173251978](redis.assets/image-20211112173251978.png)
+
+
+
+### redis基本知识说明
+
+redis默认有16个数据库
+
+- zconfig/redis.conf文件中可以查看
+
+![image-20211112173809918](redis.assets/image-20211112173809918.png)
+
+默认使用的是第0个，可以使用select进行切换数据库!
+
+```bash
+# 切换数据库
+select 数据库id
+
+# 查看当前数据库大小
+DBSIZE
+```
+
+![image-20211112174030455](redis.assets/image-20211112174030455.png)
+
+一个数据库存值后，本数据库大小发生了变化；但是其他数据库的大小不变。
+
+![image-20211112174305056](redis.assets/image-20211112174305056.png)
+
+查看当前数据库中所有的key
+
+```
+keys *
+```
+
+![image-20211112174640999](redis.assets/image-20211112174640999.png)
+
+清空redis数据库
+
+```
+# 清空当前数据库
+flushdb
+# 清空全部
+FLUSHA LL
+```
+
+
+
+redis是单线程的：
+
+明白Redis是很快的，官方表示，Redis是基于内存操作，CPU不是Redis性能瓶颈，Redis的瓶颈是根据机器的内存和网络带宽，既然可以使用单线程来实现，就使用单线程了!
+
+Redis是C语言写的，官方提供的数据为100000+的QPS，完全不比同样是使用
+
+key-vale的Memecache差!
+
+Redis为什么单线程还这么快?
+
+- 误区1∶高性能的服务器一定是多线程的?
+- 误区2∶多线程（CPU上下文会切换! )一定比单线程效率高!先去CPU>内存>硬盘的速度要有所了解!
+
+**核心**: redis是将所有的数据全部放在内存中的，所以说使用单线程去操作效率就是最高的，多线程(CPU上下文会切换︰耗时的操作!! ! )反而更耗时，对于内存系统来说，如果没有上下文切换效率就是最高的!多次读写都是在一个CPU上的，在内存情况下，这个就是最佳的方案!
+
+
+
+## 五大数据类型
+
+https://www.bilibili.com/video/BV1S54y1R7SB?p=12&spm_id_from=pageDriver
 
