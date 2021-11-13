@@ -675,5 +675,355 @@ Redis为什么单线程还这么快?
 
 ## 五大数据类型
 
-https://www.bilibili.com/video/BV1S54y1R7SB?p=12&spm_id_from=pageDriver
+官网文档
+
+![image-20211113145944923](redis.assets/image-20211113145944923.png)
+
+全段翻译︰
+Redis是一个开源(BSD许可)的，内存中的数据结构存储系统，它可以用作**数据库**、**缓存**和**消息中间件MQ**。它支持多种类型的数据结构，如字符串( strings )，散列( hashes )，列表(lists )，集合( sets )，有序集合( sorted sets）与范围查询，bitmaps,hyperloglogs和地理空间( geospatial ）索引半径查询。Redis 内置了复制( replication )，LUA脚本( Lua scripting )，LRU驱动事件(LRU eviction )，事务( transactions）和不同级别的磁盘持久化( persistence )，并通过Redis哨兵( Sentinel )和自动分区( Cluster )提供高可用性( high availability )。
+
+### Redis-Key相关简单操作
+
+查看所有的key
+
+```
+keys *
+```
+
+![image-20211113152855396](redis.assets/image-20211113152855396.png)
+
+设置键值对
+
+```
+set k v
+```
+
+![image-20211113153012484](redis.assets/image-20211113153012484.png)
+
+获得指定k的v
+
+```
+get k
+```
+
+![image-20211113154322963](redis.assets/image-20211113154322963.png)
+
+判断一个key是否有存在
+
+```
+# 返回1则存在，返回0则不存在
+EXISTS k
+```
+
+
+
+![image-20211113153127900](redis.assets/image-20211113153127900.png)
+
+把当前库的一个kv对移动到另一个库中
+
+```
+move k baseName
+```
+
+![image-20211113153712253](redis.assets/image-20211113153712253.png)
+
+设置键值对的过期时间，单位是秒
+
+```
+EXPIRE k timeInSecond
+```
+
+![image-20211113154034044](redis.assets/image-20211113154034044.png)
+
+查看键值对剩余生命，单位是秒
+
+```
+ttl k
+```
+
+查看指定k对应v的类型
+
+- 一共有String,List,Set,Hash,Zset五种类型
+
+```
+type k
+```
+
+![image-20211113154647437](redis.assets/image-20211113154647437.png)
+
+
+
+后面如果碰到不会的命令，可以在官网查看
+
+![image-20211113154915498](redis.assets/image-20211113154915498.png)
+
+### String
+
+*很多java程序员用redis只会String类型*
+
+下面演示redis中，string类型的v的一些基本操作
+
+```bash
+# 设置值
+127.0.0.1:6379> set k1 v1
+OK
+# 获得值
+127.0.0.1:6379> get k1
+"v1"
+# 为指定键的string类型v的结尾粘结字符串。如果键不存在相当于新建string型kv键值对。
+127.0.0.1:6379> append k1 zhangyun
+(integer) 10
+127.0.0.1:6379> get k1
+"v1zhangyun"
+# 查看指定键对应的string类型v的长度
+127.0.0.1:6379> strlen k1
+(integer) 10
+# 查看指定键对应的键值对是否存在
+127.0.0.1:6379> exists k1
+(integer) 1
+127.0.0.1:6379> 
+```
+
+String中有关增减的一组命令：
+
+```bash
+127.0.0.1:6379> set num 1
+OK
+# 以步长为1增加指定的k对应的v
+127.0.0.1:6379> incr num
+(integer) 2
+127.0.0.1:6379> get num
+"2"
+# 以步长为1减小指定的k对应的v
+127.0.0.1:6379> decr num
+(integer) 1
+127.0.0.1:6379> get num
+"1"
+# 以指定步长，增加指定的k对应的v
+127.0.0.1:6379> incrby num 10
+(integer) 11
+127.0.0.1:6379> get num
+"11"
+# 以指定步长，减小指定的k对应的v
+127.0.0.1:6379> decrby num 10
+(integer) 1
+127.0.0.1:6379> get num
+"1"
+127.0.0.1:6379> 
+
+```
+
+**redis中tab键不仅可以补足文件和目录，还能补足redis命令**
+
+字符串截取的一些操作
+
+```bash
+127.0.0.1:6379> get k1
+"v1zhangyun"
+# 取指定k对应v的，从0号位置到3号位置之间的内容
+127.0.0.1:6379> GETRANGE k1 0 3
+"v1zh"
+# 取指定k对应v的全部内容，-1表示取全部
+127.0.0.1:6379> GETRANGE k1 0 -1
+"v1zhangyun"
+127.0.0.1:6379> 
+```
+
+字符串内容替换的一些操作
+
+```bash
+127.0.0.1:6379> set k2 abcdefg
+OK
+127.0.0.1:6379> get k2
+"abcdefg"
+# 从v的1号位置开始，替换为zzz，未被zzz覆盖的字符串位置保持原状
+127.0.0.1:6379> SETRANGE k2 1 zzz
+(integer) 7
+127.0.0.1:6379> get k2
+"azzzefg"
+127.0.0.1:6379> 
+```
+
+设置键值对的同时设置过期时间。
+
+- 和expire区别：Setex是一个原子操作，设置值+设置过期时间两个动作，会在同一时间完成；在Redis缓存中，非常实用。expire是单纯的设置死亡时间。
+
+```
+# 设置键k3，值v3，生命20s的键值对。set with expire
+setex k3 20 v3
+```
+
+![image-20211113191434683](redis.assets/image-20211113191434683.png)
+
+不存在时的设置(set if not exist)，指定key对应的键值对不存在的时候才能设置成功。
+
+- 在分布式锁中常常使用，因为保证值总是存在。
+
+```
+setnx k4 redis
+```
+
+![image-20211113192358003](redis.assets/image-20211113192358003.png)
+
+批量设置键值对
+
+```bash
+mset k1 v1 k2 v2 k3 v3
+
+# 批量设置键值对，当所有键值对不存在时才生效，原子性！
+msetnx k1 v1 k4 v4
+```
+
+![image-20211113192817565](redis.assets/image-20211113192817565.png)
+
+![image-20211113194057284](redis.assets/image-20211113194057284.png)
+
+批量获取键对应的值
+
+```bash
+mget k1 k2 k3
+```
+
+![image-20211113193011565](redis.assets/image-20211113193011565.png)
+
+使用json方式新建对象
+
+```
+set user:1 {name:zhangyun,age:3}
+```
+
+使用mset的方式新建对象，或修改对象的值
+
+- 这里的key是一个巧妙的设计：user:{id}:{field}，这种设计在redis中是完全ok的
+
+```
+mset user:1:name zhangyun user:1:age 2
+```
+
+使用mget的方式获取对象的部分或全部信息
+
+```
+mget user:1:name user:1:age
+```
+
+![image-20211113200747145](redis.assets/image-20211113200747145.png)
+
+先get再set
+
+- 如果不存在值则返回null，并设置值；如果存在值则返回值，并设置新值
+- getset可以用来做一些更新的操作
+- 类似的操作还有CAS(compare and swap)，同时做两个操作。
+
+```
+getset db redis
+```
+
+![image-20211113201221941](redis.assets/image-20211113201221941.png)
+
+
+
+String类似的使用场景:value除了是我们的字符串还可以是我们的数字!
+
+- 计数器，incrby实现
+- 统计多单位的数量书
+- 粉丝数
+- 对象缓存存储
+
+### List
+
+在redis里面，我们可以把list玩成，栈、队列、阻塞队列!
+
+所有list大部分命令都是用l开头的，lpush和rpush组合是一个例外。
+
+redis命令不区分大小写。
+
+
+
+LPUSH将一个值或者多个值插入列表的头部:
+
+```
+LPUSH listName v
+```
+
+LRANGE获取list中一定范围内的值：
+
+
+```
+LRANGE listName l r
+```
+
+![image-20211113203121627](redis.assets/image-20211113203121627.png)
+
+RPUSH把一个值或多个值插入到列表的尾部：
+
+```
+RPUSH listName v
+```
+
+![image-20211113203744471](redis.assets/image-20211113203744471.png)
+
+从列表头部（左边）移除一个值:
+
+```
+Lpop listname
+```
+
+从列表尾部（右边）移除一个值:
+
+```
+Rpop listname
+```
+
+![image-20211113205628884](redis.assets/image-20211113205628884.png)
+
+获取列表的指定下标的值
+
+```
+Lindex listname index
+```
+
+![image-20211113210350181](redis.assets/image-20211113210350181.png)
+
+查看列表的长度
+
+![image-20211113210553333](redis.assets/image-20211113210553333.png)
+
+移除指定的值（精确匹配）：
+
+- 类似“取消关注”的功能，需要删除指定的值uid
+
+```bash
+# 从list列表，移除两个，值为“three”的元素
+lrem list 2 three
+```
+
+![image-20211113211539127](redis.assets/image-20211113211539127.png)
+
+截断列表保留下指定的值（们）
+
+```
+ltrim listname l r
+```
+
+![image-20211113212506958](redis.assets/image-20211113212506958.png)
+
+
+
+https://www.bilibili.com/video/BV1S54y1R7SB?p=14&spm_id_from=pageDriver
+
+16.32
+
+
+
+### Set
+
+### Hash
+
+### Zset
+
+
+
+## 三种特殊的数据类型
+
+
 
