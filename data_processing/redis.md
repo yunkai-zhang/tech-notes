@@ -937,6 +937,8 @@ String类似的使用场景:value除了是我们的字符串还可以是我们�
 
 redis命令不区分大小写。
 
+redis中list不是列表，是双向链表。
+
 
 
 LPUSH将一个值或者多个值插入列表的头部:
@@ -1007,23 +1009,246 @@ ltrim listname l r
 
 ![image-20211113212506958](redis.assets/image-20211113212506958.png)
 
+rpoplpush,从原list右边(尾)pop一个元素，给新list左边（头）push进去
+
+- **组合命令是原子操作**，在处理并发问题的时候，占有优势
+
+```
+rpoplpush src des
+```
+
+![image-20211114135459228](redis.assets/image-20211114135459228.png)
+
+lset 将list（已存在）中指定下标（已存在）的值替换为另一个值
+
+- 如果list或者下标不存在，lset会报错
+
+```
+lset listname index value
+```
+
+![image-20211114140649646](redis.assets/image-20211114140649646.png)
+
+在list的指定位置插入元素：
+
+```
+linsert listname before/after pivotWord insertedWord
+```
+
+![image-20211114141754705](redis.assets/image-20211114141754705.png)
 
 
-https://www.bilibili.com/video/BV1S54y1R7SB?p=14&spm_id_from=pageDriver
 
-16.32
+小结：
+
+- list实际上是一个双向链表：before Node after ；left 和right都可以插入值
+- 如果key不存在，创建新的链表
+- 如果key存在，新增内容
+- 如果移除了所有node，空链表，也代表不存在!
+- 在两边插入或者改动值，效率最高!中间元素，相对来说效率会低一点~
+- 实际上这些命令，用的时候看redis官方api即可。
+
+队列（消息排队）：lpush+rpop；栈：lpush+lpop。
 
 
 
 ### Set
 
+存值，取值，查值
+
+```bash
+# set集合中添加元素
+sadd setname v
+# 查看指定set集合的所有值
+SMEMBERS setname
+# 判断某个值是不是在set集合中
+SISMEMBER setname v
+```
+
+![image-20211114155103001](redis.assets/image-20211114155103001.png)
+
+获取set中元素的个数
+
+```
+scard setname 
+```
+
+![image-20211114160007163](redis.assets/image-20211114160007163.png)
+
+srem从set中移除指定元素
+
+```
+srem setname v 
+```
+
+![image-20211114160222327](redis.assets/image-20211114160222327.png)
+
+随机删除一些元素
+
+```
+spop setname
+```
+
+![image-20211114162336001](redis.assets/image-20211114162336001.png)
+
+SRANDMEMBER从set中随机抽选一个元素
+
+```
+SRANDMEMBER setname num
+```
+
+![image-20211114160819128](redis.assets/image-20211114160819128.png)
+
+smove把一个元素从一个set移动到另一个set
+
+```
+smove setnameSrc setnameDes v
+```
+
+![image-20211114162951891](redis.assets/image-20211114162951891.png)
+
+sdiff求两个集合的差集
+
+```
+sdiff set1 set2
+```
+
+![image-20211114163637025](redis.assets/image-20211114163637025.png)
+
+求两个集合的交集，比如微博中好友的共同关注
+
+```
+SINTER set1 set2
+```
+
+![image-20211114163802610](redis.assets/image-20211114163802610.png)
+
+求两个集合的并集
+
+```
+sunion set1 set2
+```
+
+![image-20211114170134829](redis.assets/image-20211114170134829.png)
+
 ### Hash
 
-### Zset
+redis中hashmap，本质和string没有什么太大区别，本质还是一个简单地k-v。
 
 
+
+**hset**存hashmap，**hget和hmget和hgetall**取hashmap：
+
+- 根据Redis 4.0.0，HMSET被视为已弃用。请在新代码中使用HSET。
+
+```bash
+# (批量)k-v存值
+hset hashmapName k1 v1 k2 v2 k3 v3...
+# 取值
+hget hashmapName k
+# 批量取v
+hmget hashmapName k1 k2...
+# 取hashmap所有的k-v
+hgetall hashmapName
+```
+
+![image-20211114195850633](redis.assets/image-20211114195850633.png)
+
+![image-20211114200058596](redis.assets/image-20211114200058596.png)
+
+![image-20211114200702855](redis.assets/image-20211114200702855.png)
+
+hdel删除hashmap中某一键值对
+
+```
+hdel hashmapName k
+```
+
+![image-20211114200926957](redis.assets/image-20211114200926957.png)
+
+hlen查看hashmap中键值对的数目
+
+```
+hlen hashmapName
+```
+
+![image-20211114201753573](redis.assets/image-20211114201753573.png)
+
+hexists判断某个键（值对）是否存在
+
+```
+HEXISTS hashmapName k
+```
+
+![image-20211114202256450](redis.assets/image-20211114202256450.png)
+
+**hkeys**和**hvals**查看hashmap的所有键或值
+
+```bash
+# 查看hashmap所有的key
+hkeys hashmapName
+# 查看hashmap所有的value
+hvals hashmapName
+```
+
+![image-20211114202618807](redis.assets/image-20211114202618807.png)
+
+hincrby增加或减少hashmap中的v（应为数字类型）的值
+
+```
+HINCRBY hashmapName k step
+```
+
+![image-20211114203503206](redis.assets/image-20211114203503206.png)
+
+hsetnx当键k不存在时添加键值对
+
+```
+hsetnx hashmapName k v
+```
+
+![image-20211114204221467](redis.assets/image-20211114204221467.png)
+
+
+
+hashmap可以存储变更的数据，尤其是用户信息之类的，经常变动的信息。hash更适合对象的存储 ，string 更适合字符串的存储。
+
+### Zset（有序集合）
+
+set的基础上为每一个元素增加一个序号
+
+
+
+往有序集合中添加元素
+
+```
+zadd zsetname index1 v1 index2 v2...
+```
+
+![image-20211114210449568](redis.assets/image-20211114210449568.png)
+
+查看有序集合的一段元素
+
+```
+# 1为0，r为-1时，为查看所有元素
+zrange zsetName l r
+```
+
+**ZRANGEBYSCORE**为有序集合按照编号升序排序：
+
+- 降序要使用ZREVRANGEBYSCORE 命令
+- ZRANGEBYSCORE还能添加一些其他参数，比如 `withscore`，表示排序同时把编号也打印出来。
+
+```
+# low为-inf表示编号从负无穷开始计入排序，up为+inf表示编号截止到正无穷计入排序
+ZRANGEBYSCORE zsetname low up
+```
+
+![image-20211114211041978](redis.assets/image-20211114211041978.png)
+
+https://www.bilibili.com/video/BV1S54y1R7SB?p=17&spm_id_from=pageDriver
+
+9.54
 
 ## 三种特殊的数据类型
-
-
 
