@@ -1,9 +1,5 @@
 ### 安装基础+搭建伪分布式（视频+博客）
 
-https://www.bilibili.com/video/BV1E4411e7v9?from=search&seid=12850173412224629004&spm_id_from=333.337.0.0
-
-https://yangyefu.github.io/2019/05/07/Centos7%E9%85%8D%E7%BD%AEhadoop3.1.2%20%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E8%AF%A6%E7%BB%86%E8%BF%87%E7%A8%8B/
-
 #### 准备工作
 - Linux环境：Centos 7.6
 - hadoop版本：hadoop3.1.2
@@ -301,5 +297,90 @@ https://yangyefu.github.io/2019/05/07/Centos7%E9%85%8D%E7%BD%AEhadoop3.1.2%20%E4
    firewall-cmd --state
    ```
 
-   https://yangyefu.github.io/2019/05/07/Centos7%E9%85%8D%E7%BD%AEhadoop3.1.2%20%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E8%AF%A6%E7%BB%86%E8%BF%87%E7%A8%8B/
+   1）关闭防火墙
+   
+   - 因为腾讯云本身就有port安全组和防火墙，比较安全，这里关掉即可
+   
+   ```
+   systemctl stop firewalld.service
+   ```
+   
+   2）禁止开机时防火墙自启
+   
+   ```
+   systemctl disable firewalld.service
+   ```
+
+#### 格式化&启动&停止hadoop
+
+1. 格式化hadoop，不要多次格式化。多次格式化会导致DataNode无法正常启动，解决办法在文末
+
+   ```
+   hadoop namenode -format
+   ```
+
+2. 启动&停止hadoop
+
+   ```
+   start-all.sh
+   ```
+
+   ```
+   stop-all.sh
+   ```
+
+   启动以后可以输入jps，看有没有下面这些进程
+
+   >16352 NameNode
+   >21362 Jps
+   >16644 SecondaryNameNode
+   >17017 NodeManager
+   >16475 DataNode
+   >16891 ResourceManager
+
+   输入netstat -tpnl | grep java，查看是否有9870和8088端口，刚启动需要等待一会儿才能查询到端口，等待时间视虚拟机情况而定
+
+   ```
+   netstat -tpnl | grep java
+   ```
+
+#### 遇到的一些坑
+
+1. 多次格式化会导致DataNode无法正常启动（很多人遇到这个问题）
+
+   1）打开/usr/local/hadoop-3.1.2/data/dfs
+
+   ```
+   cd /usr/local/hadoop-3.1.2/data/dfs
+   ```
+
+   2）有name和data两个目录，将data/current/VERSION中clusterID的值改为name/current/VERSION中clusterID的值
+
+   找到并复制clusterID的值
+
+   ```
+   cat name/current/VERSION
+   ```
+
+   修改clusterID的值
+
+   ```
+   vi data/current/VERSION
+   ```
+
+   3）重新启动hadoop
+
+2. ip:50070无法访问
+
+   hadoop 3.X版本以上，50070端口已改为9870端口，访问ip：9870即可
+
+3. 解决问题的最好办法
+
+   查看logs！如果看不懂请百度。修改之后记得重启hadoop
+
+   - 以本文为例，logs路径为：/usr/local/hadoop-3.1.2/logs
+
+
+
+[参考文档](https://yangyefu.github.io/2019/05/07/Centos7%E9%85%8D%E7%BD%AEhadoop3.1.2%20%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E8%AF%A6%E7%BB%86%E8%BF%87%E7%A8%8B/)
 
