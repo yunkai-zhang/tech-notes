@@ -1701,7 +1701,7 @@ linux是一个系统
    安装jdk.rpm包
 
    ```bash
-   rpm -ivh rpm包
+   rpm -ivh jdk-8u311-linux-x64.rpm
    ```
 
    ![image-20211107142946407](linux.assets/image-20211107142946407.png)
@@ -1864,28 +1864,31 @@ ssm war就需要放到tomcat中运行
    在tomcat解压文件夹/bin中执行下列命令，可以启动/停止tomcat
 
    ```bash
+   # 来到执行命令的目录
+   cd /home/zhangyun/apache-tomcat-9.0.54/bin
+   
    # 启动
    ./startup.sh
    # 停止
    ./shutdown.sh
    ```
-
+   
    ![image-20211107172827614](linux.assets/image-20211107172827614.png)
-
+   
    如果linux服务器防火墙开了8080端口，并且阿里云安全组也开放了，这个时候就可以直接访问远程tomcat服务器。
-
+   
    ```
    阿里云服务器公网ip:8080
    ```
-
+   
    ![image-20211107173221727](linux.assets/image-20211107173221727.png)
-
+   
    成功访问，这时候只要在阿里云中做如下操作，就有自己的网站了。
-
+   
    - 买个域名，
    - 域名解析到这个地址，
    - 再备案
-
+   
    域名解析后，如果端口是80 -http或者443-https 可以直接访问，如果是9000 或8080，就需要通过Apcahe或者Nginx做一下反向代理即可，配置文件即可，十分之简单，大家如果想要上线自己的网站，到目前为止
    那么你可以如愿以偿了!
 
