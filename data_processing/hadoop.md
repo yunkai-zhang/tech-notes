@@ -392,7 +392,134 @@
 
 以下记录所有聊天记录：
 
+>提单信息： 请输入问题描述 ：xshell无法ssh登录；腾讯云网页也无法ssh登录；同时netstat命令不能用了，使用yum尝试安装nettools也失败。 腾讯云网页尝试直接ssh登录服务器报错如下： socket connection established ssH connection failed: connect ECONNREFUSED 120.53.244.17:22* 3SH ERROR:connect ECONNREFUSED 120.53.244.17:22* Connection closed* 轻量服务器ID/名称：lhins-09jwaw6c 登录方式：本地ssh软件登录 服务器系统版本：centos 7.6 登录用户名：root
 
+
+
+您好，腾讯云很高兴为您服务，您已接入人工，工程师将尽快为您核实问题处理。
+
+2021-11-17 00:31
+
+您截图看一下
+
+![查看图片](hadoop.assets/100022181286_d0b68cde-f5e9-41b3-b37c-60d1a29152ed_txy_CFRCJOIORBC0.png)
+
+> 好的，我是配置hadoop的时候涉及了ssh，当时一切正常，结果xshell关闭后，重新连接就连不上了
+
+
+
+现在扫描22端口关闭了，您用VNC的登录方式重启一下ssh服务
+https://cloud.tencent.com/document/product/1207/46824
+
+
+
+> 我试过重启，但是报另一个错，你稍等我截图
+
+![查看图片](hadoop.assets/100022181286_d0b68cde-f5e9-41b3-b37c-60d1a29152ed_sshrb_CFRCOUN6FZC0.png)
+
+
+
+2021-11-17 00:40
+
+看起来是这个服务有问题了
+
+2021-11-17 00:40
+
+输入提示的命令看一下具体
+
+
+
+![查看图片](hadoop.assets/100022181286_d0b68cde-f5e9-41b3-b37c-60d1a29152ed_tishi_CFRCR16P03K0.png)
+
+> 输入这个吗？也报错
+
+用systemctl这个看一下
+
+![查看图片](hadoop.assets/100022181286_d0b68cde-f5e9-41b3-b37c-60d1a29152ed_sysctl_CFRCSD4144O0.png)
+
+> 这个吗？我用过了
+
+2021-11-17 00:45
+
+您好，关于您的问题我们已收到，经初步排查，需要为您转接相关负责人为您进一步跟进，请您稍等~
+
+您好：
+针对您遇到的问题，腾讯云申请登机排查，请您配合做好【数据备份】，提供云服务器的登录【账号】和【密码】
+排查过程中，工程师可能会对您服务器进行重启、或对系统的文件、配置、密码等修改操作。
+【请您在会话中文字回复】如下信息：
+1、（必填）实例用户名：
+2、（必填）实例密码：
+3、（必填）是否已完成备份：【已备份（提供备份截图）】 / 【已确认无需备份】
+4、（必填）是否允许重启：【允许重启】/【不允许重启】
+5、（必填）是否允许读写操作：【允许读写操作】/【不允许读写操作】
+授权前，还请您务必在控制台创建镜像、快照备份数据，
+制作快照参考：
+https://cloud.tencent.com/document/product/1207/48546制作系统镜像参考：
+https://cloud.tencent.com/document/product/1207/53038如您数据盘是本地盘，请及时将数据备份本地后授权我们操作。
+若您坚持要求腾讯云在您未完成备份情况下即进行排查，如您的数据或业务因此遭受影响且无备份恢复，腾讯云不承担任何责任，感谢您的理解和支持
+
+
+
+> \1. root
+>
+> 2021-11-17 00:49
+>
+> \2. XXXX
+>
+> 2021-11-17 00:49
+>
+> \3.  已备份（提供备份截图）
+
+![查看图片](hadoop.assets/100022181286_d0b68cde-f5e9-41b3-b37c-60d1a29152ed_backup_CFRCZQK2NX40.png)
+
+> 2021-11-17 00:49
+>
+> 允许重启
+>
+> 2021-11-17 00:49
+>
+> \4. 允许重启
+>
+> 2021-11-17 00:49
+>
+> \5. 允许读写操作
+
+
+
+收到，这边上机协助您尽快查看下问题
+
+
+
+> 查到问题的话，麻烦把导致问题的（可能）原因告诉我一下。结合netstat不能使用和安装，结合之前我安装hadoop涉及的ssh。如果可以的话
+
+
+
+您好：
+1、目前ssh服务的问题已经处理，原因是由于目录文件异常/var/empty/sshd
+
+![查看图片](hadoop.assets/1637082485938_4830.png)
+
+2、netstat不能使用和安装，目前查看是yum源异常，请您稍等
+
+![查看图片](hadoop.assets/1637082518783_1843.png)
+
+
+
+> 好的，为什么本来没事，突然目录就异常了？这个问题不知道的话，后续可能还会异常
+
+
+
+您好，请您稍等，具体的原因稍后一并给您反馈
+
+您好，抱歉让您久等了：
+上机已经为您修复，辛苦您进行核实
+
+![查看图片](hadoop.assets/1637085826488_168.png)
+
+【问题原因】
+1、ssh服务问题，是由于/var/empty/sshd目录权限导致，后续若ssh服务异常，您可以执行：sshd -t或者sshd -D进行查看([ssh的一些参考知识](https://blog.csdn.net/ranrancc_/article/details/96421193)，[该问题网上的解决方法](https://blog.csdn.net/bugzeroman/article/details/89223610)，[相关问题2](https://blog.csdn.net/zhanglh046/article/details/78890432))
+2、netstat 无法正常安装是由于yum源的问题导致，报错：报错404直接访问url打不开
+http://mirrors.tencentyun.com/centos/$releasever/os/x86_64/repodata/repomd.xml。$releasever变量没有被系统识别，在连接网络yum源的时候，变成了%24releasever；而yum中的变量$releasever是由/etc/yum.conf中的distroverpkg进行定义，还请您知晓。（[参考连接](https://cloud.tencent.com/developer/article/1559023)）
 
 
 
@@ -407,6 +534,74 @@
 依次执行以下命令：
 
 ```bash
+# 来到hadoop启动文件的存放位置
+[root@zhangyun ~]# cd /home/zhangyun/hadoop-3.1.2/sbin
+# 启动hadoop
+[root@zhangyun sbin]# ./start-all.sh
+Starting namenodes on [zhangyun]
+Last login: Wed Nov 17 10:25:54 CST 2021 from 223.72.40.168 on pts/0
+zhangyun: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+zhangyun: @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+zhangyun: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+zhangyun: IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+zhangyun: Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+zhangyun: It is also possible that a host key has just been changed.
+zhangyun: The fingerprint for the ECDSA key sent by the remote host is
+zhangyun: SHA256:Q9N55LawH2g4vH1uKKOeaCN7hBRiHGd6PS7ryqHEFfw.
+zhangyun: Please contact your system administrator.
+zhangyun: Add correct host key in /root/.ssh/known_hosts to get rid of this message.
+zhangyun: Offending ECDSA key in /root/.ssh/known_hosts:2
+zhangyun: Password authentication is disabled to avoid man-in-the-middle attacks.
+zhangyun: Keyboard-interactive authentication is disabled to avoid man-in-the-middle attacks.
+Starting datanodes
+Last login: Wed Nov 17 10:31:53 CST 2021 on pts/0
+localhost: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+localhost: @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+localhost: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+localhost: IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+localhost: Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+localhost: It is also possible that a host key has just been changed.
+localhost: The fingerprint for the ECDSA key sent by the remote host is
+localhost: SHA256:Q9N55LawH2g4vH1uKKOeaCN7hBRiHGd6PS7ryqHEFfw.
+localhost: Please contact your system administrator.
+localhost: Add correct host key in /root/.ssh/known_hosts to get rid of this message.
+localhost: Offending ECDSA key in /root/.ssh/known_hosts:3
+localhost: Password authentication is disabled to avoid man-in-the-middle attacks.
+localhost: Keyboard-interactive authentication is disabled to avoid man-in-the-middle attacks.
+Starting secondary namenodes [zhangyun]
+Last login: Wed Nov 17 10:31:58 CST 2021 on pts/0
+zhangyun: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+zhangyun: @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+zhangyun: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+zhangyun: IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+zhangyun: Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+zhangyun: It is also possible that a host key has just been changed.
+zhangyun: The fingerprint for the ECDSA key sent by the remote host is
+zhangyun: SHA256:Q9N55LawH2g4vH1uKKOeaCN7hBRiHGd6PS7ryqHEFfw.
+zhangyun: Please contact your system administrator.
+zhangyun: Add correct host key in /root/.ssh/known_hosts to get rid of this message.
+zhangyun: Offending ECDSA key in /root/.ssh/known_hosts:2
+zhangyun: Password authentication is disabled to avoid man-in-the-middle attacks.
+zhangyun: Keyboard-interactive authentication is disabled to avoid man-in-the-middle attacks.
+Starting resourcemanager
+Last login: Wed Nov 17 10:32:03 CST 2021 on pts/0
+Starting nodemanagers
+Last login: Wed Nov 17 10:32:10 CST 2021 on pts/0
+localhost: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+localhost: @    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+localhost: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+localhost: IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+localhost: Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+localhost: It is also possible that a host key has just been changed.
+localhost: The fingerprint for the ECDSA key sent by the remote host is
+localhost: SHA256:Q9N55LawH2g4vH1uKKOeaCN7hBRiHGd6PS7ryqHEFfw.
+localhost: Please contact your system administrator.
+localhost: Add correct host key in /root/.ssh/known_hosts to get rid of this message.
+localhost: Offending ECDSA key in /root/.ssh/known_hosts:3
+localhost: Password authentication is disabled to avoid man-in-the-middle attacks.
+localhost: Keyboard-interactive authentication is disabled to avoid man-in-the-middle attacks.
+[root@zhangyun sbin]#
+
 # 来到hadoop根目录
 [root@zhangyun ~]# cd /home/zhangyun/hadoop-3.1.2/
 [root@zhangyun hadoop-3.1.2]# ls
