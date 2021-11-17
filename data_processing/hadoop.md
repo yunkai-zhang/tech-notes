@@ -384,3 +384,421 @@
 
 [参考文档](https://yangyefu.github.io/2019/05/07/Centos7%E9%85%8D%E7%BD%AEhadoop3.1.2%20%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E8%AF%A6%E7%BB%86%E8%BF%87%E7%A8%8B/)
 
+
+
+### ssh+netstat崩坏
+
+安装好hadoop后，断开xshell连接，过段时间再连接时提示ssh无法登录。自己尝试很多办法无法搞定，申请了腾讯云的在线协助。
+
+以下记录所有聊天记录：
+
+
+
+
+
+### 试用自带的wordcount
+
+以下命令基于：centos7.6+hadoop3.1.2+jdk1.8
+
+
+
+来到hadoop的根目录，在我的机器上是`/home/zhangyun/hadoop-3.1.2`
+
+依次执行以下命令：
+
+```bash
+# 来到hadoop根目录
+[root@zhangyun ~]# cd /home/zhangyun/hadoop-3.1.2/
+[root@zhangyun hadoop-3.1.2]# ls
+bin  data  etc  include  lib  libexec  LICENSE.txt  logs  NOTICE.txt  README.txt  sbin  share
+# 创建用于存放本地待分析文件的文件夹，并把待分析文件放进去
+[root@zhangyun hadoop-3.1.2]# mkdir file
+[root@zhangyun hadoop-3.1.2]# ls
+bin  data  etc  file  include  lib  libexec  LICENSE.txt  logs  NOTICE.txt  README.txt  sbin  share
+[root@zhangyun hadoop-3.1.2]# cp README.txt file
+[root@zhangyun hadoop-3.1.2]# cd file
+[root@zhangyun file]# ls
+README.txt
+# 回到hadoop根目录，因为很多文件要从hadoop根目录往下去找
+[root@zhangyun file]# cd ../
+# 在hdfs上创建input文件夹，hadoop计算的时候，我指定从这个文件夹中读文件
+[root@zhangyun hadoop-3.1.2]# bin/hadoop fs -mkdir /input
+# 把根目录的file/README.txt上传到hdfs的/input目录中
+[root@zhangyun hadoop-3.1.2]# bin/hadoop fs -put file/README.txt /input
+# 使用mapreduce自带的wordcount函数，对于hadoop3.1.2来说这个函数在以下的目录和jar包中。处理hdfs的/input/README.txt，并把结果输出到hdfs的/output中。运行发生了错误！！！！！！
+[root@zhangyun hadoop-3.1.2]# bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.1.2.jar wordcount /input/README.txt /output
+2021-11-17 11:29:09,204 INFO client.RMProxy: Connecting to ResourceManager at zhangyun/10.0.24.2:8032
+2021-11-17 11:29:09,871 INFO mapreduce.JobResourceUploader: Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/root/.staging/job_1637116334826_0002
+2021-11-17 11:29:10,496 INFO input.FileInputFormat: Total input files to process : 1
+2021-11-17 11:29:10,632 INFO mapreduce.JobSubmitter: number of splits:1
+2021-11-17 11:29:10,797 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1637116334826_0002
+2021-11-17 11:29:10,798 INFO mapreduce.JobSubmitter: Executing with tokens: []
+2021-11-17 11:29:10,988 INFO conf.Configuration: resource-types.xml not found
+2021-11-17 11:29:10,989 INFO resource.ResourceUtils: Unable to find 'resource-types.xml'.
+2021-11-17 11:29:11,245 INFO impl.YarnClientImpl: Submitted application application_1637116334826_0002
+2021-11-17 11:29:11,290 INFO mapreduce.Job: The url to track the job: http://zhangyun:8088/proxy/application_1637116334826_0002/
+2021-11-17 11:29:11,290 INFO mapreduce.Job: Running job: job_1637116334826_0002
+2021-11-17 11:29:15,327 INFO mapreduce.Job: Job job_1637116334826_0002 running in uber mode : false
+2021-11-17 11:29:15,328 INFO mapreduce.Job:  map 0% reduce 0%
+2021-11-17 11:29:15,345 INFO mapreduce.Job: Job job_1637116334826_0002 failed with state FAILED due to: Application application_1637116334826_0002 failed 2 times due to AM Container for appattempt_1637116334826_0002_000002 exited with  exitCode: 1
+Failing this attempt.Diagnostics: [2021-11-17 11:29:15.205]Exception from container-launch.
+Container id: container_1637116334826_0002_02_000001
+Exit code: 1
+
+[2021-11-17 11:29:15.208]Container exited with a non-zero exit code 1. Error file: prelaunch.err.
+Last 4096 bytes of prelaunch.err :
+Last 4096 bytes of stderr :
+Error: Could not find or load main class org.apache.hadoop.mapreduce.v2.app.MRAppMaster
+
+Please check whether your etc/hadoop/mapred-site.xml contains the below configuration:
+<property>
+  <name>yarn.app.mapreduce.am.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+<property>
+  <name>mapreduce.map.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+<property>
+  <name>mapreduce.reduce.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+
+[2021-11-17 11:29:15.209]Container exited with a non-zero exit code 1. Error file: prelaunch.err.
+Last 4096 bytes of prelaunch.err :
+Last 4096 bytes of stderr :
+Error: Could not find or load main class org.apache.hadoop.mapreduce.v2.app.MRAppMaster
+
+Please check whether your etc/hadoop/mapred-site.xml contains the below configuration:
+<property>
+  <name>yarn.app.mapreduce.am.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+<property>
+  <name>mapreduce.map.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+<property>
+  <name>mapreduce.reduce.env</name>
+  <value>HADOOP_MAPRED_HOME=${full path of your hadoop distribution directory}</value>
+</property>
+
+For more detailed output, check the application tracking page: http://zhangyun:8088/cluster/app/application_1637116334826_0002 Then click on links to logs of each attempt.
+. Failing the application.
+2021-11-17 11:29:15,361 INFO mapreduce.Job: Counters: 0
+[root@zhangyun hadoop-3.1.2]# hadoop path
+ERROR: path is not COMMAND nor fully qualified CLASSNAME.
+Usage: hadoop [OPTIONS] SUBCOMMAND [SUBCOMMAND OPTIONS]
+ or    hadoop [OPTIONS] CLASSNAME [CLASSNAME OPTIONS]
+  where CLASSNAME is a user-provided Java class
+
+  OPTIONS is none or any of:
+
+buildpaths                       attempt to add class files from build tree
+--config dir                     Hadoop config directory
+--debug                          turn on shell script debug mode
+--help                           usage information
+hostnames list[,of,host,names]   hosts to use in slave mode
+hosts filename                   list of hosts to use in slave mode
+loglevel level                   set the log4j level for this command
+workers                          turn on worker mode
+
+  SUBCOMMAND is one of:
+
+
+    Admin Commands:
+
+daemonlog     get/set the log level for each daemon
+
+    Client Commands:
+
+archive       create a Hadoop archive
+checknative   check native Hadoop and compression libraries availability
+classpath     prints the class path needed to get the Hadoop jar and the required libraries
+conftest      validate configuration XML files
+credential    interact with credential providers
+distch        distributed metadata changer
+distcp        copy file or directories recursively
+dtutil        operations related to delegation tokens
+envvars       display computed Hadoop environment variables
+fs            run a generic filesystem user client
+gridmix       submit a mix of synthetic job, modeling a profiled from production load
+jar <jar>     run a jar file. NOTE: please use "yarn jar" to launch YARN applications, not this command.
+jnipath       prints the java.library.path
+kdiag         Diagnose Kerberos Problems
+kerbname      show auth_to_local principal conversion
+key           manage keys via the KeyProvider
+rumenfolder   scale a rumen input trace
+rumentrace    convert logs into a rumen trace
+s3guard       manage metadata on S3
+trace         view and modify Hadoop tracing settings
+version       print the version
+
+    Daemon Commands:
+
+kms           run KMS, the Key Management Server
+
+SUBCOMMAND may print help when invoked w/o parameters or with -h.
+```
+
+现在根据报错提示处理一下这个错误，查看mapred-site.xml中是否缺少对应的property。vim查看后发现确实缺少了。用以下命令得到`${full path of your hadoop distribution directory}`
+
+```
+[root@zhangyun hadoop-3.1.2]# hadoop classpath
+/home/zhangyun/hadoop-3.1.2/etc/hadoop:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/*
+```
+
+在mapred-site.xml中添加报错提示的内容,并把${full path of your hadoop distribution directory}替换为自己查到的目录：
+
+```
+# 在hadoop根目录执行下列命令
+cd ./etc/hadoop
+
+[root@zhangyun hadoop]# vim mapred-site.xml 
+```
+
+mapred-site.xml 中添加如下property
+
+```
+<property>
+  <name>yarn.app.mapreduce.am.env</name>
+  <value>HADOOP_MAPRED_HOME=/home/zhangyun/hadoop-3.1.2/etc/hadoop:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/*
+</value>
+</property>
+<property>
+  <name>mapreduce.map.env</name>
+  <value>HADOOP_MAPRED_HOME=/home/zhangyun/hadoop-3.1.2/etc/hadoop:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/*
+</value>
+</property>
+<property>
+  <name>mapreduce.reduce.env</name>
+  <value>HADOOP_MAPRED_HOME=/home/zhangyun/hadoop-3.1.2/etc/hadoop:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/common/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/hdfs/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/mapreduce/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/lib/*:/home/zhangyun/hadoop-3.1.2/share/hadoop/yarn/*
+</value>
+</property>
+```
+
+![image-20211117123816068](hadoop.assets/image-20211117123816068.png)
+
+重回正轨
+
+```bash
+# 回到hadoop根目录
+[root@zhangyun hadoop]# cd ../../
+# 重新执行wordcount，执行成功
+[root@zhangyun hadoop-3.1.2]# bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.1.2.jar wordcount /input/README.txt /output
+2021-11-17 11:46:12,476 INFO client.RMProxy: Connecting to ResourceManager at zhangyun/10.0.24.2:8032
+2021-11-17 11:46:13,176 INFO mapreduce.JobResourceUploader: Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/root/.staging/job_1637116334826_0003
+2021-11-17 11:46:13,384 INFO input.FileInputFormat: Total input files to process : 1
+2021-11-17 11:46:13,461 INFO mapreduce.JobSubmitter: number of splits:1
+2021-11-17 11:46:13,626 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1637116334826_0003
+2021-11-17 11:46:13,627 INFO mapreduce.JobSubmitter: Executing with tokens: []
+2021-11-17 11:46:13,823 INFO conf.Configuration: resource-types.xml not found
+2021-11-17 11:46:13,824 INFO resource.ResourceUtils: Unable to find 'resource-types.xml'.
+2021-11-17 11:46:13,888 INFO impl.YarnClientImpl: Submitted application application_1637116334826_0003
+2021-11-17 11:46:13,928 INFO mapreduce.Job: The url to track the job: http://zhangyun:8088/proxy/application_1637116334826_0003/
+2021-11-17 11:46:13,928 INFO mapreduce.Job: Running job: job_1637116334826_0003
+2021-11-17 11:46:21,026 INFO mapreduce.Job: Job job_1637116334826_0003 running in uber mode : false
+2021-11-17 11:46:21,027 INFO mapreduce.Job:  map 0% reduce 0%
+2021-11-17 11:46:26,090 INFO mapreduce.Job:  map 100% reduce 0%
+2021-11-17 11:46:31,124 INFO mapreduce.Job:  map 100% reduce 100%
+2021-11-17 11:46:32,136 INFO mapreduce.Job: Job job_1637116334826_0003 completed successfully
+2021-11-17 11:46:32,224 INFO mapreduce.Job: Counters: 53
+	File System Counters
+		FILE: Number of bytes read=1836
+		FILE: Number of bytes written=438611
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=1468
+		HDFS: Number of bytes written=1306
+		HDFS: Number of read operations=8
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=1
+		Launched reduce tasks=1
+		Data-local map tasks=1
+		Total time spent by all maps in occupied slots (ms)=2638
+		Total time spent by all reduces in occupied slots (ms)=3317
+		Total time spent by all map tasks (ms)=2638
+		Total time spent by all reduce tasks (ms)=3317
+		Total vcore-milliseconds taken by all map tasks=2638
+		Total vcore-milliseconds taken by all reduce tasks=3317
+		Total megabyte-milliseconds taken by all map tasks=2701312
+		Total megabyte-milliseconds taken by all reduce tasks=3396608
+	Map-Reduce Framework
+		Map input records=31
+		Map output records=179
+		Map output bytes=2055
+		Map output materialized bytes=1836
+		Input split bytes=102
+		Combine input records=179
+		Combine output records=131
+		Reduce input groups=131
+		Reduce shuffle bytes=1836
+		Reduce input records=131
+		Reduce output records=131
+		Spilled Records=262
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=139
+		CPU time spent (ms)=1170
+		Physical memory (bytes) snapshot=482385920
+		Virtual memory (bytes) snapshot=5622079488
+		Total committed heap usage (bytes)=389545984
+		Peak Map Physical memory (bytes)=297500672
+		Peak Map Virtual memory (bytes)=2809237504
+		Peak Reduce Physical memory (bytes)=184885248
+		Peak Reduce Virtual memory (bytes)=2812841984
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=1366
+	File Output Format Counters 
+		Bytes Written=1306
+# 查看hdfs输出文件夹中的计算结果
+[root@zhangyun hadoop-3.1.2]# bin/hadoop fs -ls /output
+Found 2 items
+-rw-r--r--   1 root supergroup          0 2021-11-17 11:46 /output/_SUCCESS
+-rw-r--r--   1 root supergroup       1306 2021-11-17 11:46 /output/part-r-00000
+[root@zhangyun hadoop-3.1.2]# bin/hadoop fs -cat /output/part-r-00000
+(BIS),	1
+(ECCN)	1
+(TSU)	1
+(see	1
+5D002.C.1,	1
+740.13)	1
+<http://www.wassenaar.org/>	1
+Administration	1
+Apache	1
+BEFORE	1
+BIS	1
+Bureau	1
+Commerce,	1
+Commodity	1
+Control	1
+Core	1
+Department	1
+ENC	1
+Exception	1
+Export	2
+For	1
+Foundation	1
+Government	1
+Hadoop	1
+Hadoop,	1
+Industry	1
+Jetty	1
+License	1
+Number	1
+Regulations,	1
+SSL	1
+Section	1
+Security	1
+See	1
+Software	2
+Technology	1
+The	4
+This	1
+U.S.	1
+Unrestricted	1
+about	1
+algorithms.	1
+and	6
+and/or	1
+another	1
+any	1
+as	1
+asymmetric	1
+at:	2
+both	1
+by	1
+check	1
+classified	1
+code	1
+code.	1
+concerning	1
+country	1
+country's	1
+country,	1
+cryptographic	3
+currently	1
+details	1
+distribution	2
+eligible	1
+encryption	3
+exception	1
+export	1
+following	1
+for	3
+form	1
+from	1
+functions	1
+has	1
+have	1
+http://hadoop.apache.org/core/	1
+http://wiki.apache.org/hadoop/	1
+if	1
+import,	2
+in	1
+included	1
+includes	2
+information	2
+information.	1
+is	1
+it	1
+latest	1
+laws,	1
+libraries	1
+makes	1
+manner	1
+may	1
+more	2
+mortbay.org.	1
+object	1
+of	5
+on	2
+or	2
+our	2
+performing	1
+permitted.	1
+please	2
+policies	1
+possession,	2
+project	1
+provides	1
+re-export	2
+regulations	1
+reside	1
+restrictions	1
+security	1
+see	1
+software	2
+software,	2
+software.	2
+software:	1
+source	1
+the	8
+this	3
+to	2
+under	1
+use,	2
+uses	1
+using	2
+visit	1
+website	1
+which	2
+wiki,	1
+with	1
+written	1
+you	1
+your	1
+[root@zhangyun hadoop-3.1.2]#
+```
+
