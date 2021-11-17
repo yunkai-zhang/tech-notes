@@ -4715,3 +4715,9 @@ public class FileController {
 
 <img src="springMVC.assets/image-20210807212658987.png" alt="image-20210807212658987" style="zoom:80%;" />
 
+重述ssm重点：
+
+- springmvc重点：springmvc执行流程，restful，整合ssm项目；
+- spring重点：DI-Set CP，代理模式，整合mybatis事务；
+- mybatis重点：第一个mybatis程序，resultmap结果集映射；
+
