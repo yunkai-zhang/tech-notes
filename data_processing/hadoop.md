@@ -523,6 +523,22 @@ http://mirrors.tencentyun.com/centos/$releasever/os/x86_64/repodata/repomd.xml�
 
 
 
+> 2021-11-17 16:03
+>
+> 但是我还有两个问题
+>
+> \1. “/var/empty/sshd目录权限”导致的问题，使我不小心修改了权限吗？还是后台某个应用修改的？
+>
+> \2. “$releasever变量没有被系统识别，在连接网络yum源的时候，变成了%24releasever；”，为什么会发生这个情况？
+
+
+
+您好，关于您的问题解答如下：
+1.“/var/empty/sshd目录权限”：这个问题判断为您可能有进行openssh升级或者误操作删除了ssh相关文件导致的
+2.$releasever变量没有被系统识别：这个问题是由于可能有操作关于centos-release这个源的配置导致的
+
+
+
 ### 试用自带的wordcount
 
 以下命令基于：centos7.6+hadoop3.1.2+jdk1.8
