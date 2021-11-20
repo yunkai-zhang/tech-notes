@@ -517,9 +517,27 @@ https://cloud.tencent.com/document/product/1207/53038如您数据盘是本地盘
 ![查看图片](hadoop.assets/1637085826488_168.png)
 
 【问题原因】
-1、ssh服务问题，是由于/var/empty/sshd目录权限导致，后续若ssh服务异常，您可以执行：sshd -t或者sshd -D进行查看([ssh的一些参考知识](https://blog.csdn.net/ranrancc_/article/details/96421193)，[该问题网上的解决方法](https://blog.csdn.net/bugzeroman/article/details/89223610)，[相关问题2](https://blog.csdn.net/zhanglh046/article/details/78890432))
+1、ssh服务问题，是由于/var/empty/sshd目录权限导致，后续若ssh服务异常，您可以执行：sshd -t或者sshd -D进行查看([ssh的一些参考知识](https://blog.csdn.net/ranrancc_/article/details/96421193)，[该问题网上的解决方法](https://blog.csdn.net/bugzeroman/article/details/89223610)，[相关问题2](https://blog.csdn.net/zhanglh046/article/details/78890432),[本问题解决方法](https://blog.csdn.net/syt124416/article/details/104209591))
 2、netstat 无法正常安装是由于yum源的问题导致，报错：报错404直接访问url打不开
 http://mirrors.tencentyun.com/centos/$releasever/os/x86_64/repodata/repomd.xml。$releasever变量没有被系统识别，在连接网络yum源的时候，变成了%24releasever；而yum中的变量$releasever是由/etc/yum.conf中的distroverpkg进行定义，还请您知晓。（[参考连接](https://cloud.tencent.com/developer/article/1559023)）
+
+3, xshell提示`WARNING! The remote SSH server rejected X11 forwarding request.`的解决方法见[链接](https://blog.csdn.net/qq_39720249/article/details/87078734).记录方案如下：
+
+- 编辑文件`/etc/ssh/sshd_config`,设置：
+
+  ```
+  X11Forwarding yes
+  ```
+
+  ![image-20211120211116465](hadoop.assets/image-20211120211116465.png)
+
+- 配置Xshell 6连接属性，如下图，取消勾取即可：
+
+  ![img](hadoop.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM5NzIwMjQ5,size_16,color_FFFFFF,t_70.png)
+
+  ![img](hadoop.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM5NzIwMjQ5,size_16,color_FFFFFF,t_70-16374139083882.png)
+
+
 
 
 

@@ -843,4 +843,77 @@ idea下载vue插件
 
 ### vue绑定事件
 
-https://www.bilibili.com/video/BV18E411a7mC?p=6&spm_id_from=pageDriver
+#### v-on
+
+emsp;事件有Vue的事件、和前端页面本身的一些事件!我们这里的`click`是vue的事件， 可以绑定到Vue中的`methods`中的方法事件!
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<div id="app">
+  <button v-on:click="sayHi">点我</button>
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  // vue有七大对象：el，data，template，methods，render，computed，watch；除了七大属性还有别的属性只不过这七大更重要。
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      message:'Hello World'
+    },
+    //不要把methods写成method
+    methods:{//方法必须定义在Vue的method对象中
+      sayHi:function(){
+      //'this'在方法里面指向当前Vue实例。this.message即为'Hello World'
+      alert(this.message);
+      }
+    }
+  });
+</script>
+</body>
+</html>
+
+```
+
+![image-20211120205546403](Vue.assets/image-20211120205546403.png)
+
+Vue还有一些基本的使用方式， 大家有需要的可以再跟着官方文档看看， 因为这些基本的指令几乎我们都见过了，一通百通!掌握学习的方式!
+
+
+
+#### 彩蛋：vue功能搬上服务器
+
+登录xshell，执行下列语句，查看tomcat主要出现在哪些目录，从而找到webinf所在目录
+
+```bash
+[root@zhangyun ~]# sudo find / -name *tomcat*
+```
+
+![image-20211120212458728](Vue.assets/image-20211120212458728.png)
+
+来到root目录，发现确实有标志性的“index.js"和”webinf文件夹“。所以把上节写的von.html放置在Root目录下
+
+![image-20211120212632096](Vue.assets/image-20211120212632096.png)
+
+![image-20211120212804481](Vue.assets/image-20211120212804481.png)
+
+访问：http://120.53.244.17:8080/von.html。即在外网看到自己写的页面。
+
+![image-20211120212916694](Vue.assets/image-20211120212916694.png)
+
+
+
+### Vue双向绑定
+
+https://www.bilibili.com/video/BV18E411a7mC?p=7&spm_id_from=pageDriver
+
+https://blog.csdn.net/qq_46138160/article/details/111028492
+
