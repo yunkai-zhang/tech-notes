@@ -411,7 +411,7 @@ Vue.js：
 
 
 
-## VUE功能讲解
+## 基本语法和概念
 
 ### 第一个vue程序
 
@@ -911,9 +911,502 @@ Vue还有一些基本的使用方式， 大家有需要的可以再跟着官方�
 
 
 
+## 双向绑定和组件
+
 ### Vue双向绑定
 
-https://www.bilibili.com/video/BV18E411a7mC?p=7&spm_id_from=pageDriver
+#### 什么是双向数据绑定
 
-https://blog.csdn.net/qq_46138160/article/details/111028492
+Vue.js是一个MV VM框架， 即数据双向绑定， 即当数据发生变化的时候， 视图也就发生变化， 当视图发生变化的时候，数据也会跟着同步变化。这也算是Vue.js的精髓之处了。
+
+值得注意的是，我们所说的数据双向绑定，一定是对于UI控件来说的非UI控件不会涉及到数据双向绑定。单向数据绑定是使用状态管理工具的前提。如果我们使用vue x那么数据流也是单项的，这时就会和双向数据绑定有冲突。
+
+
+为什么要实现数据的双向绑定:
+
+在`Vue.js`中，如果使用`vuex`， 实际上数据还是单向的， 之所以说是数据双向绑定，这是用的UI控件来说， 对于我们处理表单， `Vue.js`的双向数据绑定用起来就特别舒服了。即两者并不互斥，在全局性数据流使用单项，方便跟踪；局部性数据流使用双向，简单易操作。
+
+
+
+#### 在表单中使用双向数据绑定
+
+你可以用v-model指令在表单、及元素上创建双向数据绑定。它会根据控件类型自动选取正确的方法来更新元素。尽管有些神奇， 但v-model本质上不过是语法糖。它负责监听用户的输入事件以更新数据，并对一些极端场景进行一些特殊处理。
+
+注意：v-model会忽略所有表单元素的value、checked、selected特性的初始值而总是将Vue实例的数据作为数据来源。你应该通过JavaScript在组件的data选项中声明初始值!
+
+
+
+
+v-model是同步了输入框的value
+
+说name没用的麻烦看下前端知识。name是为了保证他们是一组单选框
+
+
+
+#### 单行文本双向绑定实战
+
+- v-model把\<input>的value和VM中data的message的value绑定了。
+
+- \<input>自带的初始value值“hello”被vue忽略了，vue绑定下，\<input>的初始值为message的初始值即空字符串
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<div id="app">
+  输入的文本：<input type="text" v-model="message" value="hello">{{message}}
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      message:""
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+![image-20211121173212289](Vue.assets/image-20211121173212289.png)
+
+
+
+#### 多行文本双向绑定实战
+
+- `&nbsp;`在html中表示不换行空格
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<div id="app">
+  多行文本：<textarea v-model="pan"></textarea>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;多行文本是：{{pan}}
+<!--  多行文本：<textarea v-model="pan"></textarea>多行文本是：{{pan}}-->
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      pan:"Hello hello!"
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+![image-20211121174828000](Vue.assets/image-20211121174828000.png)
+
+
+
+
+
+#### 单个复选框实现双向绑定
+
+- label组件的for属性显式绑定label组件和input组件，用label的值提示用户应该在input输入什么
+- 本例绑定了复选框的check结果+data.checked，和label的value+data.checked
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<div id="app">
+    单复选框：
+    <input type="checkbox" id="checkbox" v-model="checked">
+    &nbsp;&nbsp;
+    <label for="checkbox">{{checked}}</label>
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+    var vm = new Vue({
+        el:"#app",
+        data:{
+            checked:false
+        }
+    });
+</script>
+</body>
+</html>
+```
+
+![image-20211121181217422](Vue.assets/image-20211121181217422.png)
+
+![image-20211121181246972](Vue.assets/image-20211121181246972.png)
+
+#### 多复选框实现双向绑定
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<div id="app">
+  多复选框：
+  <input type="checkbox" id="jack" value="Jack" v-model="checkedNames">
+  &nbsp;&nbsp;
+  <label for="jack">Jack</label>
+  <input type="checkbox" id="john" value="John" v-model="checkedNames">
+  &nbsp;&nbsp;
+  <label for="john">John</label>
+  <input type="checkbox" id="mike" value="Mike" v-model="checkedNames">
+  &nbsp;&nbsp;
+  <label for="mike">Mike</label>
+  <span>选中的值：{{checkedNames}}</span>
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      checkedNames:[]
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+![image-20211121194611172](Vue.assets/image-20211121194611172.png)
+
+- 取消某个checkbox的选中的话，被取消的checkbox的value也会从后面的中括号中消失
+
+#### 单选按钮实现双向绑定
+
+- radioinput的value和VM.picked的value绑定了，VM.picked的value又和span中的值绑定了。所以点击不同的radioinput，顿号后面的span展示区会展示相对应的radioinput的value。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<div id="app">
+  单选框按钮
+  <input type="radio" id="one" value="One" v-model="picked">
+  <label for="one">One</label>
+  <input type="radio" id="two" value="Two" v-model="picked">
+  <label for="two">Two</label>
+  <span>选中的值：{{picked}}</span>
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      picked:'Two'
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+![image-20211121195239454](Vue.assets/image-20211121195239454.png)
+
+#### 下拉框
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<div id="app">
+  下拉框:
+  <select v-model="zhangyun">
+    <option value="" disabled>---请选择---</option>
+    <option>A</option>
+    <option>B</option>
+    <option>C</option>
+    <option>D</option>
+  </select>
+  <span>value:{{zhangyun}}</span>
+
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  var vm = new Vue({
+    el:"#app",
+    data:{
+      zhangyun:"A"
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+![image-20211121200008607](Vue.assets/image-20211121200008607.png)
+
+![image-20211121200101709](Vue.assets/image-20211121200101709.png)
+
+注意：`v-model`表达式的初始值未能匹配任何选项，元系将被渲染为“未选中”状态。 在iOS中， 这会使用户无法选择第一个选项，因为这样的情况下，iOS不会触发`change`事件。因此，更推荐像上面这样提供一个值为空的禁用选项。
+
+
+
+### 什么是组件
+
+组件是可复用的`Vue`实例， 说白了就是一组可以重复使用的模板， 跟`JSTL`的自定义标签、`Thymeleal`的`th:fragment`等框架有着异曲同工之妙，通常一个应用会以一棵嵌套的组件树的形式来组织：
+
+![在这里插入图片描述](Vue.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3Bhbl9oMTk5NQ==,size_16,color_FFFFFF,t_70.png)
+
+![img](Vue.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3Bhbl9oMTk5NQ==,size_16,color_FFFFFF,t_70-16374962149632.png)
+
+例如，你可能会有页头、侧边栏、内容区等组件，每个组件又包含了其它的像导航链接、博文之类的组件。
+
+
+
+#### 第一个vue组件
+
+注意：在实际开发中，我们并不会用以下方式开发组件，而是采用`vue-cli`创建，`vue`模板文件的方式开发，以下方法只是为了让大家理解什么是组件。
+
+**使用`Vue.component()`方法注册组件，格式如下：**
+
+```html
+<div id="app">
+<!--  直接使用自定义的zhangyun组件-->
+  <zhangyun></zhangyun>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  //先注册组件,组件中对象的名字是“zhangyun”，对象的内容在大括号中括着。这里定义了一个名字叫“zhangyun”的组件
+  Vue.component("zhangyun",{
+
+    template:'<li>Hello</li>'
+
+  });
+  //再实例化Vue
+  var vm = new Vue({
+    el:"#app",
+  });
+</script>
+```
+
+![image-20211121210531388](Vue.assets/image-20211121210531388.png)
+
+#### 自定义组件使用`props`属性传递参数
+
+如何理解props：
+
+- 方法一：首先v-for遍历出items里的数组，然后v-bind绑定把item传给了props
+
+- （推荐）方法二：props是来定义一个形参temp，用来接收items中的变量item即实参；template 用来取形参中的变量值
+
+这里也再出出现vfor：
+
+- `v-for="item in items"`：遍历`Vue`实例中定义的名为`items`的数组，并创建同等数量的组件
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<div id="app">
+    <!--组件：传递给组件中的值：props-->
+    <zhangyun v-for="item in items" v-bind:temp="item"></zhangyun>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+    //定义组件
+    Vue.component("zhangyun",{
+        props:['temp'],
+        template:'<li>{{temp}}</li>'
+
+    });
+    var vm = new Vue({
+        el:"#app",
+        data:{
+            items:["java","Linux","前端","love张云"]
+        }
+    });
+</script>
+</body>
+</html>
+```
+
+![image-20211121223717678](Vue.assets/image-20211121223717678.png)
+
+## Axios异步通信
+
+### 什么是Axios
+
+Axios是一个开源的可以用在浏览器端和Node JS的异步通信框架， 她的主要作用就是实现AJAX异步通信，其功能特点如下：
+
+- 从浏览器中创建XMLHttpRequests
+- 从node.js创建http请求
+- 支持Promise API[JS中链式编程]
+- 拦截请求和响应
+- 转换请求数据和响应数据
+- 取消请求
+- 自动转换JSON数据
+- 客户端支持防御XSRF(跨站请求伪造)
+
+GitHub：https://github.com/axios/axios
+中文文档：http://www.axios-js.com/
+
+
+
+js版本要求：ECMAScript 6+
+
+
+
+### 为什么使用Axios
+
+由于`Vue.js`是一个视图层框架并且作者(尤雨溪) 严格准守SoC(关注度分离原则)所以Vue.js并不包含AJAX的通信功能， 为了解决通信问题， 作者单独开发了一个名为`vue-resource`的插件， 不过在进入2.0版本以后停止了对该插件的维护并推荐了`Axios`框架。少用jQuery， 因为它操作Dom太频繁!
+
+
+
+### 第一个Axios应用程序
+
+咱们开发的接口大部分都是采用JSON格式， 可以先在项目里模拟一段JSON数据， 数据内容如下：创建一个名为data.json的文件并填入上面的内容， 放在项目的根目录下
+
+- 本json第一层有六个对象，其中address对象和links对象又包含了一些二层级对象
+
+```json
+{
+  "name": "张云学Java",
+  "url": "https://www.weibo.com",
+  "page": 1,
+  "isNonProfit": true,
+  "address": {
+    "street": "天安门",
+    "city": "北京西城",
+    "country": "中国"
+  },
+  "links": [
+    {
+      "name": "bilibili",
+      "url": "https://zhihu.com"
+    },
+    {
+      "name": "狂神说Java",
+      "url": "https://bing.com"
+    },
+    {
+      "name": "百度",
+      "url": "https://www.baidu.com/"
+    }
+  ]
+}
+```
+
+编写前端代码
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:v-binf="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!--v-clock 解决{{message}}原始变量直接出现在页面上的问题：用上后，页面会是先空白，等完全加载好了再出现。-->
+    <style>
+        [v-cloak]{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="vue">
+<!--    3. 页面从data的info中拿数据-->
+    <div>地名：{{info.name}}</div>
+    <div>地址：{{info.address.country}}--{{info.address.city}}--{{info.address.street}}</div>
+<!--    target="_blank"意为在新的页面打开链接，但是有潜在的安全风险
+v-bind:使得点击链接时，不直接访问https://info.url，而是data中info.url对应的value；标签的元素特性必须用vbind绑定才能使用VM的data中的内容-->
+    <div>链接：<a v-bind:href="info.url" target="_blank">{{info.url}}</a> </div>
+</div>
+
+<!--引入js文件-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript">
+    var vm = new Vue({
+        el:"#vue",
+        /*
+        * data：属性：vm，存一些数据。
+        * */
+        data(){
+            return{
+                info:{
+                    name:null,
+                    address:{
+                        country:null,
+                        city:null,
+                        street:null
+                    },
+                    url:null
+                }
+            }
+        },
+        mounted(){//钩子函数（网友说：钩子函数就是回调函数，待考证）
+            //1. 使用get()从json中读取了数据，该数据可以用response.data拿到
+            axios.get('../data.json')
+                //2. 把读取的数据赋值给VM的info对象
+                .then(response=>(this.info=response.data));
+        }
+    });
+</script>
+</body>
+</html>
+```
+
+网友说：
+
+- 网友说：`注意：这里data(){}应该没有意义，直接data:{}就可以，但里面一定有一个原始参数info，然后axios获取到的数据绑定到info上.`
+
+- 网友说：`把data写成方法可以防止变量污染.`
+
+要点：
+
+1. 在这里使用了v-bind将a:href的属性值与Vue实例中的数据进行绑定
+2. 使用axios框架的get方法请求AJAX并自动将数据封装进了Vue实例的数据对象中
+3. 我们在data中的数据结构必须和`Ajax`响应回来的数据格式匹配！
+
+测试结果如下：
+
+![image-20211122164123059](Vue.assets/image-20211122164123059.png)
+
+![image-20211122164303476](Vue.assets/image-20211122164303476.png)
 
