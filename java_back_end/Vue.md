@@ -617,7 +617,7 @@ idea下载vue插件
 
 我们已经成功创建了第一个Vue应用!看起来这跟渲染一个字符串模板非常类似， 但是Vue在背后做了大量工作。现在数据和DOM已经被建立了关联， 所有东西都是响应式的。我们在控制台操作对象属性，界面可以实时更新!
 
-我们还可以使用v-bind来绑定元素特性!
+我们还可以使用v-bind来绑定元素特性和VM.data中的值!
 
 ```html
 <!DOCTYPE html>
@@ -943,6 +943,18 @@ v-model是同步了输入框的value
 
 
 
+#### v-model和v-bind的区别
+
+简单来说：
+
+v-bind是一个单向数据绑定，映射关系：Model->View，我们不需要进行额外的DOM操作，只需要进行Model的操作就可以实现视图的联动更新。
+
+v-model是一个双向数据绑定，映射关系：View接受的数据,传给model,model的数据再传给view。把Model绑定到View的同时也将View绑定到Model上，这样就既可以通过更新Model来实现View的自动更新，也可以通过更新View来实现Model数据的更新。所以，当我们用JavaScript代码更新Model时，View就会自动更新，反之，如果用户更新了View，Model的数据也自动被更新了。
+
+[参考网址](https://blog.csdn.net/weixin_45849072/article/details/105428298?spm=1001.2101.3001.6650.1&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1.no_search_link&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1.no_search_link)
+
+
+
 #### 单行文本双向绑定实战
 
 - v-model把\<input>的value和VM中data的message的value绑定了。
@@ -1019,7 +1031,7 @@ v-model是同步了输入框的value
 #### 单个复选框实现双向绑定
 
 - label组件的for属性显式绑定label组件和input组件，用label的值提示用户应该在input输入什么
-- 本例绑定了复选框的check结果+data.checked，和label的value+data.checked
+- 本例复选框的check结果绑定了data.checked；label的value绑定了data.checked
 
 ```html
 <!DOCTYPE html>
@@ -1410,3 +1422,515 @@ v-bind:使得点击链接时，不直接访问https://info.url，而是data中in
 
 ![image-20211122164303476](Vue.assets/image-20211122164303476.png)
 
+
+
+### Vue的生命周期
+
+官方文档：https://cn.vuejs.org/v2/guide/instance.html#生命周期图示
+
+Vue实例有一个完整的生命周期，也就是从开始创建初女台化数据、编译模板、挂载DOM、渲染一更新一渲染、卸载等一系列过程，我们称这是Vue的生命周期。通俗说就是Vue实例从创建到销毁的过程，就是生命周期。
+
+在Vue的整个生命周期中，它提供了一系列的事件，可以让我们在事件触发时注册JS方法，可以让我们用自己注册的JS方法控制整个大局，在这些事件响应方法中的this直接指向的是Vue的实例。
+![在这里插入图片描述](Vue.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3Bhbl9oMTk5NQ==,size_16,color_FFFFFF,t_70.png)
+
+## 计算属性、内容分发、自定义事件
+
+### 计算属性（computed）
+
+计算属性的重点突出在`属性`两个字上(属性是名词)，首先它是个`属性`；其次这个属性有`计算`的能力(计算是动词)，这里的`计算`就是个函数：简单点说，它就是一个能够将计算结果缓存起来的属性(将行为转化成了静态的属性)，仅此而已；可以想象为缓存!
+
+与自己写函数(VM.methods)实现如上功能相比，计算属性有一个好处就是：他在内存中运行，有虚拟dom的概念。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--view层，模板-->
+<div id="app">
+<!--    方法必须用`方法名+括号`来调用-->
+    <p>currentTime1:{{currentTime1()}}</p>
+    <p>currentTime2:{{currentTime2}}</p>
+</div>
+
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+    var vm = new Vue({
+        el:"#app",
+        data:{
+            message:"zyk"
+        },
+        methods:{
+            currentTime1:function(){
+                return Date.now();//返回一个时间戳
+            }
+        },
+        computed:{
+            currentTime2:function(){//计算属性：methods，computed方法名不能重名，重名之后，只会调用methods的方法
+                //console中修改this.message后，原本不变的时间戳变了可以看出:计算属性类似mybatis，第一次计算存在缓存里面，一旦有增删改则缓存立马失效重新计算。
+                this.message;
+                return Date.now();//返回一个时间戳
+            }
+        }
+    });
+</script>
+</body>
+</html>
+```
+
+测试结果如下：
+
+- 刷新页面的话，两个时间戳都会变
+
+![image-20211122202346875](Vue.assets/image-20211122202346875.png)
+
+注意：methods和computed里的东西不能重名
+
+说明：
+
+- methods：定义方法， 调用方法使用currentTime1()， 需要带括号
+- computed：定义计算属性， 调用属性使用currentTime2， 不需要带括号：this.message是为了能够让currentTime2观察到数据变化而变化
+  - 如果在方法中的值发生了变化，则缓存就会刷新!可以在控制台使用`vm.message=”zhangyun"`， 改变下数据的值；再次测试在控制台观察currentTime2的结果，或发现原本不变得currentTime2变了!
+
+结论：
+
+调用方法时，每次都需要讲行计算，既然有计算过程则必定产生系统开销，那如果这个结果是不经常变化的呢?此时就可以考虑将这个结果缓存起来，采用计算属性可以很方便的做到这点，**计算属性的主要特性就是为了将不经常变化的计算结果进行缓存，以节约我们的系统开销；**
+
+
+
+### 内容分发（slot）
+
+在Vue.js中我们使用\<slot>元素作为承载分发内容的出口，作者称其为插槽，可以应用在组合组件的场景中；
+比如准备制作一个待办事项组件(todo) ， 该组件由待办标题(todo-title) 和待办内容(todo-items)组成，但这三个组件又是相互独立的，该如何操作呢?
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<!--view层，模板-->
+<div id="vue">
+  <todo>
+      
+    <todo-title slot="todo-title" v-bind:title="title"></todo-title>
+<!--    v-bind:item="item"的双引号可以不用-->
+    <todo-items slot="todo-items" v-for="(item,index) in todoItems" v-bind:index=index v-bind:item="item"></todo-items>
+  </todo>
+</div>
+    
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  Vue.component('todo',{
+    //插槽用name属性绑定自定义的component
+    template:'<div>\
+                <slot name="todo-title"></slot>\
+                <ul>\
+                    <slot name="todo-items"></slot>\
+                </ul>\
+            </div>'
+  });
+  Vue.component('todo-title',{
+    props:['title'],
+    template:'<div>{{title}}</div>'
+  });
+  //这里的index，就是数组的下标，使用for循环遍历的时候，可以循环出来！
+  Vue.component("todo-items",{
+    props:["item","index"],
+    template:"<li>{{index}},{{item}}</li>"
+  });
+
+  var vm = new Vue({
+    el:"#vue",
+    data:{
+      title:"张云学java",
+      todoItems:['javaweb','ssm','springboot']
+    }
+  });
+</script>
+</body>
+</html>
+```
+
+测试结果如下：
+
+![image-20211122213400802](Vue.assets/image-20211122213400802.png)
+
+注意：
+
+- 看了一下官网的解释，使用自定义组件时，如果模板中不留slot插槽，那么这个组件内放的任意东西都将被忽略
+
+- slot插槽是为了方便二次开发
+- 我们的todo-title和todo-items组件分别被分发到了todo组件的todo-title和todo-items插槽中。插槽可以让代办事项的标题和值实现动态绑定。
+
+
+
+### 自定义事件内容分发
+
+总体概念：
+
+- 就是用事件来通知上层，让上层来执行操作；父组件通过props把数据（属性）传给子组件，子组件使用$emit触发父组件的自定义事件。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<!--view层，模板-->
+<div id="vue">
+  <todo>
+    <todo-title slot="todo-title" :title="title_text"></todo-title>
+    <!--<todo-items slot="todo-items" v-for="(item,index) in todoItems" v-bind:item="item"></todo-items>-->
+    <!--如下简写“v-bind：”为“：”
+    v-on:remove的remove是一个自定义事件名字，绑定了事件执行时使用的方法为removeItems-->
+    <todo-items slot="todo-items" v-for="(item,index) in todoItems"
+                :item_p="item" :index_p="index" v-on:remove="removeItems(index)" :key="index"></todo-items>
+  </todo>
+</div>
+<!--1.导入Vue.js-->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.21/dist/vue.min.js"></script>
+<script type="text/javascript">
+  Vue.component('todo',{
+    template:'<div>\
+                <slot name="todo-title"></slot>\
+                <ul>\
+                    <slot name="todo-items"></slot>\
+                </ul>\
+            </div>'
+  });
+  Vue.component('todo-title',{
+    props:['title'],
+    template:'<div>{{title}}</div>'
+  });
+  //这里的index，就是数组的下标，使用for循环遍历的时候，可以循环出来！
+  Vue.component("todo-items",{
+    props:["item_p","index_p"],
+    template:"<li>{{index_p+1}},{{item_p}} <button @click='remove_methods'>删除</button></li>",
+    methods:{
+      remove_methods:function (index) {
+        //this.$emit 自定义事件分发，绑定了删除按钮点击这一动作和自定义事件remove。
+        this.$emit('remove',index);
+      }
+    }
+  });
+
+  var vm = new Vue({
+    el:"#vue",
+    data:{
+      title_text:"张云学java",
+      todoItems:['test1','test2','test3']
+    },
+    methods:{
+      removeItems:function(index){
+        console.log("删除了"+this.todoItems[index]+"OK");
+        //this指的是当前vm对象。splice是操作js数组的一个工具，1表示一次删除一个元素。
+        this.todoItems.splice(index,1);
+      }
+    }
+  });
+</script>
+</body>
+</html>
+
+```
+
+![image-20211123001615827](Vue.assets/image-20211123001615827.png)
+
+![image-20211123001634996](Vue.assets/image-20211123001634996.png)
+
+删除流程：
+
+- this.$emit将自定义事件分发回前端，前端v–on:remove再将事件给removeItems(处理)，而:key则是将index返回到vue事例。
+- 网友说：把：key=“index”去了也能成功。这里的v-bind:index不用写，this.$emit中的index，也不用写，本质就是利用&emit调用外部绑定的函数，绑定的时候已经传参了，所以这里执行就行，根本不用传参
+
+前后端分离的精髓：
+
+- VM.methods都可以是前端写好的，后端人员不用关注前端页面，只用关注VM.data即可。
+- 后端只需要传个json其他都不用管了，前端已经全部拉通了
+
+流程图示意：
+
+![在这里插入图片描述](Vue.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3Bhbl9oMTk5NQ==,size_16,color_FFFFFF,t_70-16375984650442.png)
+
+### Vue入门小结
+
+核心：数据驱动，组件化
+
+优点：借鉴了AngularJS的模块化开发和React的虚拟Dom，虚拟Dom就是把Demo操作放到内存中执行；
+
+常用的属性：
+
+- v-if
+- v-else-if
+- v-else
+- v-for
+- v-on绑定事件，简写@
+- v-model数据双向绑定
+- v-bind给组件绑定参数，简写：
+
+组件化：
+
+- 组合组件slot插槽
+- 组件内部绑定事件需要使用到this.$emit("事件名",参数);
+- 计算属性的特色，缓存计算数据
+
+遵循SoC关注度分离原则，Vue是纯粹的视图框架，并不包含，比如Ajax之类的通信功能，为了解决通信问题，我们需要使用Axios框架做异步通信；
+
+
+说明：
+
+- Vue的开发都是要基于NodeJS，实际开发采用Vue-cli脚手架开发，vue-router路由，vuex做状态管理；Vue UI，界面我们一般使用ElementUI（饿了么出品），或者ICE（阿里巴巴出品）来快速搭建前端项目~~
+
+官网：
+
+- ElementUI：https://element.eleme.cn/#/zh-CN
+- ICE：https://ice.work/
+
+
+
+## 第一个vue-cli项目
+
+### 什么是vue-cli
+
+https://blog.csdn.net/qq_46138160/article/details/111028492
+
+https://www.bilibili.com/video/BV18E411a7mC?p=13
+
+vue-cli官方提供的一个脚手架，用于快速生成一个vue的项目模板
+
+预先定义好的目录结构及基础代码，就好比咱们在创建Maven项目时可以选择创建一个骨架项目，这个估计项目就是脚手架，我们的开发更加的快速；
+
+项目的功能
+
+- 统一的目录结构
+- 本地调试
+- 热部署
+- 单元测试
+- 集成打包上线
+
+### 环境搭建+第一个vuecli项目
+
+本节引用声明：原文来自此[链接](https://www.jianshu.com/p/ab3c34a95128)
+
+Element-Ul是饿了么前端团队推出的一款基于Vue.js 2.0 的桌面端UI框架，一套为开发者、设计师和产品经理准备的基于 Vue 2.0 的桌面端组件库，手机端有对应框架是Mint UI 。
+
+中文文档：http://element-cn.eleme.io/#/zh-CN
+github地址：https://github.com/ElemeFE/element
+
+![img](Vue.assets/webp.webp)
+
+#### 安装node.js
+
+端开发框架和环境都是需要 Node.js ，先安装node.js开发环境，vue的运行是要依赖于node的npm的管理工具来实现，下载[https://nodejs.org/en/](https://links.jianshu.com/go?to=https%3A%2F%2Fnodejs.org%2Fen%2F)，安装完成之后，打开cmd开始输入命令。（我用的是win10系统，所以需要管理员权限，右键点击以管理员身份运行cmd），不然会出现很多报错。
+
+![img](Vue.assets/webp-16376596505242.webp)
+
+#### 查看node的版本号
+
+下载好node之后，以管理员身份(在任意目录)打开cmd管理工具，输入 node -v ，回车，查看node版本号，出现版本号则说明安装成功。
+
+```undefined
+node -v
+```
+
+![img](Vue.assets/webp-16376597131684.webp)
+
+#### 安装淘宝npm镜像
+
+由于npm是国外的，使用起来比较慢，我们这里使用淘宝的cnpm镜像来安装vue.
+淘宝的cnpm命令管理工具可以代替默认的npm管理工具。
+
+```bash
+# 在想安装cnpm的文件目录打开cmd，输入命令：
+npm install -g cnpm --registry=https://registry.npm.taobao.org
+```
+
+![image-20211123173240960](Vue.assets/image-20211123173240960.png)
+
+#### 安装全局vue-cli脚手架
+
+淘宝镜像安装成功之后，我们就可以全局vue-cli脚手架，输入命令：cnpm install --global vue-cli 回车；验证是否安装成功，在命令输入vue，出来vue的信息，及说明安装成功；
+
+```bash
+# 推荐在cnpm的安装目录输入命令（不过貌似所在目录无所谓）：
+cnpm install --global vue-cli
+```
+
+![image-20211123173714559](Vue.assets/image-20211123173714559.png)
+
+#### 开始进入主题，初始化一个vue项目
+
+先在盘中创建要放置vue项目的文件夹
+
+![image-20211123173835178](Vue.assets/image-20211123173835178.png)
+
+在新建的文件夹所在目录打开cmd，执行下面语句
+
+- 不停按回车键，使所有创建选项按默认配置。
+
+```
+vue init webpack itemname
+```
+
+![image-20211123174108021](Vue.assets/image-20211123174108021.png)
+
+出现下面的提示即创建成功
+
+![image-20211123174146626](Vue.assets/image-20211123174146626.png)
+
+运行初始化demo:在项目根目录输入命令npm run dev；运行一下初始后的demo，弹出访问地址，如果没有问题则进行安装elementUI；准备好好之后，开始引入饿了么elementUI组件。
+
+- `ctl+C`(+c)退出批处理操作
+
+![image-20211123174450896](Vue.assets/image-20211123174450896.png)
+
+#### 安装 elementUI
+
+如果批处理状态没结束则快捷键ctrl+c（+c）,终止批处理操 作吗(Y/N)。再输入命令npm i element-ui -S
+
+```
+npm i element-ui -S
+```
+
+![image-20211123174730972](Vue.assets/image-20211123174730972.png)
+
+注意：安装过程中出现这样的bug的时候，需要解决
+
+![img](Vue.assets/webp-16376608750726.webp)
+
+解决办法：尝试 删除项目中的 package-lock.json 文件 和 node_modules 文件夹，然后再尝试 npm install.
+
+成功安装组件显示如下
+
+![image-20211123174900477](Vue.assets/image-20211123174900477.png)
+
+#### 创建第一个vuecli项目
+
+在components文件夹下面创建test.vue文件，复制一段elementUI官方文档的代码，进行测试
+
+![img](Vue.assets/webp-16376610434448.webp)
+
+```xml
+<template>
+    <el-menu :default-active="activeIndex2" class="el-menu-demo" mode="horizontal" @select="handleSelect" background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
+        <el-menu-item index="1">处理中心</el-menu-item>
+        <el-submenu index="2">
+            <template slot="title">我的工作台</template>
+            <el-menu-item index="2-1">选项1</el-menu-item>
+            <el-menu-item index="2-2">选项2</el-menu-item>
+            <el-menu-item index="2-3">选项3</el-menu-item>
+        </el-submenu>
+        <el-menu-item index="3">
+            <a href="https://www.ele.me" target="_blank">订单管理</a>
+        </el-menu-item>
+    </el-menu>
+</template>
+
+<script>
+    export default {
+        data() {
+            return {
+                activeIndex: '1',
+                activeIndex2: '1'
+            };
+        },
+        methods: {
+            handleSelect(key, keyPath) {
+                console.log(key, keyPath);
+            }
+        }
+    }
+</script>
+```
+
+在App.vue中引入test.vue
+
+![img](Vue.assets/webp-163766107612710.webp)
+
+```xml
+打开main.js,加入element-ui的js和css<template>
+  <div id="app">
+    <img src="./assets/logo.png">
+    <router-view/>
+    <Test></Test>
+  </div>
+</template>
+
+<script>
+    import Test from './components/test.vue'
+    
+export default {
+    components:{
+  Test,
+ },
+  name: 'App'
+}
+</script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+```
+
+打开main.js,加入element-ui的js和css
+
+```jsx
+import ElementUI from 'element-ui' //element-ui的全部组件
+import 'element-ui/lib/theme-chalk/index.css'//element-ui的css
+Vue.use(ElementUI) //使用elementUI
+```
+
+![img](Vue.assets/webp-163766112227512.webp)
+
+在vscode中点击“文件->全部保存”，把所有文件保存
+
+控制台再次运行，会报一些错。
+
+![image-20211123175418238](Vue.assets/image-20211123175418238.png)
+
+![image-20211123175507075](Vue.assets/image-20211123175507075.png)
+
+原因：ESLint 对语法的要求过于严格导致编译的时候报上图那些错误。要知道，这并不是代码有异常，而是代码格式有问题，这些错误并不会影响代码的执行结果。
+
+解决方法：很简单，就如提示所言，我们我可以取消ESLint验证规则，这样就不会报这些异常了。
+
+- 如果你的项目是vue脚手架工程，那么找到项目根目录下的bulid文件夹 -> [webpack](https://so.csdn.net/so/search?from=pc_blog_highlight&q=webpack).base.conf.js
+
+  找到以下代码块并注释掉第三行代码
+
+  ```
+   module: {
+      rules: [
+        ...(config.dev.useEslint ? [createLintingRule()] : []),  //注释掉该行代码
+        {
+          test: /\.vue$/,
+          loader: 'vue-loader',
+          options: vueLoaderConfig
+        },
+  
+  ```
+
+- 如果是其他类型的vue工程，参考该[链接](https://blog.csdn.net/qq_41999034/article/details/109078474)
+
+**改完保存**，重新启动项目,组件中的效果如下：
+
+![image-20211123175939008](Vue.assets/image-20211123175939008.png)
+
+![image-20211123180352460](Vue.assets/image-20211123180352460.png)
