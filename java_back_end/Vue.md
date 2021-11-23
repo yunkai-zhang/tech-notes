@@ -1774,13 +1774,22 @@ cnpm install --global vue-cli
 
 ![image-20211123173835178](Vue.assets/image-20211123173835178.png)
 
-在新建的文件夹所在目录打开cmd，执行下面语句
-
-- 不停按回车键，使所有创建选项按默认配置。
+在新建的文件夹所在目录打开cmd，执行下面语句。不停按回车键，使所有创建选项按默认配置。
 
 ```
 vue init webpack itemname
 ```
+
+说明：
+
+- Project name：项目名称，默认回车即可
+- Project description：项目描述，默认回车即可
+- Author：项目作者，默认回车即可
+- Install vue-router：是否安装vue-router，选择n不安装（后期需要再手动添加）
+- Use ESLint to lint your code:是否使用ESLint做代码检查，选择n不安装（后期需要再手动添加)
+- Set up unit tests:单元测试相关，选择n不安装（后期需要再手动添加）
+- Setupe2etests with Nightwatch：单元测试相关，选择n不安装（后期需要再手动添加）
+- Should we run npm install for you after the,project has been created:创建完成后直接初始化，选择n，我们手动执行；运行结果！
 
 ![image-20211123174108021](Vue.assets/image-20211123174108021.png)
 
@@ -1934,3 +1943,311 @@ Vue.use(ElementUI) //使用elementUI
 ![image-20211123175939008](Vue.assets/image-20211123175939008.png)
 
 ![image-20211123180352460](Vue.assets/image-20211123180352460.png)
+
+
+
+### 文件结构
+
+idea的console可以配置为管理员模式，这样就可以直接在idea运行命令了-》idea64.exe->属性
+
+网友：我不是以cmd管理员创建得项目，所以可以直接以普通身份运行，你们可以试试，不会出错的
+
+![image-20211123193321296](Vue.assets/image-20211123193321296.png)
+
+- build：
+  - 用于构建
+- config：
+  - vue项目的各种配置，比如端口号
+
+- node_modules
+  - 下载的各种项目要依赖js在里面
+- src：
+  - 源文件，自己的前端代码都在里面
+- static
+  - 存放静态文件的地方
+- index.html
+  - 不要改，最多改个title
+- package.json
+  - 指定了打包时要构建的版本
+
+
+
+ES6语法重点：
+
+- export导出，暴露接口
+- import导入，导入被暴露的接口
+
+
+
+## webpack使用
+
+### 什么是Webpack
+
+本质上， webpack是一个现代JavaScript应用程序的静态模块打包器(module bundler) 。当webpack处理应用程序时， 它会递归地构建一个依赖关系图(dependency graph) ， 其中包含应用程序需要的每个模块， 然后将所有这些模块打包成一个或多个bundle.
+
+Webpack是当下最热门的前端资源模块化管理和打包工具， 它可以将许多松散耦合的模块按照依赖和规则打包成符合生产环境部署的前端资源。还可以将按需加载的模块进行代码分离，等到实际需要时再异步加载。通过loader转换， 任何形式的资源都可以当做模块， 比如Commons JS、AMD、ES 6、CSS、JSON、Coffee Script、LESS等；
+
+伴随着移动互联网的大潮， 当今越来越多的网站已经从网页模式进化到了WebApp模式。它们运行在现代浏览器里， 使用HTML 5、CSS 3、ES 6等新的技术来开发丰富的功能， 网页已经不仅仅是完成浏览器的基本需求； WebApp通常是一个SPA(单页面应用) ， 每一个视图通过异步的方式加载，这导致页面初始化和使用过程中会加载越来越多的JS代码，这给前端的开发流程和资源组织带来了巨大挑战。
+
+前端开发和其他开发工作的主要区别，首先是前端基于多语言、多层次的编码和组织工作，其次前端产品的交付是基于浏览器的，这些资源是通过增量加载的方式运行到浏览器端，如何在开发环境组织好这些碎片化的代码和资源，并且保证他们在浏览器端快速、优雅的加载和更新，就需要一个模块化系统，这个理想中的模块化系统是前端工程师多年来一直探索的难题。
+
+
+
+### 模块化的演进
+
+#### Script标签
+
+```javascript
+<script src = "module1.js"></script>
+<script src = "module2.js"></script>
+<script src = "module3.js"></script>
+```
+
+这是最原始的JavaScript文件加载方式，如果把每一个文件看做是一个模块，那么他们的接口通常是暴露在全局作用域下，也就是定义在window对象中，不同模块的调用都是一个作用域。
+这种原始的加载方式暴露了一些显而易见的弊端：
+
+- 全局作用域下容易造成变量冲突
+- 文件只能按照\<script>的书写顺序进行加载
+- 开发人员必须主观解决模块和代码库的依赖关系
+- 在大型项目中各种资源难以管理，长期积累的问题导致代码库混乱不堪
+
+
+
+#### CommonsJS
+
+服务器端的NodeJS遵循CommonsJS规范，该规范核心思想是允许模块通过require方法来同步加载所需依赖的其它模块，然后通过exports或module.exports来导出需要暴露的接口。
+
+```
+require("module");
+require("../module.js");
+export.doStuff = function(){};
+module.exports = someValue;
+1234
+```
+
+优点：
+
+- 服务器端模块便于重用
+- NPM中已经有超过45万个可以使用的模块包
+- 简单易用
+
+缺点：
+
+- 同步的模块加载方式不适合在浏览器环境中，同步意味着阻塞加载，浏览器资源是异步加载的
+- 不能非阻塞的并行加载多个模块
+
+实现：
+
+- 服务端的NodeJS
+- Browserify，浏览器端的CommonsJS实现，可以使用NPM的模块，但是编译打包后的文件体积较大
+- modules-webmake，类似Browserify，但不如Browserify灵活
+- wreq，Browserify的前身
+
+
+
+#### AMD
+
+Asynchronous Module Definition规范其实主要一个主要接口define(id?,dependencies?,factory);它要在声明模块的时候指定所有的依赖dependencies，并且还要当做形参传到factory中，对于依赖的模块提前执行。
+
+```javascript
+define("module",["dep1","dep2"],functian(d1,d2){
+	return someExportedValue;
+});
+require（["module","../file.js"],function(module，file){});
+1234
+
+```
+
+优点
+
+- 适合在浏览器环境中异步加载模块
+- 可以并行加载多个模块
+
+缺点
+
+- 提高了开发成本，代码的阅读和书写比较困难，模块定义方式的语义不畅
+- 不符合通用的模块化思维方式，是一种妥协的实现
+
+实现
+
+- RequireJS
+- curl
+
+
+
+#### CMD
+
+Commons Module Definition规范和AMD很相似，尽保持简单，并与CommonsJS和NodeJS的Modules规范保持了很大的兼容性。
+
+```javascript
+define(function(require,exports,module){
+	var $=require("jquery");
+	var Spinning = require("./spinning");
+	exports.doSomething = ...;
+	module.exports=...;
+});
+
+```
+
+优点：
+
+- 依赖就近，延迟执行
+- 可以很容易在NodeJS中运行缺点
+- 依赖SPM打包，模块的加载逻辑偏重
+
+实现
+
+- Sea.js
+- coolie
+
+#### ES6模块
+
+EcmaScript 6标准增加了JavaScript语言层面的模块体系定义。ES 6模块的设计思想， 是尽量静态化， 使编译时就能确定模块的依赖关系， 以及输入和输出的变量。Commons JS和AMD模块，都只能在运行时确定这些东西。
+
+```javascript
+import "jquery"
+export function doStuff(){}
+module "localModule"{}
+```
+
+优点
+
+- 容易进行静态分析
+- 面向未来的Ecma Script标准
+
+缺点
+
+- 原生浏览器端还没有实现该标准
+- 全新的命令，新版的Node JS才支持
+
+实现
+
+- Babel
+
+大家期望的模块: 系统可以兼容多种模块风格， 尽量可以利用已有的代码， 不仅仅只是JavaScript模块化， 还有CSS、图片、字体等资源也需要模块化。
+
+### 安装Webpack
+
+WebPack是一款模块加载器兼打包工具， 它能把各种资源， 如JS、JSX、ES 6、SASS、LESS、图片等都作为模块来处理和使用。
+
+#### 安装
+
+在任一目录打开cmd，输入以下命令
+
+```
+npm install webpack -g
+npm install webpack-cli -g
+```
+
+![image-20211123203842757](Vue.assets/image-20211123203842757.png)
+
+#### 测试安装成功
+
+```
+webpack -v
+webpack-cli -v
+```
+
+![image-20211123203943611](Vue.assets/image-20211123203943611.png)
+
+
+
+#### 配置（先跳过本节看下一节）
+
+创建 `webpack.config.js`配置文件
+
+- entry：入口文件， 指定Web Pack用哪个文件作为项目的入口,一般是main.js
+- output：输出， 指定WebPack把处理完成的文件放置到指定路径
+- module：模块， 用于处理各种类型的文件,把所有模块打进去（类似java把所有依赖都安上）
+- plugins：插件， 如：热更新、代码重用等
+- resolve：设置路径指向
+- watch：监听， 用于设置文件改动后直接打包
+
+```javascript
+module.exports = {
+	entry:"",
+	output:{
+		path:"",
+		filename:""
+	},
+	module:{
+		loaders:[
+			{test:/\.js$/,;\loade:""}
+		]
+	},
+	plugins:{},
+	resolve:{},
+	watch:true
+}
+
+```
+
+直接运行`webpack`命令打包
+
+
+
+### 使用webpack
+
+创建项目，即在目录新建一个文件夹
+
+![image-20211123204823490](Vue.assets/image-20211123204823490.png)
+
+idea打开（open）创建的文件夹
+
+![image-20211123204943693](Vue.assets/image-20211123204943693.png)
+
+创建一个名为modules的目录，用于放置JS模块等资源文件
+
+![image-20211123205504763](Vue.assets/image-20211123205504763.png)
+
+在modules下创建模块文件，如hello.js，用于编写JS模块相关代码
+
+```javascript
+//暴露一个方法：sayHi
+exports.sayHi = function(){
+    document.write("<div>Hello Webpack</div>");
+}
+//暴露一个方法：sayHi2
+exports.sayHi2 = function(){
+    document.write("<div>Hello Webpack2</div>");
+}
+```
+
+在modules下创建一个名为main.js的入口文件，用于打包时设置entry属性,引入暴露的接口。main.js的内容如下：
+
+```javascript
+//require 导入一个模块，就可以调用这个模块中的方法了
+var hello = require("./hello");
+hello.sayHi();
+hello.sayHi2()
+```
+
+![image-20211123210407090](Vue.assets/image-20211123210407090.png)在项目目录下创建webpack.config.js配置文件，该文件用于设置webpack的打包，文件中添加以下内容。
+
+```javascript
+module.exports = {
+	entry:"./modules/main.js",
+	output:{
+		filename:"./js/bundle.js"
+	}
+
+}
+```
+
+idea的自带控制台使用webpack命令打包
+
+```bash
+webpack
+```
+
+发生报错如下：
+
+![image-20211123211134673](Vue.assets/image-20211123211134673.png)
+
+> 怀疑是idea的terminal没有管理员权限，过会研究下
+
+https://www.bilibili.com/video/BV18E411a7mC?p=14&spm_id_from=pageDriver
+
+24.12
+
+https://blog.csdn.net/qq_46138160/article/details/111028492
