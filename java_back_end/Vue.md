@@ -2234,20 +2234,363 @@ module.exports = {
 }
 ```
 
-idea的自带控制台使用webpack命令打包
+确保idea以管理员的方式开启，步骤如下：
+
+![image-20211124083931609](Vue.assets/image-20211124083931609.png)
+
+![image-20211124083955548](Vue.assets/image-20211124083955548.png)
+
+![image-20211124084045996](Vue.assets/image-20211124084045996.png)
+
+![image-20211124084138908](Vue.assets/image-20211124084138908.png)
+
+重启idea，使用其的自带控制台使用webpack命令打包
 
 ```bash
 webpack
 ```
 
-发生报错如下：
+发生报错如下：`webpack无法无法加载文件，因为在此系统上禁止运行脚本`
 
 ![image-20211123211134673](Vue.assets/image-20211123211134673.png)
 
-> 怀疑是idea的terminal没有管理员权限，过会研究下
+解决方案如下：
 
-https://www.bilibili.com/video/BV18E411a7mC?p=14&spm_id_from=pageDriver
+管理员方式打开Windows PowerShell
 
-24.12
+![image-20211124085146893](Vue.assets/image-20211124085146893.png)
+
+输入`Set-ExecutionPolicy RemoteSigned`,并设置为`Y`
+
+![image-20211124085247936](Vue.assets/image-20211124085247936.png)
+
+重新webpack，即可成功
+
+![image-20211124085335618](Vue.assets/image-20211124085335618.png)
+
+打包成功后查看项目目录结构，发现新增了dist目录。bundle.js中打包好了我们写的项目，且降级为ES5，**外界可以引用**。
+
+![image-20211124085829987](Vue.assets/image-20211124085829987.png)
+
+新建一个index.html，测试引用我们打包生成的dist文件夹
+
+![image-20211124090828605](Vue.assets/image-20211124090828605.png)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script src="dist/js/bundle.js"></script>
+</body>
+</html>
+```
+
+![image-20211124090855633](Vue.assets/image-20211124090855633.png)
+
+成功展现了hello.js中暴露的两个接口：
+
+![image-20211124090907512](Vue.assets/image-20211124090907512.png)
+
+## vue-router路由
+
+### 说明
+
+学习的时候，尽量的打开官方的文档
+
+Vue Router是Vue.js官方的路由管理器。它和Vue.js的核心深度集成， 让构建单页面应用变得易如反掌。包含的功能有：
+
+- 嵌套的路由/视图表
+- 模块化的、基于组件的路由配置
+- 路由参数、查询、通配符
+- 基于Vue js过渡系统的视图过渡效果
+- 细粒度的导航控制
+- 带有自动激活的CSS class的链接
+- HTML5 历史模式或hash模式， 在IE 9中自动降级
+- 自定义的滚动行为
+
+
+
+拿网页举例子，下面图片的每一个框都代表一个组件。之间组件是div，现在组件用template构成。
+
+![image-20211124092055342](Vue.assets/image-20211124092055342.png)
+
+
+
+vue中require和import的区别，见[链接](https://blog.csdn.net/caseywei/article/details/90710749)
+
+
+
+### 安装并测试
+
+基于前几节写的`第一个vue-cli`进行测试学习；复制一份vue-cli项目，并重命名为vue-router-test，删除原先的`.idea`目录并用idea打开（open）。
+
+![image-20211124101602234](Vue.assets/image-20211124101602234.png)
+
+把项目的展示内容（src下）全部删除，只留下骨架，
+
+ ![image-20211124103034017](Vue.assets/image-20211124103034017.png)
+
+```vue
+<!--App.vue内容如下-->
+<template>
+  <div id="app">
+
+  </div>
+</template>
+
+<script>
+
+export default {
+  name: "App"
+};
+</script>
+
+<style>
+#app {
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+```
+
+```js
+// main.js内容如下
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+import Vue from 'vue'
+import App from './App'
+
+Vue.config.productionTip = false;
+
+/* eslint-disable no-new */
+new Vue({
+  el: "#app",
+  components: { App },
+  template: "<App/>"
+});
+```
+
+**进入itemname目录**（即src的上一层目录），执行`npm run dev`运行vue
+
+![image-20211124103602909](Vue.assets/image-20211124103602909.png)
+
+![image-20211124103637738](Vue.assets/image-20211124103637738.png)
+
+运行成功，且页面无报错
+
+![image-20211124103841566](Vue.assets/image-20211124103841566.png)
+
+先查看node modules文件夹中是否存在vue-router？：node modules文件夹有vue-cli项目中的vue-router文件夹，不过没事，重新安装一下。
+
+![image-20211124104635764](Vue.assets/image-20211124104635764.png)
+
+vue-router是一个插件包， 所以我们还是需要用npm或cnpm来进行安装的。打开命令行工具，进入项目目录（src的上一级目录），输入下面命令。
+
+- 如果有提示报错，根据提示修复试试；如果修复还是不成功，尝试用cnpm替换npm
+
+```bash
+# 确保在src的上一级目录下执行如下命令
+npm install vue-router --save-dev
+```
+
+![image-20211124105003440](Vue.assets/image-20211124105003440.png)
+
+如果在一个模块化工程中使用它，必须要import并通过Vue.use()明确地安装路由功能：
+
+- 后一小结引入了router中央配置文件router/index.js后，main.js中就不需要import VueRouter了，而所有路由工作都交给router/index.js配置
+
+```js
+import VueRouter from 'vue-router'
+
+Vue.use(VueRouter);
+```
+
+```js
+// 添加router后的main.js内容如下
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+import Vue from 'vue'
+import App from './App'
+import VueRouter from 'vue-router'
+
+Vue.config.productionTip = false;
+
+// 显式声明使用
+Vue.use(VueRouter);
+
+/* eslint-disable no-new */
+new Vue({
+  el: "#app",
+  components: { App },
+  template: "<App/>"
+});
+```
+
+运行项目
+
+![image-20211124105837529](Vue.assets/image-20211124105837529.png)
+
+查看运行结果，是一个无报错的空白页，说明vue-router成功集成进项目中了
+
+![image-20211124105818525](Vue.assets/image-20211124105818525.png)
+
+App.vue添加一个标题,不刷新页面并重新查看页面，页面成功出现标题。
+
+![image-20211124110143088](Vue.assets/image-20211124110143088.png)
+
+![image-20211124110239904](Vue.assets/image-20211124110239904.png)
+
+#### router多页面实战
+
+src/component问件夹下新建Conten.vue文件，推荐文件名大写
+
+![image-20211124110429442](Vue.assets/image-20211124110429442.png)
+
+![image-20211124110633966](Vue.assets/image-20211124110633966.png)
+
+安装路由，在src目录下，新建一个文件夹：`router`，专门存放路由，新建路由的主配置文件index.js，如下:
+
+![image-20211124111334775](Vue.assets/image-20211124111334775.png)
+
+```js
+// router/index.js内容如下
+import Vue from'vue'
+// 导入路由插件
+import Router from 'vue-router'
+// 导入自己定义的组件，即vue页面
+import Content from '../components/Content'
+import Main from '../components/Main'
+import Zhang from '../components/Zhang'
+// 安装路由
+Vue.use(Router);
+// 配置路由,new后面的`Router`要和第三行导入的`Router`同名。路由很像spring中的controller，path就像requestmapping
+export default new Router({
+  routes:[
+    {
+      //路由路径
+      path:'/content',
+      //路由名称，随便定义，甚至可以不写
+      name:'routerForContent',
+      //跳转到组件，与import的组件同名
+      component:Content
+    },
+    {
+      //路由路径
+      path:'/main',
+      //路由名称，随便定义，甚至可以不写
+      name:'routerForMain',
+      //跳转到组件，与import的组件同名
+      component:Main
+    },
+    {
+      //路由路径
+      path:'/Zhang',
+      //路由名称，随便定义，甚至可以不写
+      name:'routerForZhang',
+      //跳转到组件，与import的组件同名
+      component:Zhang
+    }
+  ]
+});
+
+```
+
+修改组件文件，以Content.vue为例
+
+```vue
+<!--Content.vue文件内容如下，Main.vue和Zhang.vue只是改了一下h1的内容-->
+<template>
+<h1>内容页</h1>
+</template>
+
+<script>
+export default {
+  name: "Content"
+}
+</script>
+
+<!--<style scope>的scope表示本样式只在当前页面有效，没有scope的话，则样式全局有效。-->
+<style scoped>
+
+</style>
+
+```
+
+在`main.js`中配置路由
+
+- 有专门的路由配置文件后，每个文件里不需要单个的路由
+
+```js
+// 添加router后的main.js内容如下
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+import Vue from 'vue'
+import App from './App'
+
+// 导入创建的路由配置文件；只需要指定文件夹vue就会自动扫描里面的路由配置。这一步以后不管添加多少路由，都不用变了，只会有路由配置文件内部进行路由增加或修改，
+import router from './router'
+
+// 来关闭生产模式下给出的提示
+Vue.config.productionTip = false;
+
+new Vue({
+  el:"#app",
+  // 配置路由。这一步以后不管添加多少路由，都不用变了，只会有路由配置文件内部进行路由增加或修改。
+  router,
+  components:{App},
+  template:'<App/>'
+});
+```
+
+在`App.vue`中使用路由
+
+```vue
+<template>
+  <div id="app">
+    <h1>欢迎来到vue-router测试页面</h1>
+    <!--
+      router-link：默认会被渲染成一个<a>标签，to属性为指定链接。
+      router-view：用于渲染路由匹配到的组件。当你的路由path 与访问的地址相符时，会将指定的组件替换该 router-view
+    -->
+    <router-link to="/main">首页</router-link>
+    <router-link to="/content">内容</router-link>
+    <router-link to="/zhang">张</router-link>
+    <router-view></router-view>
+  </div>
+</template>
+
+<script>
+export default{
+  name:'App'
+}
+</script>
+<style></style>
+```
+
+重启vue项目（虽然vue会自动刷新修改的部分，但是最好重启一下）
+
+![image-20211124115405493](Vue.assets/image-20211124115405493.png)
+
+访问localhost页面，点击任何链接，页面下部分都渲染相应的vue组件（\<router-view>的作用），比如点击“张”就渲染除了Zhang.vue组件的内容
+
+![image-20211124115628356](Vue.assets/image-20211124115628356.png)
+
+![image-20211124115946301](Vue.assets/image-20211124115946301.png)
+
+## 实战快速上手
+
+我们采用实战教学模式并结合ElementUI组件库，将所需知识点应用到实际中，以最快速度带领大家掌握Vue的使用；
+
+### 创建工程
+
+https://www.bilibili.com/video/BV18E411a7mC?p=16&spm_id_from=pageDriver
 
 https://blog.csdn.net/qq_46138160/article/details/111028492
