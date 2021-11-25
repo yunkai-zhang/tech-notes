@@ -3297,8 +3297,221 @@ export default {
 
 
 
-### 路由模式与 404
+### 路由与404
+
+#### 路由模式
 
 https://blog.csdn.net/qq_46138160/article/details/111028492
 
 https://www.bilibili.com/video/BV18E411a7mC?p=19
+
+路由模式有两种
+
+- hash：路径带 # 符号，如 http://localhost/#/login
+- history：路径不带 # 符号，如 http://localhost/login
+
+
+
+src/router/index.js中修改路由配置，代码如下：
+
+```js
+export default new Router({
+  mode: 'history',
+  routes: [
+  ]
+});
+```
+
+测试。访问http://localhost:8080/login，路径不带#号，成功来到登录页面。
+
+![image-20211125194420160](Vue.assets/image-20211125194420160.png)
+
+
+
+#### 404
+
+创建一个NotFound.vue视图组件NotFound.vue
+
+```vue
+<template>
+  <div>
+    <h1>404,你的页面走丢了</h1>
+  </div>
+</template>
+<script>
+export default {
+  name: "NotFound"
+}
+</script>
+<style scoped>
+</style>
+```
+
+![image-20211125194707693](Vue.assets/image-20211125194707693.png)
+
+src/router/index.js中修改路由配置
+
+```js
+// 文件最开始添加导入组件
+import NotFound from '../views/NotFound'
+
+// routes:中最后添加如下，表示未被前面路径所匹配的一律为notfound
+{
+   path: '*',
+   component: NotFound
+}
+```
+
+测试效果。任意访问一个不存在的链接：http://localhost:8080/login11111，成功展示NotFound.vue组件的页面。
+
+![image-20211125195154713](Vue.assets/image-20211125195154713.png)
+
+
+
+#### 路由钩子
+
+beforeRouteEnter：在进入路由前执行
+beforeRouteLeave：在离开路由前执行
+
+在在Profile.vue中添加如下内容:
+
+- 注意`next`是必须的，否则router会卡死。
+
+```vue
+  export default {
+    name: "UserProfile",
+    beforeRouteEnter: (to, from, next) => {
+      console.log("准备进入个人信息页");
+      next();
+    },
+    beforeRouteLeave: (to, from, next) => {
+      console.log("准备离开个人信息页");
+      next();
+    }
+  }
+```
+
+![image-20211125195757714](Vue.assets/image-20211125195757714.png)
+
+参数说明：
+
+- to：路由将要跳转的路径信息
+- from：路径跳转前的路径信息
+- next：路由的控制参数
+- next() 跳入下一个页面
+- next(’/path’) 改变路由的跳转方向，使其跳到另一个路由
+- next(false) 返回原来的页面
+- next((vm)=>{}) 仅在 beforeRouteEnter 中可用，vm 是组件实例
+  
+
+#### 在(路由)钩子函数中使用异步请求
+
+安装 Axios
+
+```bash
+# 在项目路径(hello-vue)下执行下面的语句，同时安装axios和vue-axios
+cnpm install --save vue-axios,这句漏安装了。
+cnpm install --save axios
+
+# 或者写成下面的合体版
+cnpm install --save axios vue-axios
+```
+
+![image-20211125200242921](Vue.assets/image-20211125200242921.png)
+
+![image-20211126002154127](Vue.assets/image-20211126002154127.png)
+
+main.js引用 Axios
+
+```js
+import axios from 'axios'
+import VueAxios from 'vue-axios'
+Vue.use(VueAxios, axios)
+```
+
+![image-20211125200620991](Vue.assets/image-20211125200620991.png)
+
+准备数据 。只有我们的 static 目录下的文件是可以被访问到的，所以我们就把静态文件放入该目录下。数据和之前axios例子用的json数据一样。静态数据存放的位置为`static/mock/data.json`,static目录与src同级。
+
+```json
+{
+  "name": "张云学Java",
+  "url": "https://www.weibo.com",
+  "page": 1,
+  "isNonProfit": true,
+  "address": {
+    "street": "天安门",
+    "city": "北京西城",
+    "country": "中国"
+  },
+  "links": [
+    {
+      "name": "bilibili",
+      "url": "https://zhihu.com"
+    },
+    {
+      "name": "狂神说Java",
+      "url": "https://bing.com"
+    },
+    {
+      "name": "百度",
+      "url": "https://www.baidu.com/"
+    }
+  ]
+}
+```
+
+![image-20211126002629980](Vue.assets/image-20211126002629980.png)
+
+在 Profile.vue中的beforeRouteEnter 中进行异步请求
+
+```js
+export default {
+  name: "UserProfile",
+  //钩子函数,相当于过滤器
+  beforeRouteEnter: (to, from, next) => {
+    //加载数据
+    console.log("进入路由之前")
+    //vm是本vue文件的VM对象。“=> {}”是函数的一个简写。
+    next(vm => {
+      //进入路由之前执行getData方法
+      vm.getData()
+    });
+  },
+  beforeRouteLeave: (to, from, next) => {
+    console.log("离开路由之前")
+    next();
+  },
+  //axios
+  methods: {
+    getData: function () {
+      this.axios({
+        method: 'get',
+        //我们浏览器输入这个链接也能读到json文件。注意静态文件一定要放在static下才能访问。
+        url: 'http://localhost:8080/static/mock/data.json'
+      }).then(function (response) {
+        console.log(response)
+      })
+    }
+  }
+}
+```
+
+测试路由钩子结合axios实现的功能。
+
+先来到main页面
+
+![image-20211126002914450](Vue.assets/image-20211126002914450.png)
+
+点击配备了路由钩子和axios的”个人信息“，成功在console位置看到 beforeRouteEnter要求显示的内容，包含data.json。
+
+![image-20211126003010419](Vue.assets/image-20211126003010419.png)
+
+再点击别的链接，如”用户列表“，来触发beforeRouteLeave；成功展示了beforeRouteLeave要求展示的内容。
+
+![image-20211126003339855](Vue.assets/image-20211126003339855.png)
+
+
+
+完结撒花
+
