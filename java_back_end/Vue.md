@@ -2580,7 +2580,7 @@ export default{
 
 ![image-20211124115405493](Vue.assets/image-20211124115405493.png)
 
-访问localhost页面，点击任何链接，页面下部分都渲染相应的vue组件（\<router-view>的作用），比如点击“张”就渲染除了Zhang.vue组件的内容
+访问localhost页面，点击任何router-link链接，页面下部分\<router-view>的位置都渲染相应的vue组件（\<router-view>的作用），比如点击“张”就渲染除了Zhang.vue组件的内容
 
 ![image-20211124115628356](Vue.assets/image-20211124115628356.png)
 
@@ -2598,7 +2598,7 @@ export default{
 
 注意：
 
-- 命令行都要使用管理员模式运行
+- **命令行都要使用管理员模式运行**
 
 - 安装依赖， 我们需要安装vue-router、element-ui、sass-loader和node-sass四个插件
 
@@ -2651,8 +2651,654 @@ vue init webpack hello-vue
 
 ![image-20211124175804276](Vue.assets/image-20211124175804276.png)
 
-https://www.bilibili.com/video/BV18E411a7mC?p=16&spm_id_from=pageDriver
+#### 安装各种插件和组件
 
-3.30
+创建工程的过程中就安装插件组件，而不是运行工程后再安装有一个好处：idea会提示。
+
+- 安装插件相当于就是往package.json中填东西。
+
+先后执行下列命令：
+
+```bash
+#进入工程目录
+cd hello-vue
+#安装vue-routern 
+npm install vue-router --save-dev
+#安装element-ui
+npm i element-ui -S
+#安装依赖
+npm install
+# 安装SASS加载器和node-saas。用cnpm是因为npm有些东西在这步下载不了。总之npm下载不了的话，就用cnpm下。
+cnpm install sass-loader node-sass --save-dev
+#启功测试
+npm run dev
+```
+
+Npm命令解释：
+
+- npm install moduleName：安装模块到项目目录下
+- npm install -g moduleName：-g的意思是将模块安装到全局，具体安装到磁盘哪个位置要看npm config prefix的位置
+- npm install -save moduleName：–save的意思是将模块安装到项目目录下， 并在package文件的dependencies节点写入依赖，-S为该命令的缩写
+- npm install -save-dev moduleName:–save-dev的意思是将模块安装到项目目录下，并在package文件的devDependencies节点写入依赖，-D为该命令的缩写
+
+运行结果如下：
+
+![image-20211125123249371](Vue.assets/image-20211125123249371.png)
+
+![image-20211125123349175](Vue.assets/image-20211125123349175.png)
+
+![image-20211125123644989](Vue.assets/image-20211125123644989.png)
+
+![image-20211125123840377](Vue.assets/image-20211125123840377.png)
+
+![image-20211125124135775](Vue.assets/image-20211125124135775.png)
+
+idea打开hello-vue项目
+
+![image-20211125125508184](Vue.assets/image-20211125125508184.png)
+
+项目中删除掉无用的文件和代码，得到一个干净的模板：
+
+![image-20211125125651801](Vue.assets/image-20211125125651801.png)
+
+![image-20211125125958483](Vue.assets/image-20211125125958483.png)
+
+#### 编辑并填充项目
+
+src目录下新建views文件夹，主要存放视图组件（交互用的），components主要存放功能性组件，两者分开。
+
+src下新建router目录，存放路由配置文件。
+
+![image-20211125130504834](Vue.assets/image-20211125130504834.png)
+
+src/views目录下新建文件Main.vue,并编写文件内容
+
+![image-20211125130650847](Vue.assets/image-20211125130650847.png)
+
+```vue
+<template>
+<h1>首页</h1>
+</template>
+
+<script>
+export default {
+  name: "Main"
+}
+</script>
+
+<style scoped>
+
+</style>
+```
+
+src/views目录下新建文件Main.vue,并编写文件内容（从elementUI官网复制内容，黏贴到vue初始问价的相应位置）
+
+- 其中el-*的元素为ElementUI组件
+
+```vue
+<template>
+  <div>
+    <el-form ref="loginForm" :model="form" :rules="rules" label-width="80px" class="login-box">
+      <h3 class="login-title">欢迎登录</h3>
+      <el-form-item label="账号" prop="username">
+        <el-input type="text" placeholder="请输入账号" v-model="form.username"/>
+      </el-form-item>
+      <el-form-item label="密码" prop="password">
+        <el-input type="password" placeholder="请输入密码" v-model="form.password"/>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" v-on:click="onsubmit('loginForm')">登录</el-button>
+      </el-form-item>
+    </el-form>
+
+    <el-dialog title="温馨提示" :visible.sync="dialogVisiable" width="30%" :before-close="handleClose">
+      <span>请输入账号和密码</span>
+      <span slot="footer" class="dialog-footer">
+          <el-button type="primary" @click="dialogVisible = false">确定</el-button>
+        </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "Login",
+  data(){
+    return{
+      form:{
+        username:'',
+        password:''
+      },
+      //表单验证，需要在 el-form-item 元素中增加prop属性
+      rules:{
+        username:[
+          {required:true,message:"账号不可为空",trigger:"blur"}
+        ],
+        password:[
+          {required:true,message:"密码不可为空",tigger:"blur"}
+        ]
+      },
+
+      //对话框显示和隐藏
+      dialogVisible:false
+    }
+  },
+  methods:{
+    onSubmit(formName){
+      //为表单绑定验证功能
+      this.$refs[formName].validate((valid)=>{
+        if(valid){
+          //使用vue-router路由到指定界面，该方式称为编程式导航
+          this.$router.push('/main');
+        }else{
+          this.dialogVisible=true;
+          return false;
+        }
+      });
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.login-box{
+  border:1px solid #DCDFE6;
+  width: 350px;
+  margin:180px auto;
+  padding: 35px 35px 15px 35px;
+  border-radius: 5px;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  box-shadow: 0 0 25px #909399;
+}
+.login-title{
+  text-align:center;
+  margin: 0 auto 40px auto;
+  color: #303133;
+}
+</style>
+```
+
+创建路由，在src/router目录下创建一个名为`index.js`的vue-router路由配置文件
+
+```js
+//导入vue
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+//导入组件
+import Main from "../views/Main";
+import Login from "../views/Login";
+//使用
+Vue.use(VueRouter);
+//导出
+export default new VueRouter({
+  routes: [
+    {
+      //登录页，前端url请求/main的时候路由到Main.vue页面。注意component不要写成components！！！
+      path: '/main',
+      component: Main
+    },
+    //首页
+    {
+      path: '/login',
+      component: Login
+    },
+  ]
+
+})
+```
+
+把路由和其他组件设置配置到main.js中
+
+```js
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+
+// 导入Vue系列组件
+import Vue from 'vue'
+import App from './App'
+//这里的import router的router不能大写，包括后面的use(router)和new Vue中的router都得一致小写，否则会报错！！
+import router from "./router"
+
+//导入ElementUI系列组件。组件名如ElementUI一般首字母大写。
+import ElementUI from 'element-ui'
+//导入css需要saas编辑器，所以我们之前初始化项目的时候就安装了saas编辑器
+import 'element-ui/lib/theme-chalk/index.css'
+
+//使用自定义的，或者导入的组件
+Vue.use(router)
+Vue.use(ElementUI)
+
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  router,
+  render:h=>h(App)//ElementUI配置的，官方这么写的，我们必须这么配才能配置好elementUI；elementUI绑定App.vue。
+})
+
+```
+
+App.vue把路由的页面展示出来。这次不用\<router-link>来在当前页面指引渲染哪个视图，改为自己直接在网址端输url来在当前页面渲染指定的视图；所以用router-view渲染vue视图就行，不写router-link。
+
+```vue
+<template>
+  <div id="app">
+    <router-view></router-view>
+  </div>
+</template>
+
+<script>
+
+
+export default {
+  name: 'App',
+
+}
+</script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+```
+
+#### 启动测试与debug
+
+打开idea的terminal，先确认路径是hello-vue下的，在terminal中运行hello-vue项目，报了一个错，错误原因：老师说是saas加载器的版本太高了。
+
+![image-20211125133635340](Vue.assets/image-20211125133635340.png)
+
+解决方案：把package.json中的sass-loader的版本改成较低版本，本例改成了7.3.1：
+
+![image-20211125133950869](Vue.assets/image-20211125133950869.png)
+
+修改了package.json需要重新安装组件（依赖），先`ctl+c`退出批处理，再执行下面代码：
+
+```
+npm install
+```
+
+![image-20211125134350963](Vue.assets/image-20211125134350963.png)
+
+重新启动项目，又报错。
+
+![image-20211125134911409](Vue.assets/image-20211125134911409.png)
+
+先`ctl+c`退出批处理，再根据[链接](https://blog.csdn.net/weixin_46761843/article/details/117220209)，应该是高版本配置变了导致的，执行以下操作
+
+```bash
+# 先尝试用npm源
+# 1、卸载： 
+npm uninstall node-sass
+# 2、安装： 
+npm install node-sass@4.14.1
+
+# 国内npm源一般会失败，失败的话尝试用cnpm源
+# 1、卸载： 
+cnpm uninstall node-sass
+# 2、安装： 
+cnpm install node-sass@4.14.1
+```
+
+![image-20211125135556420](Vue.assets/image-20211125135556420.png)
+
+![image-20211125140233414](Vue.assets/image-20211125140233414.png)
+
+![image-20211125140418278](Vue.assets/image-20211125140418278.png)
+
+![image-20211125140517546](Vue.assets/image-20211125140517546.png)
+
+![image-20211125140553245](Vue.assets/image-20211125140553245.png)
+
+重新运行项目，成功
+
+![image-20211125140711468](Vue.assets/image-20211125140711468.png)
+
+访问http://localhost:8080/#/main，来到首页：
+
+![image-20211125141355012](Vue.assets/image-20211125141355012.png)
+
+访问http://localhost:8080/#/login，来到登录页面，页面自带账号密码：
+
+![image-20211125141027905](Vue.assets/image-20211125141027905.png)
+
+点击登录页面的“登录”尝试跳转到首页，但是不跳转，F12后查看到页面有错误：
+
+![image-20211125143743668](Vue.assets/image-20211125143743668.png)
+
+解决方案：
+
+![image-20211125143902134](Vue.assets/image-20211125143902134.png)
+
+![image-20211125144010627](Vue.assets/image-20211125144010627.png)
+
+修改完毕后，刷新登录页面。只有两个警告，不碍事。点击“登录”，成功来到首页。
+
+![image-20211125144242667](Vue.assets/image-20211125144242667.png)
+
+![image-20211125144146567](Vue.assets/image-20211125144146567.png)
+
+
+
+### 路由嵌套
+
+嵌套路由又称子路由，在实际应用中，通常由多层嵌套的组件组合而成。同样地，URL 中各段动态路径也按某种结构对应嵌套的各层组件，例如:
+
+![image-20211125145306259](Vue.assets/image-20211125145306259.png)
+
+
+
+实战：
+
+创建用户信息组件，在 src/views目录下创建一个/user目录，并在src/views/user目录下创建名为 Profile.vue 的视图组件；
+
+```vue
+<template>
+  <h1>个人信息</h1>
+</template>
+<script>
+export default {
+  name: "UserProfile"
+}
+</script>
+<style scoped>
+</style>
+```
+
+在用户列表组件在 src/views/user 目录下创建一个名为 List.vue 的视图组件
+
+```vue
+<template>
+  <h1>用户列表</h1>
+</template>
+<script>
+export default {
+  name: "UserList"
+}
+</script>
+<style scoped>
+</style>
+```
+
+因为我们想在首页视图下，展示Profile和List子视图；所以修改首页视图，我们修改 Main.vue 视图组件，此处使用了 ElementUI 布局容器组件，代码如下：
+
+```vue
+<template>
+  <div>
+    <el-container>
+      <el-aside width="200px">
+        <el-menu :default-openeds="['1']">
+          <el-submenu index="1">
+            <template slot="title"><i class="el-icon-caret-right"></i>用户管理</template>
+            <el-menu-item-group>
+              <el-menu-item index="1-1">
+                <!--插入的地方-->
+                <router-link to="/user/profile">个人信息</router-link>
+              </el-menu-item>
+              <el-menu-item index="1-2">
+                <!--插入的地方-->
+                <router-link to="/user/list">用户列表</router-link>
+              </el-menu-item>
+            </el-menu-item-group>
+          </el-submenu>
+          <el-submenu index="2">
+            <template slot="title"><i class="el-icon-caret-right"></i>内容管理</template>
+            <el-menu-item-group>
+              <el-menu-item index="2-1">分类管理</el-menu-item>
+              <el-menu-item index="2-2">内容列表</el-menu-item>
+            </el-menu-item-group>
+          </el-submenu>
+        </el-menu>
+      </el-aside>
+
+      <el-container>
+        <el-header style="text-align: right; font-size: 12px">
+          <el-dropdown>
+            <i class="el-icon-setting" style="margin-right: 15px"></i>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item>个人信息</el-dropdown-item>
+              <el-dropdown-item>退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </el-header>
+        <el-main>
+          <!--在这里展示视图-->
+          <router-view />
+        </el-main>
+      </el-container>
+    </el-container>
+  </div>
+</template>
+<script>
+export default {
+  name: "Main"
+}
+</script>
+<style scoped lang="scss">
+.el-header {
+  background-color: #B3C0D1;
+  color: #333;
+  line-height: 60px;
+}
+.el-aside {
+  color: #333;
+}
+</style>
+```
+
+配置嵌套路由。修改 router 目录下的 index.js 路由配置文件，使用children放入main中写入子模块，代码如下
+index.js
+
+```js
+//导入vue
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+
+//导入组件
+import Main from "../views/Main";
+import Login from "../views/Login";
+//导入“主页”下的子组件
+import UserList from "../views/user/List";
+import UserProfile from "../views/user/Profile";
+
+//使用
+Vue.use(VueRouter);
+
+//导出
+export default new VueRouter({
+  routes: [
+    //登录页，前端url请求/main的时候路由到Main.vue页面
+    {
+      path: '/main',
+      component: Main,
+      //  写入子模块
+      children: [
+        {
+          path: '/user/profile',
+          component: UserProfile,
+        }, {
+          path: '/user/list',
+          component: UserList,
+        },
+      ]
+    },
+    //首页
+    {
+      path: '/login',
+      component: Login
+    },
+  ]
+
+})
+```
+
+运行项目，访问：http://localhost:8080/#/main。点击左边栏的”个人信息“和“用户列表”，在main页面的视图展示区就会展示相应的视图：
+
+![image-20211125152300344](Vue.assets/image-20211125152300344.png)
+
+![image-20211125152745144](Vue.assets/image-20211125152745144.png)
+
+![image-20211125152936108](Vue.assets/image-20211125152936108.png)
+
+
+
+### 参数传递
+
+\<template>下一级只能有一个标签或元素，如果有多个标签或元素，要用一个div把他们全部包裹起来。
+
+![image-20211125155722370](Vue.assets/image-20211125155722370.png)
+
+这里演示如果请求带有参数该怎么传递。用的还是上述例子的代码，修改一些代码 这里不放重复的代码了
+
+#### 第一种取值方式
+
+> 对”个人信息“组件操作
+
+
+
+前端甲传递参数。此时我们在Main.vue中的route-link位置处 to 改为了 :to（:是v-bind:的简写），是为了将这一属性当成对象使用，注意 router-link 中的 name 属性名称 一定要和 路由中的 name 属性名称 匹配，因为这样 Vue 才能找到对应的路由路径；
+
+- `{id:1}`表示在Main.vue左侧边栏**点击router-link时url传递的id为1**。如果自己输入url来访问“个人信息”页，而不是在main页面点击，那么输入url时如果输入别的数字，会把这个1覆盖。
+
+```vue
+<!--name是组件的名字 params是传的参数 如果要传参数的话就需要用v:bind:来绑定-->
+<router-link :to="{name:'UserProfile',params:{id:1}}">个人信息</router-link>
+```
+
+路由绑定参数。修改路由配置，主要是router下的index.js中的 path 属性中增加了 :id 这样的占位符
+
+```js
+{
+	path: '/user/profile/:id', 
+	name:'UserProfile', 
+	component: UserProfile
+}
+```
+
+前端乙接收参数并展示。在要展示的组件Profile.vue中接收参数 使用 {undefined{$route.params.id}}来接收
+Profile.vue 部分代码
+
+```vue
+<template>
+  <!--  所有的元素必须在根节点下-->
+  <div>
+    <h1>个人信息</h1>
+    {{$route.params.id}}
+  </div>
+</template>
+```
+
+访问http://localhost:8080/#/user/profile/123，数据123被成功传递。
+
+![image-20211125164223454](Vue.assets/image-20211125164223454.png)
+
+
+
+#### 第二种取值方式（推荐）
+
+**使用props 减少耦合**
+
+> 对"用户列表"组件操作
+
+
+
+前端甲传递参数。传递参数和第一种传参方式一样 在Main.vue中修改route-link地址
+
+```vue
+<!--name是组件的名字 params是传的参数 如果要传参数的话就需要用v:bind:来绑定-->
+<router-link :to="{name:'UserList',params:{id:1}}">用户列表</router-link>
+```
+
+路由在链接上绑定参数。修改路由配置 , 主要在router下的index.js中的路由属性中增加了 props: true 属性
+
+```js
+{
+    path: '/user/list/:id',
+    name:'UserList',
+    component: UserList,
+    props: true
+}
+```
+
+前端乙接收并展示参数。在Profile.vue接收参数为目标组件增加 props 属性。
+
+- 这里的 props: ['id'],是用来接收id参数的
+
+Profile.vue
+
+```vue
+<template>
+  <div>
+    <h1>用户列表</h1>
+    {{ id }}
+  </div>
+</template>
+<script>
+export default {
+  props: ['id'],
+  name: "UserList"
+
+}
+</script>
+<style scoped>
+</style>
+```
+
+访问：http://localhost:8080/#/user/list/965，可以看到传递参数“965”成功！
+
+![image-20211125165625234](Vue.assets/image-20211125165625234.png)
+
+
+
+### 组件重定向
+
+重定向的意思大家都明白，但 Vue 中的重定向是作用在路径不同但组件相同的情况下
+
+
+
+实战：
+
+在router下面index.js的配置：
+
+- 说明：这里定义了两个路径，一个是 /login ，一个是 /goLogin，其中 /goLogin 重定向到了 /login 路径，由此可以看出重定向不需要定义组件；
+
+```js
+//登录页
+{
+    path: '/login',
+        component: Login
+},
+//展示重定向
+{
+  path: '/goLogin',
+  redirect: '/login'
+}
+```
+
+使用的话，只需要在Main.vue设置对应路径即可：
+
+```vue
+<el-menu-item index="1-3">
+    <router-link to="/goLogin">回到登录页</router-link>
+</el-menu-item>
+```
+
+在项目中查看重定向效果。重定向成功。并且可以看到重定向的特点即--网页链接也会变：
+
+![image-20211125171807482](Vue.assets/image-20211125171807482.png)
+
+![image-20211125171856685](Vue.assets/image-20211125171856685.png)
+
+
+
+### 路由模式与 404
 
 https://blog.csdn.net/qq_46138160/article/details/111028492
+
+https://www.bilibili.com/video/BV18E411a7mC?p=19
