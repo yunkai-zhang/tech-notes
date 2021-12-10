@@ -1710,20 +1710,16 @@ linux是一个系统
 
    ![image-20211107143033318](linux.assets/image-20211107143033318.png)
 
-3. （**这步rpm不用做**）配置环境变量
+3. （这步rpm不用做）配置环境变量
 
-   **使用yum 和rpm方式安装的jdk不用配置环境变量，使用解压缩方式需要**
-
-   如果按照如下步骤做了，返回会覆盖系统路径导致**错误**！！！
-
-   
+   网友说“使用yum 和rpm方式安装的jdk不用配置环境变量，使用解压缩方式需要，如果按照如下步骤做了，返回会**覆盖系统路径导致错误**！！！”这个是因为本节老师配置路径时，没有集成原有路径，只要继承就不会覆盖。**配置jdk环境参考hadoop**
 
    ```
    vim /etc/profile
    ```
 
    ![image-20211107153031806](linux.assets/image-20211107153031806.png)
-
+   
    新打开一个窗口，来查看javahome在什么位置
 
    - 一个文件夹下有java的bin和lib等文件夹的话，这个就是javahome目录
@@ -1746,9 +1742,9 @@ linux是一个系统
    PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin
    export PATH CLASSPATH JAVA_HOME
    ```
-
+   
    ![image-20211107155515332](linux.assets/image-20211107155515332.png)
-
+   
    `ESC`键退出编辑来到普通命令模式，`:wq`保存修改并退出vim
 
    ![image-20211107160619614](linux.assets/image-20211107160619614.png)
@@ -1759,7 +1755,7 @@ linux是一个系统
    # 执行这个命令后，etc下的profile文件就会生效
    source /etc/profile
    ```
-
+   
 4. 把springboot项目打包发布
 
    先本地idea运行项目，确认可以访问
