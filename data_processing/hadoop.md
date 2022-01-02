@@ -1,4 +1,4 @@
-## （中毒）hadoop安装使用
+（中毒）hadoop安装使用
 
 **中毒版本的留着，也算是一个经验记录**
 
@@ -1312,6 +1312,8 @@ The following instructions are to run a MapReduce job locally. If you want to ex
 
 1）Format the filesystem:
 
+**注意：已经format过namenode想再次format的话，要清空hadoop.tmp.dir对应目录下的内容，不然datanode可能报错**。
+
 ```
 cd /usr/local/hadoop-2.10.1
 
@@ -1321,6 +1323,8 @@ bin/hdfs namenode -format
 ![image-20211207010952962](hadoop.assets/image-20211207010952962.png)
 
 2）Start NameNode daemon and DataNode daemon:这回免密了。
+
+- 注意：一旦安装好了yarn，使用`hadoop-mapreduce-examples-2.10.1.jar`时要连着yarn一起启动，否则报错。
 
 ```
 sbin/start-dfs.sh
@@ -1333,6 +1337,9 @@ The hadoop daemon log output is written to the `$HADOOP_LOG_DIR` directory (defa
 3）Browse the web interface for the NameNode; by default it is available at:
 
 - NameNode - `http://主机ip:50070/`
+  - 如果是本地虚拟机，在虚拟机中使用ifconfig查看`inet addr`，填在这里
+  - 如果是远程服务器，ip填服务器公网ip
+
 
 ![image-20211207012537195](hadoop.assets/image-20211207012537195.png)
 
@@ -1356,7 +1363,7 @@ bin/hdfs dfs -mkdir /user/<username>
 4.2）Copy the input files into the distributed filesystem:
 
 ```
-bin/hdfs dfs -put etc/hadoop input
+bin/hdfs dfs -put etc/hadoop /input
 ```
 
 报错：
@@ -1372,6 +1379,8 @@ bin/hdfs dfs -put etc/hadoop input
 ![image-20211207111925157](hadoop.assets/image-20211207111925157.png)
 
 4.3）Run some of the examples provided:
+
+- 'dfs[a-z.]+':这个是正则表达式，查询dfs开头的，后面跟1个或1个以上的字母，比如 dfsa dfsb dfsc
 
 ```
 bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.1.jar grep input output 'dfs[a-z.]+'
@@ -1416,6 +1425,7 @@ bin/hdfs dfs -rm -r /output
 
 ```
 bin/hdfs dfs -get output output
+
 cat output/*
 ```
 
@@ -2062,3 +2072,359 @@ kill -9 <pid>
 在hadoop已经开启的前提下，重新开启yarn试试。成功。
 
 ![image-20211207203513494](hadoop.assets/image-20211207203513494.png)
+
+
+
+## Mapreduce使用
+
+### 自己实现“热词发现”
+
+#### 实验要求
+
+![image-20211220195514912](hadoop.assets/image-20211220195514912.png)
+
+#### 实验代码
+
+把待分析的text.txt文件从linux系统硬盘的`/usr/local/hadoop-2.10.1/labs/hotwords/input`上传到hdfs的`/input`。
+
+![image-20211223130431914](hadoop.assets/image-20211223130431914.png)
+
+把jar包放到为分布式启动的hadoop上运行
+
+![image-20211223131443830](hadoop.assets/image-20211223131443830.png)
+
+使用命令
+
+- 启动前确保hdfs中没有`/output`目录
+
+```
+bin/hadoop jar /usr/local/hadoop-2.10.1/labs/hotwords/jar/bigdata-appli.jar /input /output
+```
+
+代码如下：
+
+```java
+package mapreduce;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+
+
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import java.io.IOException;
+import java.util.*;
+
+public class Hotwords {
+
+    public static class HotwordsMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
+        @Override
+        protected void map(LongWritable key, Text value, Mapper<LongWritable, Text, Text, LongWritable>.Context context) throws IOException, InterruptedException {
+            //预处理
+            String stringValue=value.toString();
+            String StringValue1=stringValue.replaceAll("\\pP|\\pS|\\pC|\\pN", "");//去掉所有标点符号+数字
+            //获得stopwords集合备用。去除英文停用词的方法:https://www.baeldung.com/java-string-remove-stopwords
+            List<String> stopWordsList=new ArrayList<String>();
+            for (String stopword:Utils.stopWords.split("\n")) {
+                stopWordsList.add(stopword);
+            }
+
+            //StringTokenizer类会对预处理完的字符串进行分词操作，并通过nextToken()方法依次取出所有单词。把字符串一开始就变成全小写的。
+            StringTokenizer itr = new StringTokenizer(StringValue1.toLowerCase());
+            Text word = new Text();
+            LongWritable one = new LongWritable(1);
+            while (itr.hasMoreTokens()) {
+                word.set(itr.nextToken());
+                //把单个单词从text类型转化为String，如果当前词不是stop word才写入hdfs给reduce备用
+                String wordString=word.toString();
+                if(!stopWordsList.contains(wordString)){
+                    word.set(wordString);//把String类型的word转回Text类型
+                    context.write(word, one);//把合规的单词写入hdfs
+                }
+
+            }
+
+        }
+    }
+
+    public static class HotwordsReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
+        //用TreeMap排序
+        private static TreeMap<Integer, String> treeMap = new TreeMap<Integer, String>(new Comparator<Integer>(){
+            @Override
+            public int compare(Integer integer1, Integer integer2) {
+                return integer2 - integer1;
+            }
+        }) ;
+
+        @Override
+        protected void reduce(Text key, Iterable<LongWritable> values, Reducer<Text, LongWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
+            //对每个词计数
+            int sum = 0;
+            for (LongWritable val : values)
+                sum += val.get();
+
+            //把计数完的词插入treemap。同时使用treemap排序，保留前两百个频繁的词.
+            treeMap.put(sum ,key.toString());
+            if(treeMap.size() > 200){
+                treeMap.remove(treeMap.lastKey());
+            }
+        }
+
+        //使用treemap排序，自定义comparator实现根据key降序。treemap中单词频度为key，单词为value。
+        @Override
+        protected void cleanup(Reducer<Text, LongWritable, Text, LongWritable>.Context context) throws IOException, InterruptedException {
+            Set<Map.Entry<Integer, String>> setFromTreeMap = treeMap.entrySet();
+            for (Map.Entry<Integer, String> entry : setFromTreeMap)
+                //输出到hdfs的时候以单词为key，以单词频度为value
+                context.write(new Text(entry.getValue()), new LongWritable(entry.getKey()));
+        }
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+        Configuration conf = new Configuration();
+        //系统期待java -jar运行jar包时输入两个路径（https://stackoverflow.com/questions/22602789/hadoop-genericoptionsparser）
+        String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+        if (otherArgs.length != 2) {
+            System.err.println("Usage: hotwords <in> <out>");
+            System.exit(2);
+        }
+
+        //枝干配置
+        Job job = Job.getInstance(conf, "hotwords");
+        job.setJarByClass(Hotwords.class);//jar包的主类
+        job.setMapperClass(HotwordsMapper.class);
+        job.setReducerClass(HotwordsReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(LongWritable.class);
+        FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+        FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+    }
+
+    public static class Utils{
+        public static final String stopWords="'ll\n" +
+                "'tis\n" +
+                "'twas\n" +
+                "'ve\n" +
+                "10\n" +
+                "39\n" +
+                "a\n" +
+                "所有的stop words放这，太多了。。一行行的stopwords黏贴进idea后会自动加上换行符";
+
+    }
+}
+
+```
+
+#### 实验结果
+
+部分结果如下
+
+![image-20211223164056782](hadoop.assets/image-20211223164056782.png)
+
+
+
+### kmeans聚类分析
+
+#### 实验要求
+
+![image-20211229120202802](hadoop.assets/image-20211229120202802.png)
+
+#### 实验过程
+
+在hdfs创建输入文件夹
+
+```
+bin/hdfs dfs -mkdir /lab3input
+```
+
+把linux系统中存储的待处理文件传入hdfs
+
+```
+bin/hdfs dfs -put /usr/local/hadoop-2.10.1/labs/kmeans/input/* /lab3input
+```
+
+![image-20211229120519959](hadoop.assets/image-20211229120519959.png)
+
+
+
+执行jar包
+
+```
+/usr/local/hadoop-2.10.1$ bin/hadoop jar /usr/local/hadoop-2.10.1/labs/kmeans/bigdata-appli.jar
+```
+
+
+代码：
+
+```java
+package kmeans;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import java.io.IOException;
+import java.util.ArrayList;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.Text;
+import java.util.List;
+
+
+
+public class KmeansMapreduce {
+
+    //每个List<Double>存储一个cluster的横坐标和纵坐标，所以List<List<Double>>大小应该等于cluster数目
+    private static  List<List<Double>> centersOfClusters = new ArrayList<>();
+    //重新计算后的cluster中心们
+    private static  List<List<Double>> changedCentersOfClusters = new ArrayList<>();
+    //自己设定的cluster的个数
+    private static final int numberOfClusters = 4;
+
+    public static class KmeansMapper extends Mapper<Object, Text, IntWritable, Text> {
+
+        public void map(Object key,Text value, Context context) throws IOException, InterruptedException {
+            Double xOfPoints = Double.valueOf(value.toString().split(" ")[0]);
+            Double yOfPoints = Double.valueOf(value.toString().split(" ")[1]);
+            //如果cluster列表为空，初始化两个列表
+            if(centersOfClusters.size()==0){
+                ArrayList<Double> c = new ArrayList<>();c.add(xOfPoints);c.add(yOfPoints);
+                ArrayList<Double> changedC = new ArrayList<>();changedC.add(xOfPoints);changedC.add(yOfPoints);
+                //设置cluster中心为当前读取到的坐标
+                centersOfClusters.add(c);changedCentersOfClusters.add(changedC);
+                //往hdfs写入：k：当前点对应的clusterid，v：当前点的横坐标和纵坐标
+                context.write(new IntWritable(centersOfClusters.size()-1),value);
+            }
+            //如果cluster列表不为空，找到当前value对应的坐标距离最近的cluster
+            else{
+                double minimumDistance = Double.MAX_VALUE;
+                int clusterIndexOfCurrentPoint = -1;
+                for(int i=0;i<numberOfClusters;i++){
+                    Double tempDistance = Math.sqrt(Math.pow(xOfPoints-centersOfClusters.get(i).get(0),2)+Math.pow(yOfPoints-centersOfClusters.get(i).get(1),2));
+                    if(tempDistance<minimumDistance){
+                        minimumDistance = tempDistance;
+                        clusterIndexOfCurrentPoint = i;
+                    }
+                }
+                //key是点对应的cluster中心id,value是当前点的坐标
+                System.out.println("clusterIndex:"+clusterIndexOfCurrentPoint+"  value:"+value);
+                context.write(new IntWritable(clusterIndexOfCurrentPoint),value);
+
+            }
+        }
+    }
+
+    public static class KmeansReducer extends Reducer<IntWritable,Text,IntWritable,Text>{
+
+        public void reduce(IntWritable key,Iterable<Text> values,Context context) throws IOException, InterruptedException {
+
+            double averageOfX = 0,averageOfY = 0;
+            int numberOfPointsInThisCluster = 0;
+            //coordinateStrList 用以保存每个cluster包含的所有坐标点,并追加写入hdfs
+            List<String> coordinateStrList = new ArrayList<>();
+            //利用reduce，对同一clusterID对应的所有坐标进行规约，计算出cluster的新中心
+            for (Text pos : values){
+                double xOfPoints = Double.parseDouble(pos.toString().split(" ")[0]);
+                double yOfPoints = Double.parseDouble(pos.toString().split(" ")[1]);
+                //一个点的横纵坐标用“-”隔开
+                String coordinateStr = xOfPoints+"-"+yOfPoints;
+                coordinateStrList.add(coordinateStr);
+                averageOfX += xOfPoints;
+                averageOfY += yOfPoints;
+                numberOfPointsInThisCluster++;
+            }
+            String[] coordinateStrArray = new String[coordinateStrList.size()];
+            coordinateStrList.toArray(coordinateStrArray);
+            //一个cluster对应的不同坐标之间用“&”隔开
+            String coordinateStrs = String.join("&", coordinateStrArray);
+
+            //求出当前cluster的新中心
+            averageOfX = averageOfX/numberOfPointsInThisCluster;
+            averageOfY = averageOfY/numberOfPointsInThisCluster;
+            //把cluster新中心，存入全局列表中，覆盖掉之前相同key的value值
+            changedCentersOfClusters.get(key.get()).set(0,averageOfX);
+            changedCentersOfClusters.get(key.get()).set(1,averageOfY);
+            //向hdfs写入格式为：clusterID，当前cluster对应的所有坐标点
+            context.write(key,new Text(coordinateStrs));
+        }
+    }
+
+    //判断改变前和改变后的聚类中心的差别是否足够小
+    public static boolean CompareCentersOfClusters(List<List<Double>> centersOfClusters,List<List<Double>> changedCentersOfClusters){
+
+        double distanceBetweenCentersOfClusters = 0.0;
+        for(int i=0;i<numberOfClusters;i++){
+            for(int j=0;j<numberOfClusters;j++){
+                distanceBetweenCentersOfClusters +=(Math.sqrt(Math.pow(centersOfClusters.get(i).get(0)-changedCentersOfClusters.get(i).get(0),2)+
+                        Math.pow(centersOfClusters.get(i).get(1)-changedCentersOfClusters.get(i).get(1),2)));
+            }
+        }
+        return Math.abs(distanceBetweenCentersOfClusters) < 0.00000001;
+    }
+
+
+    public static void main(String[]args) throws IOException, ClassNotFoundException, InterruptedException {
+
+        Configuration conf = new Configuration();
+        //设置文件的输入和输出路径
+        /*不知道为什么，这里不能使用String input = "lab3input";会报错:
+        Exception in thread "main" org.apache.hadoop.mapreduce.lib.input.InvalidInputException: Input path does not exist: hdfs://192.168.187.128:9000/user/zyk/lab3input
+        之前都直接用String input = "lab3input"形式
+        把报错路径中删掉/user/zyk，就能找到文件了
+        **/
+        String input = "hdfs://192.168.187.128:9000/lab3input";
+        String output ="hdfs://192.168.187.128:9000/lab3output";
+
+
+        //反复执行mapreduce，直到结果满意
+        while(true){
+            System.out.println("将执行一轮mapreduce");
+            //删除上一轮mapreduce产生的output文件夹
+            FileSystem.get(conf).deleteOnExit(new Path(output));
+            Job job = Job.getInstance(conf, "kmeans");
+            job.setJarByClass(KmeansMapreduce.class);
+            FileInputFormat.addInputPath(job, new Path(input));
+            job.setMapperClass(KmeansMapper.class);
+            job.setReducerClass(KmeansReducer.class);
+            job.setOutputKeyClass(IntWritable.class);
+            job.setOutputValueClass(Text.class);
+            FileOutputFormat.setOutputPath(job, new Path(output));
+
+            //等待job执行完成，判断执行的效果
+            if (job.waitForCompletion(true)) {
+                //判断cluster中心在经过最近一轮mapreduce后有没有变化。如果没有变化则终止程序，如果还有变化则继续mapreduce。
+                if (CompareCentersOfClusters(centersOfClusters, changedCentersOfClusters))
+                    break;
+                else {
+                    //把centersOfClusters的内容替换为changedCentersOfClusters，准备新一轮mapreduce
+                    centersOfClusters.clear();
+                    for (List<Double> nCenter : changedCentersOfClusters) {
+                        List<Double> clusterCTemp = new ArrayList<>();
+                        clusterCTemp.add(nCenter.get(0));
+                        clusterCTemp.add(nCenter.get(1));
+                        centersOfClusters.add(clusterCTemp);
+                    }
+                }
+            }
+
+        }
+
+    }
+
+}
+
+```
+
+mapreduce完成后的展示各cluster拥有的点的结果如下所示
+
+![image-20211229211745864](hadoop.assets/image-20211229211745864.png)

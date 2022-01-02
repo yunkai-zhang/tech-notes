@@ -174,7 +174,7 @@ jps
 
 
 
-## 跟着官网安装hbase
+## 跟着官网安装远程hbase
 
 环境：
 
@@ -188,7 +188,7 @@ jps
 
 ### 下载解压并配置
 
-1）Choose a download site from this list of [Apache Download Mirrors](https://www.apache.org/dyn/closer.lua/hbase/). Click on the suggested top link. This will take you to a mirror of *HBase Releases*. Click on the folder named *stable* and then download the binary file that ends in *.tar.gz* to your local filesystem. Do not download the file ending in *src.tar.gz* for now.
+1）Choose a download site from this list of [Apache Download Mirrors](https://www.apache.org/dyn/closer.lua/hbase/)或[往期release](https://archive.apache.org/dist/hbase/2.3.4/). Click on the suggested top link. This will take you to a mirror of *HBase Releases*. Click on the folder named *stable* and then download the binary file that ends in *.tar.gz* to your local filesystem. Do not download the file ending in *src.tar.gz* for now.
 
 去[北理工镜像](http://mirror.bit.edu.cn/apache/hbase/)，安装2.3.X版本的hbase
 
@@ -293,7 +293,7 @@ bin/start-hbase.sh
 
 2）Check the HBase directory in HDFS.
 
-If everything worked correctly, HBase created its directory in HDFS. In the configuration above, it is stored in */hbase/* on HDFS. You can use the `hadoop fs` command in Hadoop’s *bin/* directory to list this directory.
+If everything worked correctly, HBase created its directory in HDFS. In the configuration above, it is stored in */hbase/* on HDFS. You can use the `hadoop fs` command in Hadoop’s *bin/* directory to list this directory.(启动hbase成功的话，hdfs目录下会创建hbase目录)
 
 在hadoop安装目录下执行下面语句，查看文件夹和文件是否被正确创建
 
@@ -309,7 +309,701 @@ If everything worked correctly, HBase created its directory in HDFS. In the conf
 
 
 
+## 跟着官网安装本地虚拟机中的java+hadoop+hbase。可javaapi连接
+
+### java
+
+安装[java](https://www.oracle.com/java/technologies/downloads/#java8)
+
+![image-20211219172738440](hbase.assets/image-20211219172738440.png)
+
+etc/profile
+
+```
+ 29 JAVA_HOME=/usr/local/jdk1.8.0_311
+ 30 JRE_HOME=/usr/local/jdk1.8.0_311/jre
+ 31 CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JRE_HOME/lib
+ 32 PATH=$JAVA_HOME/bin:$PATH
+ 33 export PATH JAVA_HOME CLASSPATH
+```
+
+
+
+### hadoop
+
+安装[hadoop官方教程](https://hadoop.apache.org/docs/r2.10.1/hadoop-project-dist/hadoop-common/SingleCluster.html#Pseudo-Distributed_Operation),找不到想要的版本或者太慢的话，可以在[北理镜像](https://mirror.bit.edu.cn/apache/hadoop/common)
+
+官网对应的配置，微调后如下:
+
+虚拟机ifconfig得到要监听的inet addr:
+
+```bash
+zyk@ubuntu:/usr/local/hadoop-2.10.1$ ifconfig
+ens33     Link encap:Ethernet  HWaddr 00:0c:29:bf:5a:8c  
+          inet addr:192.168.187.128  Bcast:192.168.187.255  Mask:255.255.255.0
+          inet6 addr: fe80::5003:ee43:de6a:fb1d/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1132902 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:444204 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:1335078325 (1.3 GB)  TX bytes:467733644 (467.7 MB)
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:152142 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:152142 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:24458999 (24.4 MB)  TX bytes:24458999 (24.4 MB)
+
+zyk@ubuntu:/usr/local/hadoop-2.10.1$ 
+
+```
+
+
+
+etc/hadoop/hadoop-env.sh:
+
+```
+# set to the root of your Java installation
+export JAVA_HOME=/usr/local/jdk1.8.0_311
+```
+
+
+
+etc/hadoop/core-site.xml:
+
+```xml
+ 19 <configuration>
+ 20     <property>
+ 21          <name>fs.defaultFS</name>
+ 22          <value>hdfs://192.168.187.128:9000</value>
+ 23     </property>
+ 24     <property>
+ 25          <name>hadoop.tmp.dir</name>
+ 26          <value>/usr/local/hadoop-2.10.1/hadoopTmpDir</value>
+ 27          <description>指定Hadoop运行时产生文件的存储目录。一定要自己配置，不然会被删</description>
+ 28     </property>
+ 29 </configuration>
+```
+
+
+
+etc/hadoop/hdfs-site.xml:
+
+```xml
+ 19 <configuration>
+ 20     <property>
+ 21         <name>dfs.replication</name>
+ 22         <value>1</value>
+ 23     </property>
+ 24 </configuration>
+```
+
+
+
+etc/hadoop/mapred-site.xml:
+
+```xml
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+</configuration>
+```
+
+
+
+etc/hadoop/yarn-site.xml:
+
+```xml
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+```
+
+
+
+配置文件填好后，使用下面命令format:
+
+- **注意：已经format过namenode想再次format的话，要清空hadoop.tmp.dir对应目录(hadoopTmpDir)下的内容，不然datanode可能报错**。
+
+```
+bin/hdfs namenode -format
+```
+
+
+
+
+
+### hbase
+
+安装[hbase官方教程](https://hbase.apache.org/book.html#quickstart_pseudo)。想找官网往期release的[网址](https://archive.apache.org/dist/hbase/2.3.4/).
+
+官网对应的配置，微调后如下：
+
+*hbase-env.sh*:
+
+```sh
+ 27 # The java implementation to use.  Java 1.8+ required.
+ 28 export JAVA_HOME=/usr/local/jdk1.8.0_311
+
+```
+
+
+
+conf/hbase-site.xml:
+
+```xml
+ 42   <property>
+ 43     <name>hbase.cluster.distributed</name>
+ 44     <value>true</value>
+ 45   </property>
+ 46   <property>
+ 47     <name>hbase.rootdir</name>
+ 48     <value>hdfs://192.168.187.128:9000/hbase</value>
+ 49   </property>
+ 50   <!--<property>
+ 51     <name>hbase.zookeeper.property.dataDir</name>
+ 52     <value>/usr/local/hbase-2.3.4/zookeeper</value>
+ 53   </property>-->
+ 54   <property>
+ 55     <name>hbase.zookeeper.quorum</name>
+ 56     <value>192.168.187.128</value>
+ 57   </property>
+
+```
+
+
+
+window系统运行的javapi，所以要配置一个inet addr：habse映射（可以不配置，不影响功能）(建议不配置，less is better！)
+
+```
+192.168.187.128 hbase
+```
+
+不配置的话idea的控制台日志为
+
+```
+2021-12-19 19:44:08,544 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ZooKeeper (Environment.java:logEnv(109)) - Client environment:os.memory.total=213MB
+2021-12-19 19:44:08,546 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ZooKeeper (ZooKeeper.java:<init>(868)) - Initiating client connection, connectString=192.168.187.128:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$8/1344386964@704148d5
+2021-12-19 19:44:08,551 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] common.X509Util (X509Util.java:<clinit>(79)) - Setting -D jdk.tls.rejectClientInitiatedRenegotiation=true to disable client-initiated TLS renegotiation
+2021-12-19 19:44:08,798 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ClientCnxnSocket (ClientCnxnSocket.java:initProperties(237)) - jute.maxbuffer value is 4194304 Bytes
+2021-12-19 19:44:08,804 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ClientCnxn (ClientCnxn.java:initRequestTimeout(1653)) - zookeeper.request.timeout value is 0. feature enabled=
+2021-12-19 19:44:17,879 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:logStartConnect(1112)) - Opening socket connection to server 192.168.187.128/192.168.187.128:2181. Will not attempt to authenticate using SASL (unknown error)
+2021-12-19 19:44:17,880 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:primeConnection(959)) - Socket connection established, initiating session, client: /192.168.187.1:8143, server: 192.168.187.128/192.168.187.128:2181
+2021-12-19 19:44:17,886 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:onConnected(1394)) - Session establishment complete on server 192.168.187.128/192.168.187.128:2181, sessionid = 0x100019000a60008, negotiated timeout = 90000
+2021-12-19 19:44:26,382 INFO  [main] client.HBaseAdmin (HBaseAdmin.java:postOperationResult(3611)) - Operation: CREATE, Table Name: default:class1, procId: 27 completed
+2021-12-19 19:44:26,383 INFO  [main] client.ConnectionImplementation (ConnectionImplementation.java:closeMasterService(1898)) - Closing master protocol: MasterService
+```
+
+![image-20211219194803276](hbase.assets/image-20211219194803276.png)
+
+配置的话，idea控制台的日志为：
+
+```
+2021-12-19 19:49:02,084 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ZooKeeper (ZooKeeper.java:<init>(868)) - Initiating client connection, connectString=192.168.187.128:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$8/797482540@48380044
+2021-12-19 19:49:02,088 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] common.X509Util (X509Util.java:<clinit>(79)) - Setting -D jdk.tls.rejectClientInitiatedRenegotiation=true to disable client-initiated TLS renegotiation
+2021-12-19 19:49:02,327 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ClientCnxnSocket (ClientCnxnSocket.java:initProperties(237)) - jute.maxbuffer value is 4194304 Bytes
+2021-12-19 19:49:02,331 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4] zookeeper.ClientCnxn (ClientCnxn.java:initRequestTimeout(1653)) - zookeeper.request.timeout value is 0. feature enabled=
+2021-12-19 19:49:02,337 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:logStartConnect(1112)) - Opening socket connection to server hbase/192.168.187.128:2181. Will not attempt to authenticate using SASL (unknown error)
+2021-12-19 19:49:02,338 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:primeConnection(959)) - Socket connection established, initiating session, client: /192.168.187.1:12884, server: hbase/192.168.187.128:2181
+2021-12-19 19:49:02,341 INFO  [ReadOnlyZKClient-192.168.187.128:2181@0x6ce139a4-SendThread(192.168.187.128:2181)] zookeeper.ClientCnxn (ClientCnxn.java:onConnected(1394)) - Session establishment complete on server hbase/192.168.187.128:2181, sessionid = 0x100019000a6000a, negotiated timeout = 90000
+2021-12-19 19:49:06,145 INFO  [main] client.HBaseAdmin (HBaseAdmin.java:postOperationResult(3611)) - Operation: CREATE, Table Name: default:class2, procId: 30 completed
+2021-12-19 19:49:06,145 INFO  [main] client.ConnectionImplementation (ConnectionImplementation.java:closeMasterService(1898)) - Closing master protocol: MasterService
+
+Process finished with exit code 0
+```
+
+![image-20211219195030173](hbase.assets/image-20211219195030173.png)
+
+
+
+linux端一个注意点！！！
+
+注意，hbase的16000master默认监听127.0.1.1端口，导致无法连接。要在linux的/etc/hosts中配置hostname到**以太网口的**inet addr的映射，且这个inet addr在各个使用hdfs//的地址中都填入
+
+- inet addr可以通过ifconfig读到
+- 如果是远程服务器，inet addr的位置猜测要填外网ip。因为本机通过inet addr可以访问本地虚拟机的各种webui；且远程的各种webui通过远程主机的外网ip访问。
+
+![image-20211219171858824](hbase.assets/image-20211219171858824.png)
+
+
+
+### java程序
+
+java程序要导入hbase安装目录下的lib和lib/client-facing-thirdparty下的jar包
+
+java程序如下：
+
+```java
+package hbase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class createTable {
+    public static void main(String[] args) throws IOException {
+        /*********得到配置文件类对象**********/
+        //创建一个配置文件类对象
+        Configuration conf = HBaseConfiguration.create();
+        //设置配置文件类的相关参数，以下四个配置参数需与HBase/conf目录下hbase-site.xml文件内容一致。
+        // 默认配置的配置参考（http://blog.sina.com.cn/s/blog_63a075af0101izmx.html）
+        conf.set("hbase.rootdir","hdfs://192.168.187.128:9000/hbase");
+        //conf.set("hbase.zookeeper.property.dataDir", "/root/zhangyunroot/hbase/zk");
+        //系统默认的就是localhost，用主机名反而报错。
+        conf.set("hbase.zookeeper.quorum", "192.168.187.128");
+        conf.set("hbase.cluster.distributed", "true");
+
+        //提高RPC通信时长
+        conf.setLong("hbase.rpc.timeout", 6000000);
+
+        /*************得到与HBase建立连接的类对象**************/
+        //使用连接工厂类ConnectionFactory的createConnection()方法构造一个连接类对象。该方法以一个配置类对象作为输入参数。
+        Connection connection = ConnectionFactory.createConnection(conf);
+
+        /**********************得到表格管理类对象************************/
+        /*
+        使用连接类对象的getAdmin()方法获得表格管理类HBaseAdmin对象。
+        由于该方法返回的是抽象类Admin，需将其强制类型转化为HBaseAdmin
+        */
+        HBaseAdmin admin = (HBaseAdmin) connection.getAdmin();
+
+        /***************创建一张名为“class”的表，该表包含两个列簇“information”与“results”。*****************/
+        /*
+        * 使用HBaseAdmin类创建一张HBase表的流程为：声明一个表格描述器构造器类TableDescriptorBuilder对象，并初始化表名为“class”
+        * */
+        TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("class"));
+        /*
+        * 使用HBaseAdmin类创建一张HBase表的流程（续1）：使用列族描述器构造器类的build()方法创建列族描述器ColumnFamilyDescriptor类对象。
+        * 如果有多个列族，则可以存放在Java中自带的数据结构List中。
+        * */
+        List<ColumnFamilyDescriptor> listColumns = new ArrayList<>();
+        ColumnFamilyDescriptor cfd_info = ColumnFamilyDescriptorBuilder.newBuilder("information".getBytes()).build();
+        ColumnFamilyDescriptor cfd_res = ColumnFamilyDescriptorBuilder.newBuilder("results".getBytes()).build();
+        listColumns.add(cfd_info);
+        listColumns.add(cfd_res);
+        /*
+        *  使用HBaseAdmin类创建一张HBase表的流程（续2）：使用TableDescriptorBuilder类的setColumnFamilies()方法，
+        * 将存储多个ColumnFamilyDescriptor类的List对象加入到TableDescriptorBuilder类
+        * */
+        tdb.setColumnFamilies(listColumns);
+        /*
+        * 使用TableDescriptorBuilder类的build()方法创建表格描述器TableDescriptor类
+        * */
+        TableDescriptor td = tdb.build();
+        //使用HBaseAdmin类的createTable()方法创建HBase表
+        admin.createTable(td);
+
+        //收尾工作
+        admin.close();
+        connection.close();
+    }
+}
+```
+
+
+
 ## 使用Hbase
+
+### 使用shell命令操作Hbase
+
+为了使用户容易地管理和操作HBase集群，HBase 向用户提供了丰富的交互式shell命令。 
+
+在HBase所在的目录执行以下命令进入交互式 shell命令行：
+
+- 使用之前确保开启了hadoop+hbase
+
+```
+./bin/hbase shell
+```
+
+出现了如下警告
+
+![image-20211212203446377](hbase.assets/image-20211212203446377.png)
+
+参考[文章](https://blog.csdn.net/qq_41541801/article/details/82413776),在`etc/profile`中添加如下语句。
+
+```
+export JAVA_LIBRARY_PATH=’/usr/local/hadoop-2.10.1/lib/native’
+```
+
+![image-20211212203134835](hbase.assets/image-20211212203134835.png)
+
+`source /etc/profile`使变更生效
+
+![image-20211212203651905](hbase.assets/image-20211212203651905.png)
+
+重新启动hbase,yarn,hdfs。再启动hbase-shell，**警告还是没解决，，先不管了**：
+
+![image-20211212204327168](hbase.assets/image-20211212204327168.png)
+
+#### 基础命令
+
+general命令用于查看系统、用户、HBase版本等 信息。 
+
+常见的general命令如下： 
+
+- 显示集群状态 
+- 查看系统版本 
+- 查看当前用户
+
+
+
+一些常用命令
+
+```bash
+# 查看集群状态，可以搭配参数
+hbase(main):001:0> status
+1 active master, 0 backup masters, 1 servers, 0 dead, 2.0000 average load
+Took 0.7128 seconds                         
+hbase(main):002:0> status simple
+NameError: undefined local variable or method `simple' for main:Object
+hbase(main):003:0> status `simple`
+1 active master, 0 backup masters, 1 servers, 0 dead, 2.0000 average load
+Took 0.0095 seconds                                                                                                                 # 查看系统版本            
+hbase(main):004:0> version
+2.3.7, r8b2f5141e900c851a2b351fccd54b13bcac5e2ed, Tue Oct 12 16:38:55 UTC 2021
+Took 0.0004 seconds                                                                                                                 # 查看当前用户                 
+hbase(main):005:0> whoami
+root (auth:SIMPLE)
+    groups: root
+Took 0.0297 seconds  
+
+# 退出hbase-shell
+exit
+
+# 查看帮助
+help
+```
+
+
+
+#### namespace
+
+namespaces命令用于操作当前HBase的命名空间。 
+
+常见的namespaces命令如下： 
+
+- 查看HBase中所有的命名空间 
+- 创建一个新的命名空间 
+- 查看一个命名空间的描述信息 
+- 查看一个命名空间所包含的HBase表 
+- 删除一个命名空间
+
+
+
+一些常见命令
+
+```bash
+# 列出所有namesapce
+hbase(main):006:0> list_namespace
+NAMESPACE               
+default                 
+hbase       
+2 row(s)
+Took 0.0933 seconds                                                                                                                 # 创建一个新的命名空间                 
+hbase(main):007:0> create_namespace `school`
+
+ERROR: java.io.IOException: Namespace name must not be empty
+	at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:457)
+	at org.apache.hadoop.hbase.ipc.CallRunner.run(CallRunner.java:133)
+	at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:338)
+	at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:318)
+Caused by: java.lang.IllegalArgumentException: Namespace name must not be empty
+	at org.apache.hadoop.hbase.TableName.isLegalNamespaceName(TableName.java:230)
+	at org.apache.hadoop.hbase.TableName.isLegalNamespaceName(TableName.java:220)
+	at org.apache.hadoop.hbase.master.HMaster.createNamespace(HMaster.java:3225)
+	at org.apache.hadoop.hbase.master.MasterRpcServices.createNamespace(MasterRpcServices.java:672)
+	at org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos$MasterService$2.callBlockingMethod(MasterProtos.java)
+	at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:389)
+	... 3 more
+
+For usage try 'help "create_namespace"'
+
+Took 9.1187 seconds                
+hbase(main):008:0> create_namespace 'school'
+Took 0.1735 seconds                                                                                                                 # 查看一个命名空间的描述信息                 
+hbase(main):009:0> describe_namespace 'school'
+DESCRIPTION            
+{NAME => 'school'}
+Quota is disabled
+Took 0.1774 seconds                                                                                                                 # 查看一个命名空间所包含的HBase表                 
+hbase(main):010:0> list_namespace_tables 'default'
+TABLE
+0 row(s)
+Took 0.0556 seconds                         => []
+
+# 删除一个命名空间
+hbase(main):011:0> drop_namespace 'school'
+Took 0.1512 seconds
+hbase(main):012:0> list_namespace
+NAMESPACE 
+default                                     hbase                                       2 row(s)
+Took 0.0178 seconds                         
+
+hbase(main):013:0> 
+```
+
+
+
+
+
+#### ddl
+
+DDL命令用于操作HBase表的元信息。 
+
+常见的DDL命令如下： 
+
+- 列出HBase中所有的表 
+- 创建一张HBase表 
+- 查看一张HBase表的描述信息 
+- 修改HBase表的列族
+- 下线一张HBase表，使其不再提供读写服务，但仍 保留 
+- 删除一张已下线的HBase表
+
+
+
+命令如下：
+
+```bash
+# 列出HBase中所有的表
+hbase(main):013:0> list
+TABLE                                       0 row(s)
+Took 0.0367 seconds                         => []
+
+# 创建一张HBase表。hbase> create ‘<table name>’,‘<column family1>’,‘<column family2>’,…注意：创建HBase表时只需要指定它所包含的column family,无需指定具体的列
+# 在HBase中，默认使用‘default’命名空间，如果想要指定命名空间，只需要在表名前加上'<namspace>:'变成'<namspace:employee>'
+hbase(main):014:0> create 'employee', 'personal','office'
+Created table employee
+Took 1.2252 seconds
+=> Hbase::Table - employee
+hbase(main):015:0> list
+TABLE
+employee
+1 row(s)
+Took 0.0353 seconds
+=> ["employee"]
+
+# 查看一张HBase表的描述信息
+hbase(main):016:0> describe 'employee'
+Table employee is ENABLED 
+employee
+COLUMN FAMILIES DESCRIPTION
+{NAME => 'office', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPRES
+SION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}   
+
+{NAME => 'personal', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPR
+ESSION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                       
+
+2 row(s)
+Quota is disabled
+Took 0.0771 seconds
+
+
+# 修改HBase表的列族。使用alter命令可修改HBase表的列族，如增加列族或删除列族。
+# 增加列族
+hbase(main):017:0> alter 'employee' ,'newColumnFamily'
+Updating all regions with the new schema...
+1/1 regions updated.
+Done.
+Took 1.7849 seconds
+hbase(main):018:0> describe 'employee'
+Table employee is ENABLED
+employee
+COLUMN FAMILIES DESCRIPTION
+{NAME => 'newColumnFamily', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE'
+, COMPRESSION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                
+
+{NAME => 'office', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPRES
+SION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                         
+
+{NAME => 'personal', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPR
+ESSION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                       
+
+3 row(s)
+Quota is disabled
+Took 0.0506 seconds
+# 删除列族
+hbase(main):019:0> alter 'employee' ,'delete'=>'newColumnFamily'
+Updating all regions with the new schema...
+1/1 regions updated.
+Done.
+Took 2.1016 seconds
+hbase(main):020:0> describe 'employee'
+Table employee is ENABLED
+employee
+COLUMN FAMILIES DESCRIPTION
+
+{NAME => 'office', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPRES
+SION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                         
+
+{NAME => 'personal', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', COMPR
+ESSION => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                       
+
+2 row(s)
+Quota is disabled
+Took 0.0420 seconds 
+
+# 下线一张HBase表，使其不再提供读写服务，但仍在HBase中保留
+hbase(main):021:0> disable 'employee'
+Took 0.3630 seconds 
+
+
+# 删除一张已下线的HBase表：hbase> drop ‘<table name>’。注意：该命令只能删除已经下线的HBase表。
+hbase(main):022:0> list
+TABLE
+employee
+1 row(s)
+Took 0.0084 seconds
+=> ["employee"]
+hbase(main):023:0> drop 'employee'
+Took 0.3655 seconds
+hbase(main):024:0> list
+TABLE
+0 row(s)
+Took 0.0102 seconds                         => []
+
+```
+
+
+
+#### DML
+
+DML命令用于操作HBase表中的数据。 
+
+常见的DML命令如下： 
+
+- 扫描给定条件区间内的数据 
+- 获取HBase表中一个cell或一行的值 
+- 向HBase表的特定行写入一个cell值 
+- 删除一个cell值 
+- 删除一行中所有的cell值 
+- 统计HBase表中满足条件区间的记录数
+
+
+
+具体命令：
+
+```bash
+hbase(main):001:0> create 'employee', 'personal','office'
+Created table employee
+Took 1.7688 seconds
+=> Hbase::Table - employee
+hbase(main):002:0> list
+TABLE                                       employee                                     1 row(s)
+Took 0.0256 seconds                         => ["employee"]
+
+# 扫描所有数据.hbase> scan ‘<table name>’
+hbase(main):003:0> scan 'employee'
+ROW                                    COLUMN+CELL                                 0 row(s)
+Took 0.2028 seconds   
+# 扫描给定条件区间的数据.hbase> scan ‘<table name>’ ,{<filter1>,<filter2>,…}
+hbase(main):004:0> scan 'employee',{COLUMNS => 'personal:name'}
+ROW                                    COLUMN+CELL
+0 row(s)
+Took 0.1324 seconds                         
+
+# 扫描给定条件区间内的数据.如果扫描的表已经下线，则会提示扫描错误.
+hbase(main):006:0> disable 'employee'
+Took 0.3784 seconds                         hbase(main):007:0> scan 'employee'
+ROW                                    COLUMN+CELL                                 org.apache.hadoop.hbase.TableNotEnabledException: employee is disabled.
+	at org.apache.hadoop.hbase.client.ConnectionImplementation.relocateRegion(ConnectionImplementation.java:770)
+	at org.apache.hadoop.hbase.client.RpcRetryingCallerWithReadReplicas.getRegionLocations(RpcRetryingCallerWithReadReplicas.java:330)
+	at org.apache.hadoop.hbase.client.ScannerCallable.prepare(ScannerCallable.java:139)
+	at org.apache.hadoop.hbase.client.ScannerCallableWithReplicas$RetryingRPC.prepare(ScannerCallableWithReplicas.java:408)
+	at org.apache.hadoop.hbase.client.RpcRetryingCallerImpl.callWithRetries(RpcRetryingCallerImpl.java:105)
+	at org.apache.hadoop.hbase.client.ResultBoundedCompletionService$QueueingFuture.run(ResultBoundedCompletionService.java:80)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+	at java.lang.Thread.run(Thread.java:748)
+
+ERROR: Table employee is disabled!
+
+For usage try 'help "scan"'
+
+Took 0.9556 seconds 
+
+# 获取HBase表中一个cell或一行的值
+# 获取一行的值hbase> get ‘<table name>’，‘<rowkey>’
+hbase(main):012:0> get 'employee', '00001'
+COLUMN                                 CELL 0 row(s)
+Took 0.0201 seconds  
+# 获取一个cell的值.hbase> get ‘<table name>’，‘<rowkey>’，‘<column family1>:<column column qualifier1>’,…
+hbase(main):013:0> get 'employee', '00001','office:phone'
+COLUMN                                 CELL 0 row(s)
+Took 0.0150 seconds 
+
+# 向HBase表的特定行写入一个cell值:hbase> put ‘<table name>’，‘<rowkey>’，‘<column family>:<column column qualifier>’,‘value’
+hbase(main):014:0> scan 'employee'
+ROW                                    COLUMN+CELL                                 0 row(s)
+Took 0.0048 seconds                         hbase(main):015:0> put 'employee','00001','personal:gender','man'
+Took 0.0901 secondshbase(main):016:0> scan 'employee'
+ROW                                    COLUMN+CELL                       
+ 00001                                 column=personal:gender, timestamp=2021-12-12T21:43:46.007, value=man                   1 row(s)
+Took 0.0372 seconds
+
+# 删除一个cell值:hbase> delete ‘<table name>’，‘<rowkey>’，‘<column family>:<column column qualifier>’,‘<timestamp>’注：‘<timestamp>’是可选参数。
+hbase(main):014:0> scan 'employee'
+ROW                                    COLUMN+CELL                                 0 row(s)
+Took 0.0048 seconds                         
+hbase(main):015:0> put 'employee','00001','personal:gender','man'
+Took 0.0901 seconds
+hbase(main):016:0> scan 'employee'
+ROW                                    COLUMN+CELL
+00001                                 column=personal:gender, timestamp=2021-12-12T21:43:46.007, value=man                                          
+1 row(s)
+Took 0.0372 seconds                         
+hbase(main):017:0> delete 'employee','00001','personal:gender'
+Took 0.0195 seconds               
+hbase(main):018:0> scan 'employee'
+ROW                                    COLUMN+CELL
+0 row(s)
+Took 0.0043 seconds
+
+# 删除一行中所有的cell值:hbase> deleteall ‘<table name>’，‘<rowkey>’
+hbase(main):020:0> scan 'employee'
+ROW                                    COLUMN+CELL                                                                                                   
+ 00001                                 column=personal:gender, timestamp=2021-12-12T21:49:48.053, value=man
+1 row(s)
+Took 0.0170 seconds                                                                                                             hbase(main):021:0> deleteall 'employee','00001'
+Took 0.0124 seconds                                                                                                             hbase(main):022:0> scan 'employee'
+ROW                                    COLUMN+CELL
+0 row(s)
+Took 0.0052 seconds
+
+# 统计HBase表中满足条件区间的数据
+# 统计一张表中所有数据：hbase> count ‘<table name>’
+# 统计一张表中满足条件区间的数据hbase> count ‘<table name>’,{<filter1>,<filter2>,…}
+hbase(main):024:0> scan 'employee'
+ROW                                    COLUMN+CELL                                                                                                   
+ 00001                                 column=personal:gender, timestamp=2021-12-12T21:53:31.214, value=man                     1 row(s)
+Took 0.0079 seconds
+hbase(main):025:0> count 'employee'
+1 row(s)
+Took 0.0364 seconds
+=> 1
+hbase(main):028:0> count 'employee',{COLUMNS => 'personal:age'}
+0 row(s)
+Took 0.0210 seconds
+=> 0
+
+```
+
+
+
+
 
 ### createTable
 
@@ -592,5 +1286,494 @@ java.net.UnknownHostException: zhangyun
 
    8. 建议搜索。。。hbase伪分布式 javaapi
 
+   9. 我尝试使用javaapi连接本地虚拟机中的hdfs
    
+      之前虚拟机中fs.defaultFS的地址为localhost，javapi程序设置的是“hdfs://192.168.187.128:9000”（虚拟机中ifconfig得到ip）。连不上。
+   
+      但是我把etc/hadoop/core-site.xml的fs.defaultFS的内容也改成“hdfs://192.168.187.128:9000”并format  namenode后竟然成功了。所以猜测如果要用javaapi的话，以下两个图片的地址要完全一致
+   
+      ![image-20211219135115408](hbase.assets/image-20211219135115408.png)
+   
+      ![image-20211219135155002](hbase.assets/image-20211219135155002.png)
+   
+      这里javaapi连接本地虚拟机成功了，javaapi连远程应该类似。
+   
+      尝试了hdfs处填入服务器公网ip，但是不管用，甚至namenode都无法启动。这里的hdfs应该只能是以太网接口，参考[文章](https://www.cnblogs.com/chenpython123/p/10649718.html)。所以腾讯云的以太网接口eth0如图：
+   
+      ![image-20211219203110849](hbase.assets/image-20211219203110849.png)
+   
+      修改etc/hadoop/core-site.xml:
+   
+      ```
+      <configuration>
+          <property>
+              <name>fs.defaultFS</name>
+              <value>hdfs://10.0.24.2:9000</value>
+          </property>
+                  <!-- 指定hadoop运行时产生文件的存储目录 -->
+              <property>
+                      <name>hadoop.tmp.dir</name>
+                      <value>/usr/local/hadoop-2.10.1/hadoopTmpDir</value>
+              </property>
+      </configuration>
+      
+      ```
+   
+      成功启动hdfs：
+   
+      ![image-20211219203424506](hbase.assets/image-20211219203424506.png)
+   
+      再启动yarn
+   
+      ![image-20211219203651345](hbase.assets/image-20211219203651345.png)
+   
+      启动hbase
+   
+      ```
+      [root@rootuser hbase-2.3.7]# bin/start-hbase.sh
+      120.53.244.17: running zookeeper, logging to /usr/local/hbase-2.3.7/bin/../logs/hbase-root-zookeeper-rootuser.out
+      120.53.244.17: java.io.IOException: Could not find my address: rootuser in list of ZooKeeper quorum servers
+      120.53.244.17: 	at org.apache.hadoop.hbase.zookeeper.HQuorumPeer.writeMyID(HQuorumPeer.java:166)
+      120.53.244.17: 	at org.apache.hadoop.hbase.zookeeper.HQuorumPeer.main(HQuorumPeer.java:72)
+      running master, logging to /usr/local/hbase-2.3.7/logs/hbase-root-master-rootuser.out
+      : running regionserver, logging to /usr/local/hbase-2.3.7/logs/hbase-root-regionserver-rootuser.out
+      [root@rootuser hbase-2.3.7]# jps
+      22448 SecondaryNameNode
+      22113 NameNode
+      4994 Jps
+      23220 NodeManager
+      22260 DataNode
+      2567 HMaster
+      2698 HRegionServer
+      23115 ResourceManager
+      
+      ```
+   
+      
+   
+      修改hbase中的conf/hbase-site.xml
+   
+      ```
+        <property>
+          <name>hbase.rootdir</name>
+          <!--对应各处hdfs//配置，使用ifconf得到的以太网接口的ip addr-->
+          <value>hdfs://10.0.24.2:9000/hbase</value>
+        </property>
+        <property>
+          <name>hbase.cluster.distributed</name>
+          <value>true</value>
+        </property>
+        <property>
+            <name>hbase.zookeeper.quorum</name>
+            <!--配置的是公网ip，让windows找到linux服务器-->
+            <value>120.53.244.17</value>
+       </property>
+      
+      <!--to prevent port2181 from binding localhost 这两项配置可以不用试试-->
+      <property>
+      <name>hbase.master.ipc.address</name>
+      <value>0.0.0.0</value>
+      </property>
+      <property>
+      <name>hbase.regionserver.ipc.address</name>
+      <value>0.0.0.0</value>
+      </property>
+      
+      
+      ```
+   
+      运行java程序
+   
+      ```java
+      package hbase;
+      
+      import org.apache.hadoop.conf.Configuration;
+      import org.apache.hadoop.hbase.HBaseConfiguration;
+      import org.apache.hadoop.hbase.TableName;
+      import org.apache.hadoop.hbase.client.*;
+      
+      import java.io.IOException;
+      import java.util.ArrayList;
+      import java.util.List;
+      
+      public class createTable {
+          public static void main(String[] args) throws IOException {
+              /*********得到配置文件类对象**********/
+              //创建一个配置文件类对象
+              Configuration conf = HBaseConfiguration.create();
+              //设置配置文件类的相关参数，以下四个配置参数需与HBase/conf目录下hbase-site.xml文件内容一致。
+              // 默认配置的配置参考（http://blog.sina.com.cn/s/blog_63a075af0101izmx.html）
+              //腾讯云ip：120.53.244.17
+              conf.set("hbase.rootdir","hdfs://10.0.24.2:9000/hbase");
+              //conf.set("hbase.zookeeper.property.dataDir", "/root/zhangyunroot/hbase/zk");
+              //系统默认的就是localhost，用主机名反而报错。
+              conf.set("hbase.zookeeper.quorum", "120.53.244.17");
+              conf.set("hbase.cluster.distributed", "true");
+      
+              //提高RPC通信时长
+              conf.setLong("hbase.rpc.timeout", 6000000);
+      
+              /*************得到与HBase建立连接的类对象**************/
+              //使用连接工厂类ConnectionFactory的createConnection()方法构造一个连接类对象。该方法以一个配置类对象作为输入参数。
+              Connection connection = ConnectionFactory.createConnection(conf);
+      
+              /**********************得到表格管理类对象************************/
+              /*
+              使用连接类对象的getAdmin()方法获得表格管理类HBaseAdmin对象。
+              由于该方法返回的是抽象类Admin，需将其强制类型转化为HBaseAdmin
+              */
+              HBaseAdmin admin = (HBaseAdmin) connection.getAdmin();
+      
+              /***************创建一张名为“class”的表，该表包含两个列簇“information”与“results”。*****************/
+              /*
+              * 使用HBaseAdmin类创建一张HBase表的流程为：声明一个表格描述器构造器类TableDescriptorBuilder对象，并初始化表名为“class”
+              * */
+              TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("class2"));
+              /*
+              * 使用HBaseAdmin类创建一张HBase表的流程（续1）：使用列族描述器构造器类的build()方法创建列族描述器ColumnFamilyDescriptor类对象。
+              * 如果有多个列族，则可以存放在Java中自带的数据结构List中。
+              * */
+              List<ColumnFamilyDescriptor> listColumns = new ArrayList<>();
+              ColumnFamilyDescriptor cfd_info = ColumnFamilyDescriptorBuilder.newBuilder("information".getBytes()).build();
+              ColumnFamilyDescriptor cfd_res = ColumnFamilyDescriptorBuilder.newBuilder("results".getBytes()).build();
+              listColumns.add(cfd_info);
+              listColumns.add(cfd_res);
+              /*
+              *  使用HBaseAdmin类创建一张HBase表的流程（续2）：使用TableDescriptorBuilder类的setColumnFamilies()方法，
+              * 将存储多个ColumnFamilyDescriptor类的List对象加入到TableDescriptorBuilder类
+              * */
+              tdb.setColumnFamilies(listColumns);
+              /*
+              * 使用TableDescriptorBuilder类的build()方法创建表格描述器TableDescriptor类
+              * */
+              TableDescriptor td = tdb.build();
+              //使用HBaseAdmin类的createTable()方法创建HBase表
+              admin.createTable(td);
+      
+              //收尾工作
+              admin.close();
+              connection.close();
+          }
+      }
+      ```
+   
+      报错如下：
+   
+      ```
+      2021-12-19 21:00:44,646 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4] zookeeper.ZooKeeper (ZooKeeper.java:<init>(868)) - Initiating client connection, connectString=120.53.244.17:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$8/618316137@51f39934
+      2021-12-19 21:00:44,651 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4] common.X509Util (X509Util.java:<clinit>(79)) - Setting -D jdk.tls.rejectClientInitiatedRenegotiation=true to disable client-initiated TLS renegotiation
+      2021-12-19 21:00:44,902 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4] zookeeper.ClientCnxnSocket (ClientCnxnSocket.java:initProperties(237)) - jute.maxbuffer value is 4194304 Bytes
+      2021-12-19 21:00:44,914 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4] zookeeper.ClientCnxn (ClientCnxn.java:initRequestTimeout(1653)) - zookeeper.request.timeout value is 0. feature enabled=
+      2021-12-19 21:00:54,815 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4-SendThread(120.53.244.17:2181)] zookeeper.ClientCnxn (ClientCnxn.java:logStartConnect(1112)) - Opening socket connection to server 120.53.244.17/120.53.244.17:2181. Will not attempt to authenticate using SASL (unknown error)
+      2021-12-19 21:00:54,827 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4-SendThread(120.53.244.17:2181)] zookeeper.ClientCnxn (ClientCnxn.java:primeConnection(959)) - Socket connection established, initiating session, client: /10.128.240.95:12544, server: 120.53.244.17/120.53.244.17:2181
+      2021-12-19 21:00:54,843 INFO  [ReadOnlyZKClient-120.53.244.17:2181@0x6ce139a4-SendThread(120.53.244.17:2181)] zookeeper.ClientCnxn (ClientCnxn.java:onConnected(1394)) - Session establishment complete on server 120.53.244.17/120.53.244.17:2181, sessionid = 0x1003d8f64810015, negotiated timeout = 90000
+      2021-12-19 21:01:01,996 WARN  [main] client.ConnectionUtils (ConnectionUtils.java:getStubKey(245)) - Can not resolve rootuser, please check your network
+      java.net.UnknownHostException: rootuser
+      	at java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+      	at java.net.InetAddress$2.lookupAllHostAddr(InetAddress.java:929)
+      	at java.net.InetAddress.getAddressesFromNameService(InetAddress.java:1324)
+      	at java.net.InetAddress.getAllByName0(InetAddress.java:1277)
+      	at java.net.InetAddress.getAllByName(InetAddress.java:1193)
+      	at java.net.InetAddress.getAllByName(InetAddress.java:1127)
+      	at java.net.InetAddress.getByName(InetAddress.java:1077)
+      	at org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey(ConnectionUtils.java:242)
+      	at org.apache.hadoop.hbase.client.ConnectionImplementation$MasterServiceStubMaker.makeStubNoRetries(ConnectionImplementation.java:1207)
+      	at org.apache.hadoop.hbase.client.ConnectionImplementation$MasterServiceStubMaker.makeStub(ConnectionImplementation.java:1229)
+      	at org.apache.hadoop.hbase.client.ConnectionImplementation.getKeepAliveMasterService(ConnectionImplementation.java:1294)
+      	at org.apache.hadoop.hbase.client.ConnectionImplementation.getMaster(ConnectionImplementation.java:1283)
+      	at org.apache.hadoop.hbase.client.MasterCallable.prepare(MasterCallable.java:57)
+      	at org.apache.hadoop.hbase.client.RpcRetryingCallerImpl.callWithRetries(RpcRetryingCallerImpl.java:105)
+      	at org.apache.hadoop.hbase.client.HBaseAdmin.executeCallable(HBaseAdmin.java:3014)
+      	at org.apache.hadoop.hbase.client.HBaseAdmin.executeCallable(HBaseAdmin.java:3006)
+      	at org.apache.hadoop.hbase.client.HBaseAdmin.createTableAsync(HBaseAdmin.java:651)
+      	at org.apache.hadoop.hbase.client.HBaseAdmin.createTableAsync(HBaseAdmin.java:4322)
+      	at org.apache.hadoop.hbase.client.Admin.createTable(Admin.java:315)
+      	at hbase.createTable.main(createTable.java:64)
+      
+      ```
+   
+      参考[文章](https://www.cnblogs.com/cc11001100/p/12354928.html),了解思路：客户端通过zk来到服务端。
+   
+   
+   
+   
+
+> 处理虚拟机版问题：Call to ubuntu:16000 failed on connection exception:org.apache.hbase.thirdparty.io.netty.channel.AbstractChannel$AnnotatedConnectException
+
+先在虚拟机上用telnet测试本机有没有监听16000端口，发现没有，这块可能出错了
+
+![image-20211219170947728](hbase.assets/image-20211219170947728.png)
+
+发现[文章](https://www.cnblogs.com/cc11001100/p/12354928.html),根据文章用`netstat -nautlp|grep 16000`查看有16000（master）端口监听网卡的地址。发现监听的是127.0.1.1而不是hdfs//中写的地址192.168.187.128
+
+![image-20211219171500385](hbase.assets/image-20211219171500385.png)
+
+关闭hbase。
+
+在/etc/hosts中把hostname（本虚拟机的hostname为ubuntu）和192.168.187.128绑定
+
+![image-20211219171858824](hbase.assets/image-20211219171858824.png)
+
+启动hbase。重新运行java程序，成功了。
+
+![image-20211219172026193](hbase.assets/image-20211219172026193.png)
+
+查看虚拟机中的表，有新建的class表
+
+![image-20211219172105807](hbase.assets/image-20211219172105807.png)
+
+处理hbase
+
+
+
+### javaapi建表并插入数据
+
+#### 实验要求
+
+![image-20211220133856306](hbase.assets/image-20211220133856306.png)
+
+![image-20211220133910736](hbase.assets/image-20211220133910736.png)
+
+![image-20211220133927527](hbase.assets/image-20211220133927527.png)
+
+#### 代码
+
+```java
+package hbase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+public class createTableData {
+    //admin到处都要使用，把他设置为全局静态变量
+    public static HBaseAdmin admin;
+    //connection也设置为全局静态变量，方便close统一关闭
+    public static Connection connection;
+
+    public static void main(String[] args) throws IOException {
+        init();
+        createTable();
+        insertData();
+        close();
+    }
+
+    /**
+     * 初始化连接类对象和表格管理类对象
+     * */
+    public static void init() throws IOException {
+        /*********得到配置文件类对象**********/
+        //创建一个配置文件类对象
+        Configuration conf = HBaseConfiguration.create();
+        //设置配置文件类的相关参数，以下四个配置参数需与HBase/conf目录下hbase-site.xml文件内容一致。
+        // 默认配置的配置参考（http://blog.sina.com.cn/s/blog_63a075af0101izmx.html）
+        //腾讯云ip：120.53.244.17
+        conf.set("hbase.rootdir","hdfs://192.168.187.128:9000/hbase");
+        //conf.set("hbase.zookeeper.property.dataDir", "/root/zhangyunroot/hbase/zk");
+        //系统默认的就是localhost，用主机名反而报错。
+        conf.set("hbase.zookeeper.quorum", "192.168.187.128");
+        conf.set("hbase.cluster.distributed", "true");
+
+        //提高RPC通信时长
+        conf.setLong("hbase.rpc.timeout", 6000000);
+
+        /*************得到与HBase建立连接的类对象**************/
+        //使用连接工厂类ConnectionFactory的createConnection()方法构造一个连接类对象。该方法以一个配置类对象作为输入参数。连接类对象直接给全局静态变量
+        connection = ConnectionFactory.createConnection(conf);
+
+        /**********************得到表格管理类对象************************/
+        /*
+        使用连接类对象的getAdmin()方法获得表格管理类HBaseAdmin对象。
+        由于该方法返回的是抽象类Admin，需将其强制类型转化为HBaseAdmi，并把其赋值给全局admin
+        */
+        admin = (HBaseAdmin) connection.getAdmin();
+    }
+
+    /**
+     * 创建目标空表
+     * */
+    public static void createTable() throws IOException {
+        /***************创建一张名为“class”的表，该表包含两个列簇“information”与“results”。*****************/
+        /*
+         * 使用HBaseAdmin类创建一张HBase表的流程为：声明一个表格描述器构造器类TableDescriptorBuilder对象，并初始化表名为“class”
+         * */
+        TableDescriptorBuilder tdb = TableDescriptorBuilder.newBuilder(TableName.valueOf("Orders"));
+        /*
+         * 使用HBaseAdmin类创建一张HBase表的流程（续1）：使用列族描述器构造器类的build()方法创建列族描述器ColumnFamilyDescriptor类对象。
+         * 如果有多个列族，则可以存放在Java中自带的数据结构List中。
+         * */
+        List<ColumnFamilyDescriptor> listColumns = new ArrayList<>();
+        ColumnFamilyDescriptor cfd_od = ColumnFamilyDescriptorBuilder.newBuilder("Order Detail".getBytes()).build();
+        ColumnFamilyDescriptor cfd_t = ColumnFamilyDescriptorBuilder.newBuilder("Transaction".getBytes()).build();
+        listColumns.add(cfd_od);
+        listColumns.add(cfd_t);
+        /*
+         *  使用HBaseAdmin类创建一张HBase表的流程（续2）：使用TableDescriptorBuilder类的setColumnFamilies()方法，
+         * 将存储多个ColumnFamilyDescriptor类的List对象加入到TableDescriptorBuilder类
+         * */
+        tdb.setColumnFamilies(listColumns);
+        /*
+         * 使用TableDescriptorBuilder类的build()方法创建表格描述器TableDescriptor类
+         * */
+        TableDescriptor td = tdb.build();
+        //使用HBaseAdmin类的createTable()方法创建HBase表
+        admin.createTable(td);
+    }
+
+    /**
+     * 往创建的空表里传指定的数据
+     * */
+    public static void insertData() throws IOException {
+        HTable orders = (HTable) connection.getTable(TableName.valueOf("Orders"));
+
+        Put put=null;
+
+        //利用rowkey创建put对象。每个put对象负责每行的order detail列族的各列标识符的数据的填入
+        put = new Put("00001".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"41341".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"1057499".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"2".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"1".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"462.8".getBytes());
+        orders.put(put);
+
+        put = new Put("00002".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"32805".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"9203020".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"4".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"0".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"760.3".getBytes());
+        orders.put(put);
+
+        put = new Put("00003".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"66772".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"6330669".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"5".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"9".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"97".getBytes());
+        orders.put(put);
+
+        put = new Put("000004".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"59086".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"5544997".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"4".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"4".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"550.1".getBytes());
+        orders.put(put);
+
+        put = new Put("000005".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"94847".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"5377359".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"1".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"6".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"87.4".getBytes());
+        orders.put(put);
+
+        put = new Put("000006".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"92140".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"8739695".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"5".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"9".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"819".getBytes());
+        orders.put(put);
+
+        put = new Put("000007".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"13851".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"9503980".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"9".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"7".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"671.3".getBytes());
+        orders.put(put);
+
+        put = new Put("000007".getBytes());
+        put.addColumn("Order Detail".getBytes(),"consumerId".getBytes(),"42138".getBytes());//为一个格子填上数据
+        put.addColumn("Order Detail".getBytes(),"itemId".getBytes(),"2682154".getBytes());
+        put.addColumn("Order Detail".getBytes(),"itemCategory".getBytes(),"5".getBytes());
+        put.addColumn("Order Detail".getBytes(),"amount".getBytes(),"3".getBytes());
+        put.addColumn("Order Detail".getBytes(),"money".getBytes(),"11.6".getBytes());
+        orders.put(put);
+
+        put = new Put("00001".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-4-16 9:21:09".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-4-16 10:14:47".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-7-9 2:12:23".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-7-28 12:10:40".getBytes());
+        orders.put(put);
+
+        put = new Put("000002".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-3-17 0:17:19".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-3-17 1:15:04".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-7-4 21:13:27".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-9-22 6:58:44".getBytes());
+        orders.put(put);
+
+        put = new Put("000003".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-4-6 11:34:17".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-4-6 11:37:04".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-5-10 10:18:01".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-7-1 8:27:19".getBytes());
+        orders.put(put);
+
+        put = new Put("000004".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-3-26 22:29:44".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-3-26 22:51:19".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-7-5 10:09:26".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-9-13 15:47:28".getBytes());
+        orders.put(put);
+
+        put = new Put("000005".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-4-23 8:43:27".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-4-23 9:11:33".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-4-29 11:31:01".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-5-15 3:24:54".getBytes());
+        orders.put(put);
+
+        put = new Put("000006".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-2-9 1:03:14".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-2-9 1:13:04".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-5-3 0:06:12".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-8-19 23:38:05".getBytes());
+        orders.put(put);
+
+        put = new Put("000007".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-2-18 15:05:57".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-2-18 15:57:22".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-5-8 9:39:56".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-5-27 3:10:54".getBytes());
+        orders.put(put);
+
+        put = new Put("000008".getBytes());
+        put.addColumn("Transaction".getBytes(),"createTime".getBytes(),"2020-2-28 6:54:33".getBytes());//为一个格子填上数据
+        put.addColumn("Transaction".getBytes(),"paymentTime".getBytes(),"2020-2-28 7:18:10".getBytes());
+        put.addColumn("Transaction".getBytes(),"deliveryTime".getBytes(),"2020-3-25 22:24:11 ".getBytes());
+        put.addColumn("Transaction".getBytes(),"CompleteTime".getBytes(),"2020-6-27 10:04:31".getBytes());
+        orders.put(put);
+
+        orders.close();
+    }
+
+    public static void close() throws IOException {
+        //收尾工作
+        admin.close();
+        connection.close();
+    }
+}
+
+```
+
+#### 虚拟机中查看表和插入的数据
+
+查看表
+
+![image-20211220151237766](hbase.assets/image-20211220151237766.png)
+
+查看插入的数据
+
+![image-20211220151145754](hbase.assets/image-20211220151145754.png)
 

@@ -2,6 +2,14 @@
 
 http://mp.weixin.qq.com/mp/homepage?__biz=Mzg2NTAzMTExNg==&hid=2&sn=1650b6338f6469ca519b080fdbbbd333&scene=18#wechat_redirect
 
+
+
+网友推荐
+
+- 韩顺平Linux永远的神
+
+
+
 ## 前言
 
 ### 内容概要
