@@ -1959,13 +1959,885 @@ OK
 
 ## Jedis
 
-https://www.bilibili.com/video/BV1S54y1R7SB?p=23&spm_id_from=pageDriver
+jedis是使用Java来操作Redis的中间件，Jedis是Redis官方推荐使用的Java连接redis的客户端。
+
+后面springboot集成redis是顶层，这里讲解的jedis是底层，懂底层才能各种debug。
+
+
+
+### jedis实战测试
+
+#### 创建项目
+
+创建空项目
+
+![image-20220103095559078](redis.assets/image-20220103095559078.png)
+
+![image-20220103095628506](redis.assets/image-20220103095628506.png)
+
+![image-20220103095857114](redis.assets/image-20220103095857114.png)
+
+创建空项目完毕后，idea自动跳出module创建要求，创建一下module
+
+![image-20220103100102027](redis.assets/image-20220103100102027.png)
+
+![image-20220103100206395](redis.assets/image-20220103100206395.png)
+
+![image-20220103100301827](redis.assets/image-20220103100301827.png)
+
+![image-20220103100354290](redis.assets/image-20220103100354290.png)
+
+创建module完毕后，项目中可以看到module
+
+![image-20220103100513396](redis.assets/image-20220103100513396.png)
+
+空项目注意一个点：在project structure中把jdk配上
+
+![image-20220103100643818](redis.assets/image-20220103100643818.png)
+
+![image-20220103100758073](redis.assets/image-20220103100758073.png)
+
+![image-20220103100835010](redis.assets/image-20220103100835010.png)
+
+空项目还要在setting中把java版本改一下
+
+![image-20220103101006993](redis.assets/image-20220103101006993.png)
+
+![image-20220103101131499](redis.assets/image-20220103101131499.png)
+
+#### 引入依赖
+
+访问[mvnrepository](https://mvnrepository.com/)
+
+![image-20220103102609505](redis.assets/image-20220103102609505.png)
+
+使用3.2.0版本。碰到一些maven错误，参考[文章](https://blog.csdn.net/weixin_44005516/article/details/108293228)解决。
+
+- 后面发现阿里云镜像就是用不了，直接删掉settings.xml中所有的镜像，用默认的maven中央仓库把jar包下载了。
+
+![image-20220103102656085](redis.assets/image-20220103102656085.png)
+
+```xml
+<!-- https://mvnrepository.com/artifact/redis.clients/jedis -->
+<dependency>
+    <groupId>redis.clients</groupId>
+    <artifactId>jedis</artifactId>
+    <version>3.2.0</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/com.alibaba/fastjson -->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>fastjson</artifactId>
+    <version>1.2.62</version>
+</dependency>
+```
+
+#### 编码测试
+
+步骤概述：
+
+- 连接数据库
+
+- 操作命令
+
+- 断开连接
+
+
+
+具体步骤如下：
+
+修改远程linux服务器上的redis配置文件（redis.conf），让redis监听所有ip的6379端口。这样才能远程连接。
+
+![image-20220103152149818](redis.assets/image-20220103152149818.png)
+
+腾讯云防火墙放开6379端口
+
+![image-20220103151900947](redis.assets/image-20220103151900947.png)
+
+远程云主机开启redis服务端
+
+![image-20220103145746070](redis.assets/image-20220103145746070.png)
+
+本地idea编写如下的java测试文件
+
+```java
+import redis.clients.jedis.Jedis;
+
+public class TestPing {
+    public static void main(String[] args) {
+        //1. new Jedis对象
+        Jedis jedis =new Jedis("120.53.244.17",6379);
+        //2. jedis所有的命令就是我们之前学的所有redis指令,所以redis指令学习很重要
+        System.out.println(jedis.ping());
+        //3. 关闭连接。养成开启连接用完后随手关闭的习惯。
+        jedis.close();
+        
+    }
+
+}
+```
+
+运行测试文件，控制台成功输出“pong”，说明本地连接远程redis服务端成功！
+
+![image-20220103151456568](redis.assets/image-20220103151456568.png)
+
+**如果连接不上**，参考如下思路：远程链接不上，可能有几个原因：1.redis配置文件的ip限制注释掉，2.远程访问保护关掉，设置为no，3.如果是阿里ECS，需要开放6379端口，4。检查下是不是防火墙被拦了，5.远程redis启动了没有端口
+
+### jedis常用API
+
+string，List，set，Hash，zset，geospatial，hyperloglog，bitmaps。
+
+所有的api命令，就是我们对应的上面学习的redis指令，一个都没有变化。
+
+
+
+### jedis事务
+
+实例+注释如下：
+
+```java
+package com.zhang;
+
+import com.alibaba.fastjson.JSONObject;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Transaction;
+
+public class TestTX {
+    public static void main(String[] args) {
+        //初始化
+        Jedis jedis =new Jedis("120.53.244.17",6379);
+        jedis.flushDB();
+
+        //把得到json格式的字符串，作为kv的v
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("hello","world");
+        jsonObject.put("name","zhangyun");
+        String result = jsonObject.toJSONString();
+        System.out.println("result -> " + result);
+
+        //开启事务
+        Transaction transaction = jedis.multi();
+
+        //！！！可能执行失败并且要回滚的代码块，使用trycatch包裹起来！
+        try {
+            //命令入队
+            transaction.set("user1",result);
+            /*
+            * 和redis环境不同，这里是javatrycatch环境，虽然1/0是运行时异常，但出现异常会走catch中的取消事务，exec没执行就抛错了，所以try中的set都不会执行
+            *
+            * exec都没执行，跟redis的事务执行异常根本没关系
+            * */
+            int i=1/0;//
+            transaction.set("user2",result);
+
+            //事务执行
+            transaction.exec();
+        } catch (Exception e) {
+            //发生异常时放弃事务（事务回滚）
+            transaction.discard();
+            e.printStackTrace();
+        } finally {
+            //无论事务成功与否都会来到finally代码块。如果能看到user1和user2的值，则说明事务执行成功；如果值为空则事务失败。
+            System.out.println("user1 -> " +jedis.get("user1"));
+            System.out.println("user2 -> " +jedis.get("user2"));
+            //关闭连接
+            jedis.close();
+        }
+    }
+}
+```
+
+运行代码的结果如下：
+
+- 这个例子其实不好，因为异常都没被redis处理。本例子主要展示的其实是javatrycatch的功能：碰见报错的地方跳往catch。
+
+![image-20220103155802073](redis.assets/image-20220103155802073.png)
+
+
 
 ## SpringBoot整合
 
+### 概念说明
+
+SpringBoot操作数据使用:spring-data，jpa，jdbc ，mongodb，redis !
+
+SpringData也是和SpringBoot齐名的项目!
+
+说明∶在SpringBoot2.x之后，原来`<artifactId>spring-boot-starter-data-redis</artifactId>`底层使用的jedis被替换为了lettuce?
+
+- jedis :采用的直连，多个线程操作的话，是不安全的，如果想要避免不安全的，使用jedis pool连接池。更像BIO模式。
+- lettuce:采用letty，实例可以再多个线程中进行共享，不存在线程不安全的情况!可以减少线程数量，更像NIO模式。
+
+
+
+### 项目实战
+
+#### 新建子module
+
+新建springboot子module
+
+![image-20220103171007969](redis.assets/image-20220103171007969.png)
+
+![image-20220103171136057](redis.assets/image-20220103171136057.png)
+
+![image-20220103171426588](redis.assets/image-20220103171426588.png)
+
+springboot子module构建完成后可以在项目中看到
+
+![image-20220103171521577](redis.assets/image-20220103171521577.png)
+
+删掉没用的文件（夹），省的看的不舒服
+
+![image-20220103171720153](redis.assets/image-20220103171720153.png)
+
+![image-20220103171742801](redis.assets/image-20220103171742801.png)
+
+#### 导入依赖
+
+在创建项目时，勾选的模块已经自动体现在pom文件中的依赖里。
+
+![image-20220103175739851](redis.assets/image-20220103175739851.png)
+
+有一些构建的依赖和配置（如爆红的）要删掉，否则无法运行。删掉无关内容后，完整的pom内容如下：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.2</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.zhangyun</groupId>
+    <artifactId>redis-02-springboot</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>redis-02-springboot</name>
+    <description>redis-02-springboot</description>
+    <properties>
+        <java.version>8</java.version>
+        <repackage.classifier/>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
+```
+
+
+
+#### 配置连接
+
+在resource目录下的application.properties文件中进行springboot的配置。其中就可以配置redis的连接。
+
+文件内容如下：
+
+```properties
+#SpringBoot所有的配置类，都有一个自动配置类:RedisAutoConfiguration
+# 自动配置类都会绑定一个properties:RedisProperties
+
+# 配置redis
+spring.redis.host=120.53.244.17
+spring.redis.port=6379
+# 如果要使用连接池的话，要使用lettuce的连接池。因为jedis的连接池很多类都不存在也不生效。
+```
+
+#### 测试
+
+打开springboot的测试类，编写内容+注释如下：
+
+```java
+package com.zhangyun.redis02springboot;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisTemplate;
+
+@SpringBootTest
+class Redis02SpringbootApplicationTests {
+
+    //注入redisTemplate
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Test
+    void contextLoads() {
+
+        /*redisTemplate操作不同的数据类型，api和redis指令是一样的：
+        * opsForValue 操作字符串 类似String
+        * opsForList 操作list 类似list
+        * opsForSet
+        * opsForHash
+        * opsForZSet
+        * opsForGeo
+        * opsForHyperLogLog
+        * */
+
+        /*除了基本的操作，我们常用的方法都可以直接通过redisTemplate操作，比如事务，和基本的CRUD
+        * */
+
+        //获取redis的连接对象
+        //RedisConnection connection = redisTemplate.getConnectionFactory().getConnection();
+        //connection.flushDb();
+
+        /*redis数据库中键值对有乱码，是因为java自带序列化的原因，参考文章：https://blog.csdn.net/qq_16159433/article/details/121491555*/
+        redisTemplate.opsForValue().set("key1","zhangyun1");
+        System.out.println(redisTemplate.opsForValue().get("key1"));
+    }
+
+}
+```
+
+运行测试方法后得到结果：
+
+![image-20220103210556221](redis.assets/image-20220103210556221.png)
+
+使用xshell查看远程redis库的内容，可以看到存的key1，但是因为序列化的问题，键和值的前面都有一大串不可读的字符：
+
+![image-20220103210719758](redis.assets/image-20220103210719758.png)
+
+为了解决这个问题，参见本章的“序列化相关”。
+
+
+
+### 源码分析
+
+#### RedisAutoConfiguration
+
+分析RedisAutoConfiguration.java中的源码：
+
+```java
+@Bean
+//我们可以自己定义一个redisTemplate来替换默认的
+@ConditionalOnMissingBean(
+    name = {"redisTemplate"}
+)
+@ConditionalOnSingleCandidate(RedisConnectionFactory.class)
+public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    //默认的RedisTemplate没有过多的设置，redis对象都是需要序列化的。
+    //两个泛型都是Object, Object类型，我们经常使用的是String类型，所以后续需要强制转换为<String, Object>。
+    RedisTemplate<Object, Object> template = new RedisTemplate();
+    template.setConnectionFactory(redisConnectionFactory);
+    return template;
+}
+
+@Bean
+@ConditionalOnMissingBean
+@ConditionalOnSingleCandidate(RedisConnectionFactory.class)
+//由于String是redis中最常使用的类型，所以说单独提出来一个bean。
+public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    return new StringRedisTemplate(redisConnectionFactory);
+}
+```
+
+
+
+#### RedisTemplate
+
+探讨序列化问题，看RedisTemplate.java
+
+![image-20220103210216748](redis.assets/image-20220103210216748.png)
+
+![image-20220103210952183](redis.assets/image-20220103210952183.png)
+
+
+
+### 序列化相关
+
+#### 传递不实现序列化的对象
+
+编写一个不实现序列化的pojo类。
+
+类如下：
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
+
+//把User类变成一个组件
+@Component
+//使用lombok，简化pojo类的编写（其实不推荐使用lombok，不过这用一下）
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+public class User {
+    private String name;
+    private int age;
+
+}
+```
+
+![image-20220104130233351](redis.assets/image-20220104130233351.png)
+
+---
+
+首先考虑把对象转化为json格式字符串后，存入redis。
+
+测试函数如下：
+
+```java
+    @Test
+    public void testJsonStringSerilization() throws JsonProcessingException {
+        //真实的开发一般都使用json来传递对象,所以要把User对象序列化成（json格式的）String
+        User user = new User("张云", 3);
+        String userAsJsontypeString = new ObjectMapper().writeValueAsString(user);
+        redisTemplate.opsForValue().set("user1",userAsJsontypeString);//传送序列化成jsonstring后的对象
+        System.out.println("user1=>"+redisTemplate.opsForValue().get("user1"));
+    }
+```
+
+控制台输出结果正确，说明成功存入远程redis：
+
+![image-20220104125148969](redis.assets/image-20220104125148969.png)
+
+远程redis查看数据。由于序列化，key的前面跟了很多不可读的字符：
+
+![image-20220104125248286](redis.assets/image-20220104125248286.png)
+
+---
+
+现在考虑直接传对象本体。
+
+测试函数如下：
+
+```java
+    @Test
+    public void testObjectSerilization() throws JsonProcessingException {
+        User user = new User("张云", 3);
+        redisTemplate.opsForValue().set("user2",user);//直接传送对象
+        System.out.println("user2=>"+redisTemplate.opsForValue().get("user2"));
+    }
+```
+
+程序执行报错,并且远程redis看不到“user2"。这是因为pojo类User**没有实现序列化，不能直接传输**。
+
+```
+2022-01-04 12:54:48.145  INFO 22460 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 5 ms. Found 0 Redis repository interfaces.
+2022-01-04 12:54:49.318  INFO 22460 --- [           main] c.z.r.Redis02SpringbootApplicationTests  : Started Redis02SpringbootApplicationTests in 1.814 seconds (JVM running for 2.615)
+
+org.springframework.data.redis.serializer.SerializationException: Cannot serialize; nested exception is org.springframework.core.serializer.support.SerializationFailedException: Failed to serialize object using DefaultSerializer; nested exception is java.lang.IllegalArgumentException: DefaultSerializer requires a Serializable payload but received an object of type [com.zhangyun.redis02springboot.pojo.User]
+
+	at org.springframework.data.redis.serializer.JdkSerializationRedisSerializer.serialize(JdkSerializationRedisSerializer.java:96)
+	at org.springframework.data.redis.core.AbstractOperations.rawValue(AbstractOperations.java:128)
+	at org.springframework.data.redis.core.DefaultValueOperations.set(DefaultValueOperations.java:304)
+	at com.zhangyun.redis02springboot.Redis02SpringbootApplicationTests.testObjectSerilization(Redis02SpringbootApplicationTests.java:55)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:725)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:149)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:140)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:84)
+	at org.junit.jupiter.engine.execution.ExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(ExecutableInvoker.java:115)
+	at org.junit.jupiter.engine.execution.ExecutableInvoker.lambda$invoke$0(ExecutableInvoker.java:105)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.ExecutableInvoker.invoke(ExecutableInvoker.java:104)
+	at org.junit.jupiter.engine.execution.ExecutableInvoker.invoke(ExecutableInvoker.java:98)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:214)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:210)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:135)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:66)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.util.ArrayList.forEach(ArrayList.java:1259)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.util.ArrayList.forEach(ArrayList.java:1259)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:107)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:88)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:67)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:52)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:114)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:86)
+	at org.junit.platform.launcher.core.DefaultLauncherSession$DelegatingLauncher.execute(DefaultLauncherSession.java:86)
+	at org.junit.platform.launcher.core.SessionPerRequestLauncher.execute(SessionPerRequestLauncher.java:53)
+	at com.intellij.junit5.JUnit5IdeaTestRunner.startRunnerWithArgs(JUnit5IdeaTestRunner.java:71)
+	at com.intellij.rt.junit.IdeaTestRunner$Repeater.startRunnerWithArgs(IdeaTestRunner.java:33)
+	at com.intellij.rt.junit.JUnitStarter.prepareStreamsAndStart(JUnitStarter.java:235)
+	at com.intellij.rt.junit.JUnitStarter.main(JUnitStarter.java:54)
+Caused by: org.springframework.core.serializer.support.SerializationFailedException: Failed to serialize object using DefaultSerializer; nested exception is java.lang.IllegalArgumentException: DefaultSerializer requires a Serializable payload but received an object of type [com.zhangyun.redis02springboot.pojo.User]
+	at org.springframework.core.serializer.support.SerializingConverter.convert(SerializingConverter.java:64)
+	at org.springframework.core.serializer.support.SerializingConverter.convert(SerializingConverter.java:33)
+	at org.springframework.data.redis.serializer.JdkSerializationRedisSerializer.serialize(JdkSerializationRedisSerializer.java:94)
+	... 70 more
+Caused by: java.lang.IllegalArgumentException: DefaultSerializer requires a Serializable payload but received an object of type [com.zhangyun.redis02springboot.pojo.User]
+	at org.springframework.core.serializer.DefaultSerializer.serialize(DefaultSerializer.java:43)
+	at org.springframework.core.serializer.Serializer.serializeToByteArray(Serializer.java:56)
+	at org.springframework.core.serializer.support.SerializingConverter.convert(SerializingConverter.java:60)
+	... 72 more
+
+
+Process finished with exit code -1
+
+```
+
+![image-20220104125911985](redis.assets/image-20220104125911985.png)
+
+![image-20220104125627899](redis.assets/image-20220104125627899.png)
+
+#### 传递实现序列化的对象
+
+修改pojo类User如下：
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.io.Serializable;
+
+//把User类变成一个组件
+@Component
+//使用lombok，简化pojo类的编写（其实不推荐使用lombok，不过这用一下）
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+//!!!implements Serializable使User类能够被序列化
+public class User implements Serializable {
+    private String name;
+    private int age;
+}
+```
+
+再次运行testObjectSerilization方法
+
+![image-20220104130800230](redis.assets/image-20220104130800230.png)
+
+控制台成功展示内容，远程redis成功展示名为“user2”的key。这是因为**User类implements Serializable了，可以被默认的序列化器“JdkSerializationRedisSerializer”所序列化**，所以传输成功。
+
+![image-20220104130916401](redis.assets/image-20220104130916401.png)
+
+![image-20220104130927736](redis.assets/image-20220104130927736.png)
+
+
+
+#### 自定义redisTemplate
+
+如果不想要默认的序列化器JdkSerializationRedisSerializer，我们自己实现一个redisTemplate来自定义序列化器，*这样就不会有长串不可读的字符出现*。为了实现这个目的，我们在springboot启动类的同级建立config文件夹并存放RedisConfig.java,以后redis的相关配置在这个类中做：
+
+![image-20220103211406913](redis.assets/image-20220103211406913.png)
+
+包含自定义redisTemplate的完整RedisConfig类如下（含注释），**开发时可以直接使用**！
+
+```java
+package com.zhangyun.redis02springboot.config;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.net.UnknownHostException;
+
+//表示被注解的类是一个配置类
+@Configuration
+public class RedisConfig {
+    /*RedisAutoConfiguration.java（如果只有RedisAutoConfiguration.class的话点击“download source”可得到java文件）
+    中的redisTemplate方法可以直接借鉴过来。并把所有<Object, Object>改为<String, Object>，因为我们主要面向String*/
+    //自己定义了一个RedisTemplate，这是一个固定模板，拿去可以直接使用
+    @Bean
+    @ConditionalOnMissingBean(name = "redisTemplate")
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory)
+            throws UnknownHostException {
+        //为了我们自己开发方便，一般直接使用<String,Object>
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);//set连接工厂，这个是默认的。
+
+        //序列化器设置
+        //json序列化配置
+        Jackson2JsonRedisSerializer<Object> objectJackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<Object>(Object.class);//json解析任意的对象，变成一个json序列化。
+        ObjectMapper om = new ObjectMapper();//objectmappeer对json序列化进行转义
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        objectJackson2JsonRedisSerializer.setObjectMapper(om);//转义完毕后就可以使用了
+        //String的序列化
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+
+        //key采用String序列化方式（序列化器）
+        template.setKeySerializer(stringRedisSerializer);
+        //hash的key也采用String的序列化方式
+        template.setHashKeySerializer(stringRedisSerializer);
+        //value采用jackson序列化方式
+        template.setValueSerializer(objectJackson2JsonRedisSerializer);
+        //hash的value采用jackson序列化方式
+        template.setHashValueSerializer(objectJackson2JsonRedisSerializer);
+
+        template.afterPropertiesSet();//在template中设置所有的properties
+        return template;
+    }
+}
+```
+
+自定义redisTemplate后，由于@ConditionalOnMissingBean注解，原本的redisTemplate bean会失效
+
+![image-20220104155736148](redis.assets/image-20220104155736148.png)
+
+清空redis数据库
+
+![image-20220104155854330](redis.assets/image-20220104155854330.png)
+
+再次执行测试函数testObjectSerilization()
+
+![image-20220104155923698](redis.assets/image-20220104155923698.png)
+
+控制台成功得到结果了。并且远程数据库读取的key没有一大串不可读的字符前缀了。
+
+- 网友说：get value值的时候中文乱码是因为windows的编码是gbk 而数据库的编码格式是utf8  chcp 65001
+
+![image-20220104160144180](redis.assets/image-20220104160144180.png)
+
+![image-20220104160157594](redis.assets/image-20220104160157594.png)
+
+
+
+#### redis工具类
+
+redis工具类`RedisUtil.java`位置如下，和代码图示如下。代码太多了就不黏贴进来了：
+
+![image-20220104163438341](redis.assets/image-20220104163438341.png)
+
+新建测试方法，测试RedisUtils.java
+
+```java
+    @Autowired
+    private RedisUtil redisUtil;
+    @Test void testRedisUtil(){
+        redisUtil.set("name","zhangyun");
+        System.out.println(redisUtil.get("name"));
+    }
+```
+
+控制台成功输出value，远程redis也正确展示了键值对:
+
+![image-20220104163531348](redis.assets/image-20220104163531348.png)
+
+![image-20220104163615412](redis.assets/image-20220104163615412.png)
+
+
+
+
+
+
+
+
+
 ## Redis.conf详解
 
+启动redisserver的时候就通过Redis.conf来启动。
+
+
+
+#### 单位
+
+容量单位不区分大小写，G和GB有区别：
+
+![img](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80Mzg3MzIyNw==,size_16,color_FFFFFF,t_70.png)
+
+#### 包含
+
+可以使用 include 组合多个配置文件。这里include redis配置文件就类似spring中配置文件可以用import组合多个配置文件：
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200513214902552.png)
+
+#### 网络配置
+
+bind如果只是127.0.0.1的话，就只能本机访问，如果想实现远程访问，这里要bind 0.0.0.0。
+
+![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80Mzg3MzIyNw==,size_16,color_FFFFFF,t_70-16412861708662.png)
+
+#### 通用配置
+
+daemonize以守护进程的方式运行，默认是no，我们需要自己开启为yes !要开启，才能在后台一直运行，不然一退出这个进程就结束了：
+
+![image-20220104165607879](redis.assets/image-20220104165607879.png)
+
+配置文件的pid文件。如果以后台（即守护进程）方式运行，那么我们就需要指定pid文件：
+
+![image-20220104165731686](redis.assets/image-20220104165731686.png)
+
+日志输出级别：
+
+![img](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80Mzg3MzIyNw==,size_16,color_FFFFFF,t_70-16412867791274.png)
+
+日志输出文件位置名。如果为空的话就是一个标准的输出，就不管他 ：
+
+![在这里插入图片描述](redis.assets/20200513214933713.png)
+
+redis数据库的数量，默认是16个
+
+![image-20220104170426612](redis.assets/image-20220104170426612.png)
+
+配置是否展示redisserver启动时的logo：
+
+![image-20220104170519038](redis.assets/image-20220104170519038.png)
+
+
+
+#### 持久化
+
+由于Redis是基于内存的数据库，需要将数据由内存持久化到文件中
+
+持久化方式：
+
+- RDB
+- AOF
+
+
+
+持久化频度：
+
+![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80Mzg3MzIyNw==,size_16,color_FFFFFF,t_70-16412875054077.png)
+
+rdb文件相关：
+
+![在这里插入图片描述](redis.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80Mzg3MzIyNw==,size_16,color_FFFFFF,t_70-16412875851439.png)
+
+![在这里插入图片描述](redis.assets/20200513215006207.png)
+
+#### 主从复制
+
+这里先不讲。后面讲“redis主从复制”的时候，再进行讲解。
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200513215016371.png)
+
+
+
+#### 安全（重要）
+
+密码设置：
+
+- 上线一定设密码 否则会被攻击导致数据全丢，或者被挖矿病毒入侵。
+- 默认是没有密码的。可以在config文件这设置，也可以通过命令`config set requirepass 自己的密码`设置。
+
+![在这里插入图片描述](redis.assets/20200513215026143.png)
+
+![image-20220104172307938](redis.assets/image-20220104172307938.png)
+
+#### 限制客户端
+
+```
+maxclients 10000   #最大客户端数量
+maxmemory <bytes>  #最大内存限制
+maxmemory-policy noeviction # 内存达到限制值的处理策略。redis 中的默认的过期策略是 volatile-lru。
+```
+
+maxmemory-policy六种过期策略：
+
+- volatile-lru：只对设置了过期时间的key进行LRU（默认值）
+- allkeys-lru ： 删除lru算法的key
+- volatile-random：随机删除即将过期key
+- allkeys-random：随机删除
+- volatile-ttl ： 删除即将过期的
+- noeviction ： 永不过期，返回错误
+  
+
+#### AOF相关
+
+开启与默认文件名：
+
+![在这里插入图片描述](redis.assets/20200513215037918.png)
+
+- 默认不开启AOF，而是使用RDB进行持久化
+
+- 在大部分所有的情况下，rdb完全够用
+
+
+
+数据同步策略：
+
+![在这里插入图片描述](redis.assets/20200513215047999.png)
+
+- always：消耗性能
+- everysec：可能丢失1s的数据
+- no：相当于关闭，基本不使用这个。
+
+
+
 ## Redis持久化
+
+### RDB
+
+### AOF
+
+https://www.bilibili.com/video/BV1S54y1R7SB?p=28&spm_id_from=pageDriver
+
+https://blog.csdn.net/DDDDeng_/article/details/108118544
 
 ## Redis发布订阅
 
