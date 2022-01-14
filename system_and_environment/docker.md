@@ -1206,6 +1206,7 @@ exit
 
 - docker exec是进入容器后开启一个新的终端，可以在里面操作（常用）。
 - docker attach是进入容器中正在执行的终端，不会启动新的进程。
+- exec进去容器是以一个新的窗口进去的，exit退出当然不会关闭容器；要是你以attach进去，退出就会关闭了；运行容器时直接-it加/bin/bash进容器的话，exit后也没有存活的控制台，容器也会关闭。
 
 #### 容器和主机文件互相拷贝
 
@@ -1820,5 +1821,341 @@ docker镜像很小，centos虚拟机压缩包1个g起步，但是centos的docker
 
 ### 分层理解
 
-https://www.bilibili.com/video/BV1og4y1q7M4?p=19&spm_id_from=pageDriver
+#### 分层的镜像
+
+我们可以去下载一个镜像，注意观察下载的日志输出，可以看到是一层一层的下载
+
+![image-20220114110923117](docker.assets/image-20220114110923117.png)
+
+#### 思考
+
+思考:为什么Docker镜像要采用这种分层的结构呢?
+
+- 最大的好处，我觉得莫过于是资源共享了!比如有多个镜像都从相同的Base镜像构建而来，那么宿主机只需在磁盘上保留一份base镜像，同时内存中也只需要加载一份base镜像，这样就可以为所有的容器服务了，而且镜像的每一层都可以被共享。
+
+查看镜像分层的方式可以通过docker image inspect命令：
+
+```bash
+[root@rootuser ~]# docker image inspect redis:latest
+"RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:2edcec3590a4ec7f40cf0743c15d78fb39d8326bc029073b41ef9727da6c851f",
+                "sha256:9b24afeb7c2f21e50a686ead025823cd2c6e9730c013ca77ad5f115c079b57cb",
+                "sha256:4b8e2801e0f956a4220c32e2c8b0a590e6f9bd2420ec65453685246b82766ea1",
+                "sha256:529cdb636f61e95ab91a62a51526a84fd7314d6aab0d414040796150b4522372",
+                "sha256:9975392591f2777d6bf4d9919ad1b2c9afa12f9a9b4d260f45025ec3cc9b18ed",
+                "sha256:8e5669d8329116b8444b9bbb1663dda568ede12d3dbcce950199b582f6e94952"
+            ]
+        },
+```
+
+#### 理解
+
+理解：
+
+![image-20220114111558699](docker.assets/image-20220114111558699.png)
+
+- 所有的Docker镜像都起始于一个基础镜像层，当进行修改或增加新的内容时，就会在当前镜像层之上，创建新的镜像层。
+- 举一个简单的例子，假如基于Ubuntu Linux 16.04创建一个新的镜像，这就是新镜像的第一层;如果在该镜像中添加Python包，就会在基础镜像层之上创建第二个镜像层﹔如果继续添加一个安全补丁，就会创建第三个镜像层。
+- 该镜像当前已经包含3个镜像层，如本图所示(这只是一个用于演示的很简单的例子)。
+
+在添加额外的镜像层的同时，镜像始终保持是当前所有镜像的组合，理解这一点非常重要：
+
+![image-20220114111731706](docker.assets/image-20220114111731706.png)
+
+- 本图中举了一个简单的例子，每个镜像层包含3个文件，而镜像包含了来自两个镜像层的6个文件
+
+上图中的镜像层跟之前图中的略有区别，主要目的是便于展示文件。
+
+![image-20220114112413959](docker.assets/image-20220114112413959.png)
+
+- 本图中展示了一个稍微复杂的三层镜像，在外部看来整个镜像只有6个文件，这是因为最上层中的文件7是文件5的一个更新版本。
+- 这种情况下，上层镜像层中的文件覆盖了底层镜像层中的文件。这样就使得文件的更新版本作为一个新镜像层添加到镜像当中。Docker通过存储引擎（新版本采用快照机制)的方式来实现镜像层堆栈，并保证多镜像层对外展示为统一的文件系统。
+
+Linux上可用的存储引擎有AUFS、Overlay2、Device Mapper、Btrfs以及ZFS。顾名思义，每种存储引擎都基于Linux中对应的文件系统或者块设备技术，并且每种存储引擎都有其独有的性能特点。
+
+Docker在Windows 上仅支持windowsfilter一种存储引擎，该引擎基于NTFS文件系统之上实现了分层和CoW[1].下图展示了与系统显示相同的三层镜像。所有镜像层堆叠并合并，对外提供统一的视图。 
+
+![image-20220114113609046](docker.assets/image-20220114113609046.png)
+
+- 这六个文件，就是下载镜像时看到的layers
+
+
+
+#### 特点
+
+Docker镜像都是只读的，当容器启动时，一个新的可写层被加载到镜像的顶部。这一层就是我们通常说的容器层，容器之下的都叫镜像层!
+
+![image-20220114114136939](docker.assets/image-20220114114136939.png)
+
+
+
+### commit得到镜像
+
+（即提交自己的镜像）
+
+命令：
+
+```bash
+docker commit -m="提交的描述信息" -a="作者" 容器id 目标镜像名:[版本号即tag]
+```
+
+#### 实战
+
+开一个页面：
+
+```bash
+# 查看有哪些镜像
+[root@rootuser ~]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+docker72590/alpine    latest    f5a69fceabd2   13 days ago     5.59MB
+nginx                 latest    605c77e624dd   2 weeks ago     141MB
+tomcat                9.0       b8e65a4d736d   3 weeks ago     680MB
+redis                 latest    7614ae9453d1   3 weeks ago     113MB
+centos                latest    5d0da3dc9764   4 months ago    231MB
+portainer/portainer   latest    580c0e4e98b0   10 months ago   79.1MB
+elasticsearch         7.6.2     f29a1ee41030   21 months ago   791MB
+You have new mail in /var/spool/mail/root
+# 8081是宿主机端口，8080是tomcat容器端口
+[root@rootuser ~]# docker run -it -p 8081:8080 tomcat:9.0
+```
+
+xshell新开一个ssh连接页面：
+
+```bash
+# 确认容器确实已启动
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED         STATUS         PORTS                                       NAMES
+9f4bce2ffbc3   tomcat:9.0   "catalina.sh run"   7 minutes ago   Up 7 minutes   0.0.0.0:8081->8080/tcp, :::8081->8080/tcp   upbeat_kirch
+# 进入已启动的tomcat容器
+[root@rootuser ~]# docker exec -it 9f4bce2ffbc3 /bin/bash
+# 因为阿里云镜像仓库的镜像都是阉割版，往webapps中复制进去必须的文件夹。必须加上-r表示递归复制！！
+root@9f4bce2ffbc3:/usr/local/tomcat# cp -r webapps.dist/* webapps
+# 确保文件夹已被成功复制
+root@9f4bce2ffbc3:/usr/local/tomcat# ls webapps
+ROOT  docs  examples  host-manager  manager
+```
+
+确认能从外网访问tomcat容器：
+
+![image-20220114121113514](docker.assets/image-20220114121113514.png)
+
+
+
+  将我们操作过的容器通过commit提交为一个镜像：
+
+```bash
+# 将我们操作过的容器通过commit提交为一个镜像!我们以后就使用我们修改过的镜像即可，这就是我们自己的一个修改的镜像。
+[root@rootuser ~]# docker commit -a="zhangyun" -m="add webapps content" 9f4bce2ffbc3 tomcatzyk:1.0
+sha256:1a7b840d09e721b0e5362713142b362dec5dc5793dae3934788bbc2ebb614de2
+```
+
+- 注意包裹字符串的引号要完整，命令要正确，否则commit会失败并且控制台会出现一个`>`。
+- `-a`这类参数后面的“=”可以用空格替代。
+
+查看镜像，看到自己修改过的容器打包成的镜像：
+
+![image-20220114171339287](docker.assets/image-20220114171339287.png)
+
+- 镜像大小比原生tomcat镜像稍大，这是因为我们复制了一份webapps.dist中的文件夹。
+
+
+
+#### 用法
+
+如果你想要保存当前容器的状态，就可以通过commit来提交，获得一个镜像，就好比我们以前学习VM时候的快照!
+
+
+
+学习方式说明:
+
+- 理解概念，但是一定要**实践**，最后实践和理论相结合一次搞定这个知识。**学好理论才能实践**，不然debug如无头苍蝇。
+
+
+
+## 容器数据卷
+
+ ### 容器数据卷定义
+
+#### docker理念回顾
+
+docker是将应用和环境打包成一个镜像。
+
+docker使用的数据不能放在容器里，不然容器被删除的话数据就会丢失。所以希望：
+
+- 数据持久化，即mysql数据可以存在本地。
+- 容器之间可以有一个数据共享的技术。
+
+#### 数据卷技术
+
+docker容器中产生的数据同步到本地，这就是数据卷技术。其实本质就是”目录挂载“，把容器内的目录挂载到linux宿主机上。图示：
+
+![image-20220114175649069](docker.assets/image-20220114175649069.png)
+
+总结：用卷就是为了**容器的数据持久化+同步操作+容器间数据共享**。
+
+- 不同容器把内部目录绑定在linux宿主机的同一目录下，就实现了不同容器间的数据共享。
+
+
+
+### 使用数据卷
+
+#### 1使用命令来挂载
+
+（方式1）
+
+命令：
+
+```bash
+docker run -it -v 主机目录:容器内目录 镜像名 运行方式
+```
+
+1，在一个xshell连接中启动容器：
+
+```bash
+# 启动容器的同时设置容器的挂载
+[root@rootuser home]# docker run -it -v /home/dockertest:/home centos /bin/bash
+# 查看容器内部的home目录，为空
+[root@6a6e5fbe21f5 /]# cd /home
+[root@6a6e5fbe21f5 home]# ls
+[root@6a6e5fbe21f5 home]# 
+```
+
+2，新开一个xshell连接：
+
+```bash
+# 查看挂载目录是否存在，确实存在dockertest。后续centos容器的home目录下的文件会随时同步到宿主机的/home/dockertest
+[root@rootuser ~]# cd /home
+[root@rootuser home]# ls
+dockertest  lighthouse  lsb  zhangyun
+[root@rootuser home]# ls dockertest/
+# 查看centos容器的详细底层信息，可以看到mount即挂载信息。
+[root@rootuser home]# docker inspect 6a6e5fbe21f5 
+        "Mounts": [
+            {
+                "Type": "bind",
+                # 宿主机的地址
+                "Source": "/home/dockertest",
+                # docker容器内的地址
+                "Destination": "/home",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+       
+
+```
+
+- 挂载 就是将宿主机的一部分空间共享给容器一起用，就是相当于插了一个u盘在容器
+- 虽然看着有source和destination的区别，但是数据其实**双向绑定**的。
+
+3，测试同步，左侧为宿主机，右侧为centos容器：
+
+![image-20220114205428321](docker.assets/image-20220114205428321.png)
+
+- 测试的添加文件的同步。删除文件同理，也是同步的。
+- 就算容器关闭了，在宿主机上的目录修改文件后，容器只要启动查看相应文件，就能看见容器内部的文件仍然是同步的。
+
+数据卷好处：以后修改只需要在宿主机修改即可，容器内会自动同步。
+
+
+
+#### 2mysql同步数据
+
+思考：mysql数据持久化的问题
+
+1，启动容器：
+
+```bash
+# 获取镜像
+[root@rootuser ~]# docker pull mysql:5.7
+5.7: Pulling from library/mysql
+72a69066d2fe: Pull complete 
+93619dbc5b36: Pull complete 
+99da31dd6142: Pull complete 
+626033c43d70: Pull complete 
+37d5d7efb64e: Pull complete 
+ac563158d721: Pull complete 
+d2ba16033dad: Pull complete 
+0ceb82207cd7: Pull complete 
+37f2405cae96: Pull complete 
+e2482e017e53: Pull complete 
+70deed891d42: Pull complete 
+Digest: sha256:f2ad209efe9c67104167fc609cca6973c8422939491c9345270175a300419f94
+Status: Downloaded newer image for mysql:5.7
+docker.io/library/mysql:5.7
+# 运行容器的时候需要做数据挂载
+[root@rootuser ~]# docker run -d -p 3310:3306 -v /home/dockermysql/conf:/etc/mysql/conf -v /home/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+850dc1afa4f18e1de3a138f8fad81bc08bb5200957852e319e56ca44d443b961
+[root@rootuser ~]# 
+```
+
+- `-d`：后台运行
+
+- `-p 宿主机端口:容器端口`：端口映射。确保宿主机的端口在腾讯云防火墙上开了权限。
+
+  ![image-20220114213329901](docker.assets/image-20220114213329901.png)
+
+- `-v 宿主机目录:容器目录`：数据卷挂载，可以同时配置多个挂载。
+
+  - /etc/mysql/conf是mysql的配置文件目录
+  - /var/lib/mysql是mysql存储数据的目录
+  - 其实我这里宿主机的mysql的data目录没配置好，dockermysql目录不小心写成mysql目录，导致没和配置文件在一个文件夹（dockermysql）下。
+
+- `-e`：环境配置。本例中配置了mysql的密码，dockermysql官方要求使用mysql时要设置密码。
+
+- `--name`：容器名字。
+
+- 万一输入命令后，容器没正常启动，先检查命令有没有输对。
+
+2，使用mysql客户端尝试连接腾讯云的dockermysql，连接成功：
+
+![image-20220114213108065](docker.assets/image-20220114213108065.png)
+
+![image-20220114213211481](docker.assets/image-20220114213211481.png)
+
+- mysqlcli连接了宿主机腾讯云3310端口，宿主机3310端口又和dockermysql的3306端口绑定，所以mysqlcli连接dockermysql成功。
+
+3，宿主机上查看mysql的data数据卷
+
+![image-20220114214214395](docker.assets/image-20220114214214395.png)
+
+4，mysqlcli上创建一个数据库“zykdockermysql”
+
+![image-20220114214400932](docker.assets/image-20220114214400932.png)
+
+5，在宿主机上再次查看mysql的data数据卷，成功看到创建的数据库：
+
+![image-20220114214445133](docker.assets/image-20220114214445133.png)
+
+6，删除mysql容器
+
+```bash
+[root@rootuser data]# docker rm -f mysql01
+mysql01
+[root@rootuser data]# 
+```
+
+- 没有关闭容器的话，得使用-f强制删除容器才能删掉。关闭容器后删除的话不需要-f。
+
+7，查看宿主机的mysql的data数据卷是否还在：
+
+![image-20220114215119130](docker.assets/image-20220114215119130.png)
+
+- 所有数据确实还在，这样删掉mysql容器也不会导致数据丢失了。
+- 这就实现了容器数据持久化的功能！
+
+
+
+### 具名挂载和匿名挂载
+
+https://www.bilibili.com/video/BV1og4y1q7M4?p=23&spm_id_from=pageDriver
+
+
+
+## DockerFile
+
+## Docker网络
 
