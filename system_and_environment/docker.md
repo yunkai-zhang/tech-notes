@@ -1976,6 +1976,11 @@ sha256:1a7b840d09e721b0e5362713142b362dec5dc5793dae3934788bbc2ebb614de2
 
 ## 容器数据卷
 
+docker 数据卷的本质是**容器中的一个特殊目录**。 在容器创建的过程中，docker 会将宿主机上的指定目录 (一个以数据卷 ID 为名称的目录)挂载到容器中指定的目录上！！！
+
+- 看清楚什么是数据卷
+- 看清楚谁挂载到谁
+
  ### 容器数据卷定义
 
 #### docker理念回顾
@@ -1999,9 +2004,9 @@ docker容器中产生的数据同步到本地，这就是数据卷技术。其�
 
 
 
-### 使用数据卷
+### 1命令方式挂载数据卷
 
-#### 1使用命令来挂载
+#### Centos同步宿主机和容器数据
 
 （方式1）
 
@@ -2062,7 +2067,7 @@ dockertest  lighthouse  lsb  zhangyun
 
 
 
-#### 2mysql同步数据
+#### mysql同步数据
 
 思考：mysql数据持久化的问题
 
@@ -2151,11 +2156,1071 @@ mysql01
 
 ### 具名挂载和匿名挂载
 
-https://www.bilibili.com/video/BV1og4y1q7M4?p=23&spm_id_from=pageDriver
+#### 匿名挂载
+
+定义：
+
+- 不指定宿主机的地址，仅指定容器内部需要挂载的地址
+
+---
+
+
+
+实战：
+
+1，启动容器时使用匿名挂载数据卷：
+
+```bash
+# 匿名挂载：-v 容器内路径。-P（大P）：自动指定端口映射。-d：后台运行。
+[root@rootuser ~]# docker run -d -P --name nginx01 -v /ect/nginx nginx
+3550116d6afd62b09506abd61276d9a2b7abc2f174a76eed7bd43c83c6cb2d41
+[root@rootuser ~]# 
+```
+
+2，查看所有卷（volumn）的情况：
+
+```bash
+# 查看volume的使用方法
+[root@rootuser ~]# docker help volume
+
+Usage:  docker volume COMMAND
+
+Manage volumes
+
+Commands:
+  create      Create a volume
+  inspect     Display detailed information on one or more volumes
+  ls          List volumes
+  prune       Remove all unused local volumes
+  rm          Remove one or more volumes
+
+Run 'docker volume COMMAND --help' for more information on a command.
+# 查看宿主机的所有volume
+[root@rootuser ~]# docker volume ls
+DRIVER    VOLUME NAME
+local     3925ce496f227da8039ddf8015d25cc188f84ba2bdaaa984acc77ceee1675b10
+local     f602f470ea5b57ea48b0525c8e4397acc4f831f0d20c6ff72702383dd3db7328
+[root@rootuser ~]# 
+```
+
+- 这里`local     3925ce496f227da8039ddf8015d25cc188f84ba2bdaaa984acc77ceee1675b10`就是匿名挂载，因为没有给卷起名字，在-v的时候只写了容器内的路径没写容器外的路径。类似于”java匿名内部类“没有名字。
+
+
+
+#### 具名挂载
+
+1，以具名挂载的方式启动容器：
+
+```bash
+[root@rootuser ~]# docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx nginx
+7ccd3566dbe9967f31fd0850763d9f1ebc0f9ca3028ec88126a913f20aa9adf0
+[root@rootuser ~]# 
+```
+
+- `-v juming-nginx`：的`juming-nginx`没有加`/`，说明`juming-nginx`不是目录而是一个具名配置。这里的juming-nginx就是本具名挂载的名字。
+
+2，查看所有的卷
+
+```bash
+[root@rootuser ~]# docker volume ls
+DRIVER    VOLUME NAME
+local     3925ce496f227da8039ddf8015d25cc188f84ba2bdaaa984acc77ceee1675b10
+local     f602f470ea5b57ea48b0525c8e4397acc4f831f0d20c6ff72702383dd3db7328
+# 具名挂载可以用docker volume ls看到卷的名字，匿名挂载只能看到一长串不可读字符的名字
+local     juming-nginx
+```
+
+3，查看指定卷的位置
+
+```bash
+[root@rootuser ~]# docker volume inspect juming-nginx
+[
+    {
+        "CreatedAt": "2022-01-15T12:25:07+08:00",
+        "Driver": "local",
+        "Labels": null,
+        # 挂载的具体目录的地址，这个地址是宿主机上的
+        "Mountpoint": "/var/lib/docker/volumes/juming-nginx/_data",
+        "Name": "juming-nginx",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# 
+```
+
+- 可以看到“容器内目录”**被挂载**在“宿主机”的哪个目录下。
+- 所有docker容器内的卷，没有指定目录的情况下都是在宿主机的`/var/lib/docker/volumes/卷名/_data`目录下。
+
+4，进入具名挂载的目录看一下：
+
+```bash
+# 进入docker的工作目录，有docker工作所必须的各种文件夹
+[root@rootuser ~]# cd /var/lib/docker
+[root@rootuser docker]# ls
+buildkit    image    overlay2  runtimes  tmp    volumes
+containers  network  plugins   swarm     trust
+# 进入docker卷所存在的目录，可以看到所有卷。包括具名挂载卷和匿名挂载卷。
+[root@rootuser docker]# cd volumes
+[root@rootuser volumes]# ls
+3925ce496f227da8039ddf8015d25cc188f84ba2bdaaa984acc77ceee1675b10
+backingFsBlockDev
+f602f470ea5b57ea48b0525c8e4397acc4f831f0d20c6ff72702383dd3db7328
+juming-nginx
+metadata.db
+# 进入指定卷，查看卷的数据。卷数据和容器内部“被挂载的目录”是同步的，比如可以看到nginx.conf文件。
+[root@rootuser volumes]# cd juming-nginx
+[root@rootuser juming-nginx]# ls
+_data
+[root@rootuser juming-nginx]# cd _data
+[root@rootuser _data]# ls
+conf.d          mime.types  nginx.conf   uwsgi_params
+fastcgi_params  modules     scgi_params
+[root@rootuser _data]# 
+```
+
+- 我们通过具名挂载可以方便的找到我们的一个卷，**大多数使用具名挂载**。不建议使用匿名挂载。
+
+ #### 区分各种挂载
+
+如何区分：匿名挂载vs具名挂载vs指定路径挂载
+
+- `-v /容器内路径`：匿名挂载
+- `-v 卷名:/容器内路径`：具名挂载。注意这里的卷名标志就是开头没有`根目录标识符/`
+- `-v /宿主机路径:/容器内路径`：指定路径挂载。这里的“指定路径”就是指定宿主机数据卷路径。
+
+
+
+#### 扩展
+
+ro和rw：
+
+```bash
+#通过”-v 容器内路径:ro或rw“改变容器内目录的读写权限
+ro   readonly #只读
+rw   readwrite#可读可写
+#—旦这个了设置了容器权限，容器对我们挂载出来的内容就有限定了!
+docker run -d -p --name nginx02 -v juming-nginx:/etc/nginx:ro nginx
+docker run -d -p --name nginx02 -v juming-nginx:/etc/nginx:rw nginx
+```
+
+- 只要看到ro就说明这个路径只能通过宿主机来操作，容器内部是无法操作。
+
+
+
+### 2DockerFile方式挂载数据卷
+
+#### 初识dockerFile
+
+dockerfile是一个脚本文件，通过dockerfile可以构建docker镜像。
+
+- 镜像是一层一层的，dockerfile脚本也是一个个的命令，每个命令都是一层。
+
+
+
+#### 实战
+
+1，宿主机新建目录，并新建文件`dockerfile1`：
+
+```bash
+[root@rootuser home]# mkdir dockerfile-test-volume
+[root@rootuser home]# cd dockerfile-test-volume/
+[root@rootuser dockerfile-test-volume]# vim dockerfile1
+```
+
+2，编写`dockerfile1`的内容：
+
+```bash
+FROM centos
+VOLUME ["volume01","volume02"]
+CMD echo"-----end------"
+CMD /bin/bash
+```
+
+- 所有的命令指令都得大写。
+- 这里的每一行命令都是镜像的一层
+- `VOLUME ["volume01","volume02"]`表示创建镜像的时候就设置好挂载。
+  - 什么额外信息都没写，肯定是**匿名挂载**。
+
+3，通过`dockerfile1`建造镜像:
+
+```bash
+[root@rootuser dockerfile-test-volume]# docker build -f /home/dockerfile-test-volume/dockerfile1 -t zhangyun/centos:1.0 .
+Sending build context to Docker daemon  2.048kB
+# 给一个基准镜像
+Step 1/4 : FROM centos
+ ---> 5d0da3dc9764
+ # 通过volume进行挂载
+Step 2/4 : VOLUME ["volume01","volume02"]
+ ---> Running in add8d90e0efe
+Removing intermediate container add8d90e0efe
+ ---> 5f62e114f485
+ # 我们定义展示
+Step 3/4 : CMD echo"-----end------"
+ ---> Running in aad0657ddc9f
+Removing intermediate container aad0657ddc9f
+ ---> b78c0a750dad
+ # 进入/bin/bash
+Step 4/4 : CMD /bin/bash
+ ---> Running in 475f53581d30
+Removing intermediate container 475f53581d30
+ ---> f068c50a3a3d
+Successfully built f068c50a3a3d
+Successfully tagged zhangyun/centos:1.0
+# 查看所有镜像，dockerfile生成的zhangyun/centos镜像确实存在
+[root@rootuser dockerfile-test-volume]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+zhangyun/centos       1.0       f068c50a3a3d   2 minutes ago   231MB
+tomcatzyk             1.0       1a7b840d09e7   23 hours ago    685MB
+docker72590/alpine    latest    f5a69fceabd2   2 weeks ago     5.59MB
+nginx                 latest    605c77e624dd   2 weeks ago     141MB
+tomcat                9.0       b8e65a4d736d   3 weeks ago     680MB
+redis                 latest    7614ae9453d1   3 weeks ago     113MB
+mysql                 5.7       c20987f18b13   3 weeks ago     448MB
+centos                latest    5d0da3dc9764   4 months ago    231MB
+portainer/portainer   latest    580c0e4e98b0   10 months ago   79.1MB
+elasticsearch         7.6.2     f29a1ee41030   22 months ago   791MB
+[root@rootuser dockerfile-test-volume]# 
+```
+
+4，根据自己通过dockerfile01建的镜像，启动一个容器，查看数据卷是否存在：
+
+```bash
+[root@rootuser dockerfile-test-volume]# docker run -it  f068c50a3a3d /bin/bash
+[root@aadefffa43ed /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Jan 15 08:04 dev
+drwxr-xr-x   1 root root 4096 Jan 15 08:04 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 127 root root    0 Jan 15 08:04 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Jan 15 08:04 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+# 下面两个目录就是我们构建镜像的时候就指定的数据卷目录，也是自动挂载的。
+drwxr-xr-x   2 root root 4096 Jan 15 08:04 volume01
+drwxr-xr-x   2 root root 4096 Jan 15 08:04 volume02
+[root@aadefffa43ed /]# 
+```
+
+5，在数据卷内新建文件
+
+```bash
+[root@aadefffa43ed /]# cd volume01
+# 文件名为container表示是容器内创建的文件。
+[root@aadefffa43ed volume01]# touch container.txt
+```
+
+6，新开一个xshell连接，在宿主机查看挂载在数据卷上的目录：
+
+```bash
+# 查看有哪些容器，最近启动的容器应该就是我们自己生成镜像所运行的容器。
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS          PORTS                                     NAMES
+aadefffa43ed   f068c50a3a3d   "/bin/bash"              13 minutes ago   Up 13 minutes                                             serene_hermann
+7ccd3566dbe9   nginx          "/docker-entrypoint.…"   4 hours ago      Up 4 hours      0.0.0.0:49154->80/tcp, :::49154->80/tcp   nginx02
+3550116d6afd   nginx          "/docker-entrypoint.…"   4 hours ago      Up 4 hours      0.0.0.0:49153->80/tcp, :::49153->80/tcp   nginx01
+# 查看容器细节，定位到"Mounts"，可以看到有两个数据卷。"Source"展示了宿主机的哪个目录挂载在容器的数据卷上。
+[root@rootuser ~]# docker inspect aadefffa43ed
+"Mounts": [
+            {
+                "Type": "volume",
+                "Name": "ddf8477994c056eddaa825fd1654a4809c546aa567ae72ec4e7b223bbc3939e5",
+                "Source": "/var/lib/docker/volumes/ddf8477994c056eddaa825fd1654a4809c546aa567ae72ec4e7b223bbc3939e5/_data",
+                # 容器的"volume01"目录中存入了container.txt，在对应的宿主机的source应该也能找到。
+                "Destination": "volume01",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            },
+            {
+                "Type": "volume",
+                "Name": "cf223aece2a324ceeb2122c550b78200a7994cd8c6ee1696a0807d3c40bc5ec6",
+                "Source": "/var/lib/docker/volumes/cf223aece2a324ceeb2122c550b78200a7994cd8c6ee1696a0807d3c40bc5ec6/_data",
+                "Destination": "volume02",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+
+```
+
+7，查看宿主机用于挂载的目录中是否有容器内创建文件，确实有：
+
+```bash
+[root@rootuser ~]# cd /var/lib/docker/volumes/ddf8477994c056eddaa825fd1654a4809c546aa567ae72ec4e7b223bbc3939e5/_data
+You have new mail in /var/spool/mail/root
+[root@rootuser _data]# ls
+container.txt
+[root@rootuser _data]# 
+```
+
+
+
+#### 总结
+
+未来使用dockerfile构建数据卷（方式2）十分常见，因为我们通常会构建自己的镜像。
+
+假设构建镜像的时候没有挂载卷，就要在运行容器时手动命令（方式1）设置容器挂载：`-v 数据卷名`
+
+
+
+### 数据卷容器
+
+#### 概念
+
+两个mysql容器同步数据。
+
+- 思考：两个库挂载到同一个卷上不就可以做到同步了吗？
+  - 数据卷容器的本质，就是所有容器挂载在宿主机的同一数据卷上！
+
+示意图：
+
+![image-20220115173447051](docker.assets/image-20220115173447051.png)
+
+- **注意**：这个概念理解图并没有真正揭示容器中的卷和宿主机的关系。同步和共享这些概念本质是错误的，因为所有真实存在的存储区域就只有宿主机里面的一块空间，容器只不过是挂了上去而已；所以用`docker inspect`查看mounts时source都是宿主机目录。
+
+- --volumes-from 实际上多个容器挂载的是同一个数据卷
+
+  
+
+
+
+#### 实战
+
+1，xshell连接1启动容器，用于启动和操作docker01容器：
+
+```bash
+# xshell连接1
+[root@rootuser _data]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+zhangyun/centos       1.0       f068c50a3a3d   2 hours ago     231MB
+tomcatzyk             1.0       1a7b840d09e7   24 hours ago    685MB
+docker72590/alpine    latest    f5a69fceabd2   2 weeks ago     5.59MB
+nginx                 latest    605c77e624dd   2 weeks ago     141MB
+tomcat                9.0       b8e65a4d736d   3 weeks ago     680MB
+redis                 latest    7614ae9453d1   3 weeks ago     113MB
+mysql                 5.7       c20987f18b13   3 weeks ago     448MB
+centos                latest    5d0da3dc9764   4 months ago    231MB
+portainer/portainer   latest    580c0e4e98b0   10 months ago   79.1MB
+elasticsearch         7.6.2     f29a1ee41030   22 months ago   791MB
+You have new mail in /var/spool/mail/root
+# 根据自制镜像zhangyun/centos:1.0启动容器，这里使用zhangyun/centos:1.0不要忘记版本号；或者使用镜像id。
+[root@rootuser _data]# docker run -it --name docker01 f068c50a3a3d
+[root@4772e85f6fee /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Jan 15 09:41 dev
+drwxr-xr-x   1 root root 4096 Jan 15 09:41 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 119 root root    0 Jan 15 09:41 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Jan 15 08:04 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+# 可以看到两个数据卷，这个是制作镜像的时候就设置好了
+drwxr-xr-x   2 root root 4096 Jan 15 09:41 volume01
+drwxr-xr-x   2 root root 4096 Jan 15 09:41 volume02
+[root@4772e85f6fee /]# 
+```
+
+2，新开“xshell连接2”，并根据相同镜像启动容器，命名为docker02：
+
+```bash
+# xshell连接2
+[root@rootuser ~]# docker run -it --name docker02 --volumes-from docker01 f068c50a3a3d
+[root@a27c7755652e /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Jan 15 10:40 dev
+drwxr-xr-x   1 root root 4096 Jan 15 10:40 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 120 root root    0 Jan 15 10:40 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Jan 15 08:04 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+# docker02容器从docker01容器那继承了两个数据卷
+drwxr-xr-x   2 root root 4096 Jan 15 09:41 volume01
+drwxr-xr-x   2 root root 4096 Jan 15 09:41 volume02
+[root@a27c7755652e /]# 
+```
+
+- `--volumns-from docker01`：继承docker01的挂载
+
+3，在docker01的volume01数据卷中创建文件docker01.txt，文件名表示该文件是在docker01容器中创建的：
+
+```bash
+[root@4772e85f6fee /]# ls
+bin  dev  etc  home  lib  lib64  lost+found  media  mnt  opt  proc  root  run  sbin  srv  s
+[root@4772e85f6fee /]# cd volume01
+[root@4772e85f6fee volume01]# ls
+[root@4772e85f6fee volume01]# touch docker01.txt
+[root@4772e85f6fee volume01]# 
+```
+
+4，来到docker02容器中，查看volume01数据卷，果然看见了docker01.txt：
+
+```bash
+[root@a27c7755652e /]# ls 
+bin  dev  etc  home  lib  lib64  lost+found  media  mnt  opt  proc  root  run  
+[root@a27c7755652e /]# cd volume01 
+[root@a27c7755652e volume01]# ls
+docker01.txt
+[root@a27c7755652e volume01]# 
+```
+
+由此可以看出两个容器间实现了数据同步！
+
+这里docker01容器就是“数据卷容器”，所有通过`--volumes-from`和docker01共享挂载的容器，如docker02或docker99，都能实现数据同步。因为所有的容器都和docker01一样，挂载在宿主机的同一个目录下。
+
+- 即使docker01被关闭甚至删除，docker02...docker99还能实现数据同步。启动容器时共享挂载的数据卷后，数据同步就跟那个“数据卷容器”没啥关系了，本质所有容器都是挂载在宿主机的同一数据卷上（docker inspect看mounts就能看出）。
+- 全部容器删除后，数据仍然会保留在宿主机！数据卷实现数据持久化的功能体现了。
 
 
 
 ## DockerFile
+
+### DockerFile介绍
+
+#### 前言
+
+dockerfile是用来构建dokcer镜像的文件，是命令参数脚本。
+
+diy docker步骤：
+
+1. 编写一个dockerfile文件
+2. docker build构建成为一个镜像
+3. docker run根据镜像运行容器
+4. docker push 发布镜像(DockerHub、阿里云镜像仓库生)
+
+
+
+#### dockerhub探究
+
+进入dockerhub，搜索任意镜像，如centos。点击某版本：
+
+![image-20220115202922250](docker.assets/image-20220115202922250.png)
+
+点击版本后，会来到github仓库，看到版本对应的dockerfile文件：
+
+![image-20220115203104495](docker.assets/image-20220115203104495.png)
+
+```bash
+# 基于scratch，scratch是一个最基本最底层的镜像，90%的镜像都是基于它来的。
+FROM scratch
+# 添加了centos7，所以镜像才有centos7的功能
+ADD centos-7-x86_64-docker.tar.xz /
+
+# 加了一些centos基本的标签
+LABEL \
+    org.label-schema.schema-version="1.0" \
+    org.label-schema.name="CentOS Base Image" \
+    org.label-schema.vendor="CentOS" \
+    org.label-schema.license="GPLv2" \
+    org.label-schema.build-date="20201113" \
+    org.opencontainers.image.title="CentOS Base Image" \
+    org.opencontainers.image.vendor="CentOS" \
+    org.opencontainers.image.licenses="GPL-2.0-only" \
+    org.opencontainers.image.created="2020-11-13 00:00:00+00:00"
+# 运行方式为：/bin/bash控制台运行
+CMD ["/bin/bash"]
+```
+
+- 官方的镜像基本都是纯净的，比如官方centos7镜像，运行容器后没有ping clear等命令，想要这些命令需要自己制作自己的镜像；想得到一个集成jdk tomcat等组件的centos镜像的话，也需要自己构建。
+
+#### DockerFile构建过程
+
+dockerfile文件基础知识：
+
+- 每个保留关键字（指令）都是必须是大写字母
+- 执行从上到下顺序执行
+- #表示注释
+- 每一个指令都会创建提交一个新的镜像层，并提交!
+
+
+
+构建过程示意图：
+
+![image-20220115204758751](docker.assets/image-20220115204758751.png)
+
+- 镜像顶部再加一层可写层的话，该可写层就是运行的容器。
+
+
+
+dockerfile是面向开发的，我们以后要发布项目，做镜像，就需要编写dockerfile文件，这个文件十分简单。以前开发是交war包或者jar包，现在是交镜像。Docker镜像逐渐成为企业交付的标准，必须要掌握。
+
+
+
+使用docker的步骤：
+
+1. DockerFile :构建文件，定义了一切的步骤，源代码
+2. Dockerlmages :通过DockerFile构建生成的镜像，最终发布的产品
+3. Docker容器︰基于镜像运行起来容器来提供服务
+
+开发部署运维，缺一不可。
+
+
+
+### DockerFile指令
+
+#### 指令列表
+
+![image-20220116151436484](docker.assets/image-20220116151436484.png)
+
+FROM:
+
+- 指定基础镜像。一切从这里开始构建
+
+MAINTAINER：
+
+- 指定镜像的维护者。一般留姓名+邮箱。
+
+RUN：
+
+- docker镜像构建的时候需要运行的命令
+- 网友说：”RUN是docker build的时候执行，CMD是docker run的时候执行“
+
+ADD：
+
+- 步骤例子：想搭建一个centos+tomcat的镜像，
+  - 在FROM处指定centos，表示基于centos。
+  - 在ADD处指定tomcat压缩包，表示添加内容
+
+WORKDIR：
+
+- 镜像的工作目录
+
+VOLUME：
+
+- 设置挂载的宿主机的目录
+
+EXPOSE：
+
+- 暴露端口配置，和`命令-p`一个意思
+
+CMD：
+
+- 指定这个容器启动的时候要运行的命令。只要最后一个会生效，可被替代。所以每个CMD只能写一条命令，想要写多个命令的话就得用到多个CMD。
+
+ENTRYPOINT：
+
+- 指定这个容器启动的时候要运行的命令。可以追加命令。
+
+ONBUILD：
+
+- 当构建一个被继承的DockerFile，这个时候就会运行ONBUILD。是一个触发指令。
+
+COPY：
+
+- 类似ADD。将文件拷贝到镜像中。
+
+ENV：
+
+- 构建的时候设置环境变量。
+
+
+
+以前我们用别人的镜像，现在我们直到如上这些指令后，练习自己写一个镜像。
+
+
+
+#### 实战构建自己的centos
+
+1，`/home`下新建dockerfile目录和mydockerfile-centos文件:
+
+```bash
+[root@rootuser home]# mkdir dockerfile
+[root@rootuser home]# cd dockerfile
+[root@rootuser dockerfile]# vim mydockerfile-centos
+```
+
+2，编写dockerfile文件，问价名为mydockerfile-centos：
+
+```bash
+# 基于centos官方镜像
+FROM  centos
+
+MAINTAINER zhangyun 111@qq.com
+
+# MYPATH是环境变量
+ENV MYPATH /usr/local
+WORKDIR $MYPATH
+
+# 官方centos镜像用不了vim，用不了ifconfig，我们这安装一下组件
+RUN yum -y install vim
+RUN yum -y install net-tools
+
+# 容器启动的时候默认暴露80端口
+EXPOSE 80
+
+# 指定构建的时候的一些输出，这里输出了MYPATH和“构建完毕”的信息
+CMD echo $MYPATH
+CMD echo -----------构建完毕----------
+# 启动完毕后，进入binbash命令行
+CMD /bin/bash
+```
+
+- 网友说：”在dockerfile中只能指定一条CMD命令，所以只有最后的CMD /bin/bash“生效。echo并没有执行，被最后一个/bin/bash给替代了。（基本确认如此）
+  - 这里老师写的两个CMD echo无效，而且会误导别人。
+
+3，通过mydockerfile-centos构建镜像：
+
+```bash
+[root@rootuser dockerfile]# docker build -f mydockerfile-centos -t mycentos:1.0 .
+Sending build context to Docker daemon   2.56kB
+# 基于本地已下载的官方centos。可以看到此处镜像id和下载的centos镜像的id一致。centos镜像已经有了，所以可以直接拿本地的，如果本地没有centos的话会从dockerhub上下载centos。
+Step 1/10 : FROM  centos
+ ---> 5d0da3dc9764
+ # 配置作者信息
+Step 2/10 : MAINTAINER zhangyun 111@qq.com
+ ---> Running in f20768c8efe1
+Removing intermediate container f20768c8efe1
+ ---> 37d712d93b01
+Step 3/10 : ENV MYPATH /usr/local
+ ---> Running in 5081bfc21331
+Removing intermediate container 5081bfc21331
+ ---> 4e1f7d20428a
+Step 4/10 : WORKDIR $MYPATH
+ ---> Running in 486435b753a0
+Removing intermediate container 486435b753a0
+ ---> 2e0fa3926ba4
+# 命令“yum -y install vim”导致下载vim
+Step 5/10 : RUN yum -y install vim
+ ---> Running in 76a738bf407a
+CentOS Linux 8 - AppStream                      8.4 MB/s | 8.4 MB     00:01    
+CentOS Linux 8 - BaseOS                         2.0 MB/s | 4.6 MB     00:02    
+CentOS Linux 8 - Extras                          16 kB/s |  10 kB     00:00    
+Dependencies resolved.
+================================================================================
+ Package             Arch        Version                   Repository      Size
+================================================================================
+Installing:
+ vim-enhanced        x86_64      2:8.0.1763-16.el8         appstream      1.4 M
+Installing dependencies:
+ gpm-libs            x86_64      1.20.7-17.el8             appstream       39 k
+ vim-common          x86_64      2:8.0.1763-16.el8         appstream      6.3 M
+ vim-filesystem      noarch      2:8.0.1763-16.el8         appstream       49 k
+ which               x86_64      2.21-16.el8               baseos          49 k
+
+Transaction Summary
+================================================================================
+Install  5 Packages
+
+Total download size: 7.8 M
+Installed size: 30 M
+Downloading Packages:
+(1/5): gpm-libs-1.20.7-17.el8.x86_64.rpm        297 kB/s |  39 kB     00:00    
+(2/5): vim-filesystem-8.0.1763-16.el8.noarch.rp 1.2 MB/s |  49 kB     00:00    
+(3/5): vim-enhanced-8.0.1763-16.el8.x86_64.rpm  7.4 MB/s | 1.4 MB     00:00    
+(4/5): which-2.21-16.el8.x86_64.rpm             405 kB/s |  49 kB     00:00    
+(5/5): vim-common-8.0.1763-16.el8.x86_64.rpm     18 MB/s | 6.3 MB     00:00    
+--------------------------------------------------------------------------------
+Total                                           6.2 MB/s | 7.8 MB     00:01     
+warning: /var/cache/dnf/appstream-02e86d1c976ab532/packages/gpm-libs-1.20.7-17.el8.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID 8483c65d: NOKEY
+CentOS Linux 8 - AppStream                      803 kB/s | 1.6 kB     00:00    
+Importing GPG key 0x8483C65D:
+ Userid     : "CentOS (CentOS Official Signing Key) <security@centos.org>"
+ Fingerprint: 99DB 70FA E1D7 CE22 7FB6 4882 05B5 55B3 8483 C65D
+ From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+Key imported successfully
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : which-2.21-16.el8.x86_64                               1/5 
+  Installing       : vim-filesystem-2:8.0.1763-16.el8.noarch                2/5 
+  Installing       : vim-common-2:8.0.1763-16.el8.x86_64                    3/5 
+  Installing       : gpm-libs-1.20.7-17.el8.x86_64                          4/5 
+  Running scriptlet: gpm-libs-1.20.7-17.el8.x86_64                          4/5 
+  Installing       : vim-enhanced-2:8.0.1763-16.el8.x86_64                  5/5 
+  Running scriptlet: vim-enhanced-2:8.0.1763-16.el8.x86_64                  5/5 
+  Running scriptlet: vim-common-2:8.0.1763-16.el8.x86_64                    5/5 
+  Verifying        : gpm-libs-1.20.7-17.el8.x86_64                          1/5 
+  Verifying        : vim-common-2:8.0.1763-16.el8.x86_64                    2/5 
+  Verifying        : vim-enhanced-2:8.0.1763-16.el8.x86_64                  3/5 
+  Verifying        : vim-filesystem-2:8.0.1763-16.el8.noarch                4/5 
+  Verifying        : which-2.21-16.el8.x86_64                               5/5 
+
+Installed:
+  gpm-libs-1.20.7-17.el8.x86_64         vim-common-2:8.0.1763-16.el8.x86_64    
+  vim-enhanced-2:8.0.1763-16.el8.x86_64 vim-filesystem-2:8.0.1763-16.el8.noarch
+  which-2.21-16.el8.x86_64             
+
+Complete!
+Removing intermediate container 76a738bf407a
+ ---> d27675e578f3
+ # yum -y install net-tools导致下载net-tools
+Step 6/10 : RUN yum -y install net-tools
+ ---> Running in 7160ac4a5c8f
+Last metadata expiration check: 0:00:12 ago on Sun Jan 16 08:00:39 2022.
+Dependencies resolved.
+================================================================================
+ Package         Architecture Version                        Repository    Size
+================================================================================
+Installing:
+ net-tools       x86_64       2.0-0.52.20160912git.el8       baseos       322 k
+
+Transaction Summary
+================================================================================
+Install  1 Package
+
+Total download size: 322 k
+Installed size: 942 k
+Downloading Packages:
+net-tools-2.0-0.52.20160912git.el8.x86_64.rpm   1.7 MB/s | 322 kB     00:00    
+--------------------------------------------------------------------------------
+Total                                           428 kB/s | 322 kB     00:00     
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : net-tools-2.0-0.52.20160912git.el8.x86_64              1/1 
+  Running scriptlet: net-tools-2.0-0.52.20160912git.el8.x86_64              1/1 
+  Verifying        : net-tools-2.0-0.52.20160912git.el8.x86_64              1/1 
+
+Installed:
+  net-tools-2.0-0.52.20160912git.el8.x86_64                                     
+
+Complete!
+Removing intermediate container 7160ac4a5c8f
+ ---> 4fbe26aa6b4d
+# 第七步：暴露端口
+Step 7/10 : EXPOSE 80
+ ---> Running in 78194e2eb230
+Removing intermediate container 78194e2eb230
+ ---> ee6c75c1c1c1
+Step 8/10 : CMD echo $MYPATH
+ ---> Running in 806455c2c5d5
+Removing intermediate container 806455c2c5d5
+ ---> f06bcd75347e
+Step 9/10 : CMD echo -----------构建完毕----------
+ ---> Running in e63ed5213586
+Removing intermediate container e63ed5213586
+ ---> 1bbce67eb7f7
+Step 10/10 : CMD /bin/bash
+ ---> Running in a9da9f898a3c
+Removing intermediate container a9da9f898a3c
+ ---> 1a37cb7e9a61
+ # 根据dockerfile生成镜像完毕后打印success
+Successfully built 1a37cb7e9a61
+Successfully tagged mycentos:1.0
+```
+
+- -f：指定build所依据的dockerfile的文件路径
+- -t：指定生成镜像的名字和版本号
+- build命令的最后不要忘记`.`，其表示到当前目录下找Dockerfile。
+
+4，检查本地所有镜像中是否有生成的镜像，确实有：
+
+![image-20220116161359112](docker.assets/image-20220116161359112.png)
+
+5，检查确认官方centos容器没有vim和ifconfig命令
+
+![image-20220116211947072](docker.assets/image-20220116211947072.png)
+
+6，根据自制mycentos镜像运行容器
+
+```bash
+[root@rootuser dockerfile]# docker run -it 1a37cb7e9a61
+# 默认路径和我们在dockerfile中设置的一致
+[root@b60701d573e6 local]# pwd
+/usr/local
+# 因为run命令运行下载了net包，ifconfig能用了
+[root@b60701d573e6 local]# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether 02:42:ac:11:00:02  txqueuelen 0  (Ethernet)
+        RX packets 8  bytes 656 (656.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+# 因为run命令运行下载了vim包，vim命令能用了
+[root@b60701d573e6 local]# vim
+[root@b60701d573e6 local]# 
+```
+
+7，使用`docker history`查看自制镜像的构建历史
+
+```bash
+[root@rootuser ~]# docker history 1a37cb7e9a61
+IMAGE          CREATED        CREATED BY                                      SIZE      COMMENT
+1a37cb7e9a61   5 hours ago    /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B        
+1bbce67eb7f7   5 hours ago    /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+f06bcd75347e   5 hours ago    /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+ee6c75c1c1c1   5 hours ago    /bin/sh -c #(nop)  EXPOSE 80                    0B        
+4fbe26aa6b4d   5 hours ago    /bin/sh -c yum -y install net-tools             28.4MB    
+d27675e578f3   5 hours ago    /bin/sh -c yum -y install vim                   66.3MB    
+2e0fa3926ba4   5 hours ago    /bin/sh -c #(nop) WORKDIR /usr/local            0B        
+4e1f7d20428a   5 hours ago    /bin/sh -c #(nop)  ENV MYPATH=/usr/local        0B        
+37d712d93b01   5 hours ago    /bin/sh -c #(nop)  MAINTAINER zhangyun 111@q…   0B        
+5d0da3dc9764   4 months ago   /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B        
+<missing>      4 months ago   /bin/sh -c #(nop)  LABEL org.label-schema.sc…   0B        
+<missing>      4 months ago   /bin/sh -c #(nop) ADD file:805cb5e15fb6e0bb0…   231MB     
+[root@rootuser ~]# 
+```
+
+
+
+#### CMD和ENTRYPOINT区别
+
+测试CMD：
+
+1，编写用于测试CMD的dockerfile，文件名为cmd-test-dockerfile：
+
+```bash
+FROM centos
+# 执行命令：ls -a,列出当前目录的所有结构，此命令会被最后的CMD命令覆盖而不执>行
+CMD ["ls","-a"]
+# 最后的CMD命令，会覆盖之前所有的CMD命令
+CMD ["echo","---zhangyun studies docker----"]
+```
+
+- CMD [] :要运行的命令是存放在一个数组结构中的。这将告诉Docker按指定的原样来运行该命令。当然也可以不使用数组而是指定CMD指令，这时候Docker会在指定的命令前加上/bin/sh -c。这在执行该命令的时候可能会导致意料之外的行为，
+
+2，使用cmd-test-dockerfile制作镜像：
+
+```bash
+[root@rootuser dockerfile]# docker build -f cmd-test-dockerfile -t cmd-test-centos:1.0 .
+Sending build context to Docker daemon  3.584kB
+Step 1/3 : FROM centos
+ ---> 5d0da3dc9764
+Step 2/3 : CMD ["ls","-a"]
+ ---> Running in b90a4764284c
+Removing intermediate container b90a4764284c
+ ---> 742b986710cf
+Step 3/3 : CMD ["echo","---zhangyun studies docker----"]
+ ---> Running in b95daddf5be4
+Removing intermediate container b95daddf5be4
+ ---> 2547ab4bd7e2
+Successfully built 2547ab4bd7e2
+Successfully tagged cmd-test-centos:1.0
+[root@rootuser dockerfile]# 
+```
+
+3，根据自制运行容器可以看到打印"zhangyun studies docker"
+
+```bash
+[root@rootuser dockerfile]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+cmd-test-centos       1.0       2547ab4bd7e2   2 minutes ago   231MB
+mycentos              1.0       1a37cb7e9a61   6 hours ago     326MB
+zhangyun/centos       1.0       f068c50a3a3d   30 hours ago    231MB
+tomcatzyk             1.0       1a7b840d09e7   2 days ago      685MB
+docker72590/alpine    latest    f5a69fceabd2   2 weeks ago     5.59MB
+nginx                 latest    605c77e624dd   2 weeks ago     141MB
+tomcat                9.0       b8e65a4d736d   3 weeks ago     680MB
+redis                 latest    7614ae9453d1   3 weeks ago     113MB
+mysql                 5.7       c20987f18b13   3 weeks ago     448MB
+centos                latest    5d0da3dc9764   4 months ago    231MB
+portainer/portainer   latest    580c0e4e98b0   10 months ago   79.1MB
+elasticsearch         7.6.2     f29a1ee41030   22 months ago   791MB
+[root@rootuser dockerfile]# docker run 2547ab4bd7e2
+# CMD效果体现在此
+---zhangyun studies docker----
+[root@rootuser dockerfile]# 
+```
+
+4，启动容器时使用完整命令替换dockerfile中的CMD
+
+```bash
+# 使用ls -al打印容器内部所有目录的详细信息
+[root@rootuser dockerfile]# docker run 2547ab4bd7e2 ls -al
+# 成功打印目录的详细信息。并且echo命令没打印，说明被ls -al覆盖了。
+total 56
+drwxr-xr-x   1 root root 4096 Jan 16 13:59 .
+drwxr-xr-x   1 root root 4096 Jan 16 13:59 ..
+-rwxr-xr-x   1 root root    0 Jan 16 13:59 .dockerenv
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  340 Jan 16 13:59 dev
+drwxr-xr-x   1 root root 4096 Jan 16 13:59 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 123 root root    0 Jan 16 13:59 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Jan 15 08:04 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+[root@rootuser dockerfile]# 
+```
+
+- 这里添加的命令`ls -al`因为会覆盖dockerfile内部的CMD命令，所以必须为完整的命令。
+
+
+
+---
+
+测试ENTRYPOINT：
+
+1，新建dockerfile，文件名为entrypoint-test-dockerfile：
+
+```bash
+FROM centos
+# 和CMD一样，一个dockerfile中只允许一个ENTRYPOINT，所以dockerfile中只有最后>的ENTRYPOINT会生效
+ENTRYPOINT ["echo","zhangyun studies docker"]
+#两个ENTRYPOINT，只有ls -a命令生效
+ENTRYPOINT ["ls","-a"]
+```
+
+2，根据entrypoint-test-dockerfile制作镜像：
+
+```bash
+[root@rootuser dockerfile]# vim entrypoint-test-dockerfile
+You have new mail in /var/spool/mail/root
+[root@rootuser dockerfile]# docker build -f entrypoint-test-dockerfile -t entrypoint-test-centos:1.0 .
+Sending build context to Docker daemon  4.608kB
+Step 1/3 : FROM centos
+ ---> 5d0da3dc9764
+Step 2/3 : ENTRYPOINT ["echo","zhangyun studies docker"]
+ ---> Running in 8cfc54c26718
+Removing intermediate container 8cfc54c26718
+ ---> f366e892a233
+Step 3/3 : ENTRYPOINT ["ls","-a"]
+ ---> Running in 581a69d27175
+Removing intermediate container 581a69d27175
+ ---> 5e49f47a089e
+Successfully built 5e49f47a089e
+Successfully tagged entrypoint-test-centos:1.0
+[root@rootuser dockerfile]# 
+```
+
+3，根据制作的镜像运行容器，成功执行ENTRYPOINT命令`ls -a`:
+
+```bash
+[root@rootuser dockerfile]# docker run entrypoint-test-centos:1.0
+.
+..
+.dockerenv
+bin
+dev
+etc
+home
+lib
+lib64
+lost+found
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+[root@rootuser dockerfile]# 
+```
+
+4，测试ENTRYPOINT结合CMD，成功执行`ls -a -l`：
+
+```bash
+[root@rootuser dockerfile]# docker run entrypoint-test-centos:1.0 -l
+total 56
+drwxr-xr-x   1 root root 4096 Jan 16 14:33 .
+drwxr-xr-x   1 root root 4096 Jan 16 14:33 ..
+-rwxr-xr-x   1 root root    0 Jan 16 14:33 .dockerenv
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  340 Jan 16 14:33 dev
+drwxr-xr-x   1 root root 4096 Jan 16 14:33 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 123 root root    0 Jan 16 14:33 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Jan 15 08:04 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+[root@rootuser dockerfile]# 
+```
+
+- ENTRYPOINT和CMD**同时存在**时, docker把CMD的命令**拼接**到ENTRYPOINT命令之后, 拼接后的命令才是最终执行的命令. 
+- docker run 添加命令默认的方式是CMD，除非指定`--entrypoint`。所以测试entrypoint时，运行容器时输入的`-l`是cmd命令，被附加到entrypoint命令`ls -a`后面，得到的最终命令为`ls -a -l`，打印了启动容器内所有目录的详细信息。
+
+
+
+---
+
+总结：
+
+- 在写Dockerfile时, ENTRYPOINT或者CMD命令会自动覆盖之前的ENTRYPOINT或者CMD命令.
+- 文件内放ENTRYPOINT命令，docker run时用CMD命令的话，可以组合两个命令，实现多种多样的效果。
+- docker run时，如果是“-X -Y”，说明dockerfile内部是ENTRYPOINT实现命令，“-X -Y”会被附加到ENTRYPOINT命令后面；如果得是完整命令如“ls -a”，则说明dockerfile中没有ENTRYPOINT（命令后附加完整命令不可能），可能有CMD也可能没有（覆盖关系）。
+
+[参考文章](https://zhuanlan.zhihu.com/p/30555962)
+
+
+
+### 实战构建tomcat镜像
+
+构建tomcat镜像不像之前centos加几个命令组件构建新镜像，而是比较有用且更繁琐些的。
+
+https://www.bilibili.com/video/BV1og4y1q7M4?p=30&spm_id_from=pageDriver
 
 ## Docker网络
 
