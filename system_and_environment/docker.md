@@ -3218,9 +3218,493 @@ drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
 
 ### 实战构建tomcat镜像
 
-构建tomcat镜像不像之前centos加几个命令组件构建新镜像，而是比较有用且更繁琐些的。
+构建tomcat镜像不像之前centos加几个命令组件构建新镜像，而是比较有用且更繁琐些的。本镜像包含centos基础镜像+jdk+tomcat。
 
-https://www.bilibili.com/video/BV1og4y1q7M4?p=30&spm_id_from=pageDriver
+#### 前言
+
+步骤：
+
+1. 准备镜像文件tomcat，jdk的压缩包
+2. 编写dockerfile文件
+   - 官方命名`Dockerfile`，build会自动寻找这个文件，就不需要`-f`指定文件名了。
+
+
+
+#### 实战
+
+1，准备[tomcat](https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.22/bin/)和[jdk](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html)的压缩包，存放于`/root/dockerfiledir/tomcatcentos`
+
+![image-20220117154531665](docker.assets/image-20220117154531665.png)
+
+2，编写readme.txt，存放于`/root/dockerfiledir/tomcatcentos`
+
+```bash
+本镜像是自带tomcat和jdk的centos镜像
+```
+
+3，编写Dockerfile，存放于`/root/dockerfiledir/tomcatcentos`：
+
+```bash
+# 基于本地centos镜像，本地centos镜像的版本是7
+FROM centos
+
+# 指定镜像维护人
+MAINTAINER zhangyun<111@qq.com>
+
+# 设置环境变量。环境变量应该写在COPY前面，COPY、ADD也可以引用该变量。解压后>的文件名可以使用解压工具直接点进压缩包查看，不需要真正解压。linux中路径以冒>号分隔。
+ENV MYPATH /usr/local
+ENV JAVA_HOME /usr/local/jdk1.8.0_202
+ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.22
+ENV CATALINA_BASH /usr/local/apache-tomcat-9.0.22
+ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+
+# 把宿主机编写好的和Dockerfile同目录的readme.txt，拷贝进容器内的/usr/local
+COPY readme.txt /usr/local/readme.txt
+
+# 把tomcat和jdk的压缩包添加进镜像。ADD命令会自动解压压缩包到指定的/usr/local/。add 的源文件可以是Dockerfile所在目录的一个相对路径；也可以是一个 URL；还>可以是一个 tar 文件（自动解压为目录）。注意宿主机侧路径不能向上走，即不能使>用../
+ADD jdk-8u202-linux-x64.tar.gz /usr/local/
+ADD apache-tomcat-9.0.22.tar.gz /usr/local/
+
+# 运行yum命令 安装vim
+RUN yum -y install vim
+
+# 设置进入容器后所在的目录
+WORKDIR $MYPATH
+
+# 暴露容器的8080端口，供tomcat使用
+EXPOSE 8080
+
+# 希望运行容器的同时把tomcat启动，要使用CMD。同时挂起容器，tail -F filename 会把 filename 文件里的最尾部的内容显示在屏幕上，并且不断刷新，只要 filename 更新就可以看到最新的文件内容；这里加tail -F也是起到一个挂起的作用，不然容器>跑起来没有前台进程就直接Exit(0)了。
+CMD /usr/local/apache-tomcat-9.0.22/bin/startup.sh && tail -F /usr/local/apache-tomcat-9.0.22/bin/logs/catalina.out
+```
+
+- ADD或COPY的宿主机侧不能向上获取父目录如`../../`，解决办法就是把Dockerfile 放到父目录或者根目录；同时应考虑镜像他人复用的问题。
+
+4，根据Dockerfile构建镜像，在Dockerfile所处目录执行如下命令：
+
+```bash
+[root@rootuser tomcatcentos]# docker build -t zytomcat .
+Sending build context to Docker daemon    205MB
+Step 1/15 : FROM centos
+ ---> 5d0da3dc9764
+Step 2/15 : MAINTAINER zhangyun<111@qq.com>
+ ---> Using cache
+ ---> 796a7cb64f77
+Step 3/15 : ENV MYPATH /usr/local
+ ---> Using cache
+ ---> 2451ab654676
+Step 4/15 : ENV JAVA_HOME /usr/local/jdk1.8.0_202
+ ---> Using cache
+ ---> d6d6baac6930
+Step 5/15 : ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+ ---> Using cache
+ ---> 59e218b58a25
+Step 6/15 : ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.22
+ ---> Using cache
+ ---> 3f1024633d82
+Step 7/15 : ENV CATALINA_BASH /usr/local/apache-tomcat-9.0.22
+ ---> Using cache
+ ---> cd74ac607dc5
+Step 8/15 : ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+ ---> Using cache
+ ---> 60cacf529ef7
+Step 9/15 : COPY readme.txt /usr/local/readme.txt
+ ---> Using cache
+ ---> a19e14899a69
+Step 10/15 : ADD jdk-8u202-linux-x64.tar.gz /usr/local/
+ ---> 7f83e3fc31ad
+Step 11/15 : ADD apache-tomcat-9.0.22.tar.gz /usr/local/
+ ---> 366eacc91a1d
+Step 12/15 : RUN yum -y install vim
+ ---> Running in cbb86b6cc4f0
+CentOS Linux 8 - AppStream                      1.5 MB/s | 8.4 MB     00:05    
+CentOS Linux 8 - BaseOS                         3.0 MB/s | 4.6 MB     00:01    
+CentOS Linux 8 - Extras                          13 kB/s |  10 kB     00:00    
+Dependencies resolved.
+================================================================================
+ Package             Arch        Version                   Repository      Size
+================================================================================
+Installing:
+ vim-enhanced        x86_64      2:8.0.1763-16.el8         appstream      1.4 M
+Installing dependencies:
+ gpm-libs            x86_64      1.20.7-17.el8             appstream       39 k
+ vim-common          x86_64      2:8.0.1763-16.el8         appstream      6.3 M
+ vim-filesystem      noarch      2:8.0.1763-16.el8         appstream       49 k
+ which               x86_64      2.21-16.el8               baseos          49 k
+
+Transaction Summary
+================================================================================
+Install  5 Packages
+
+Total download size: 7.8 M
+Installed size: 30 M
+Downloading Packages:
+(1/5): vim-enhanced-8.0.1763-16.el8.x86_64.rpm  2.5 MB/s | 1.4 MB     00:00    
+(2/5): vim-filesystem-8.0.1763-16.el8.noarch.rp 877 kB/s |  49 kB     00:00    
+(3/5): gpm-libs-1.20.7-17.el8.x86_64.rpm         35 kB/s |  39 kB     00:01    
+(4/5): which-2.21-16.el8.x86_64.rpm              96 kB/s |  49 kB     00:00    
+(5/5): vim-common-8.0.1763-16.el8.x86_64.rpm    3.6 MB/s | 6.3 MB     00:01    
+--------------------------------------------------------------------------------
+Total                                           2.4 MB/s | 7.8 MB     00:03     
+warning: /var/cache/dnf/appstream-02e86d1c976ab532/packages/gpm-libs-1.20.7-17.el8.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID 8483c65d: NOKEY
+CentOS Linux 8 - AppStream                      1.6 MB/s | 1.6 kB     00:00    
+Importing GPG key 0x8483C65D:
+ Userid     : "CentOS (CentOS Official Signing Key) <security@centos.org>"
+ Fingerprint: 99DB 70FA E1D7 CE22 7FB6 4882 05B5 55B3 8483 C65D
+ From       : /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+Key imported successfully
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : which-2.21-16.el8.x86_64                               1/5 
+  Installing       : vim-filesystem-2:8.0.1763-16.el8.noarch                2/5 
+  Installing       : vim-common-2:8.0.1763-16.el8.x86_64                    3/5 
+  Installing       : gpm-libs-1.20.7-17.el8.x86_64                          4/5 
+  Running scriptlet: gpm-libs-1.20.7-17.el8.x86_64                          4/5 
+  Installing       : vim-enhanced-2:8.0.1763-16.el8.x86_64                  5/5 
+  Running scriptlet: vim-enhanced-2:8.0.1763-16.el8.x86_64                  5/5 
+  Running scriptlet: vim-common-2:8.0.1763-16.el8.x86_64                    5/5 
+  Verifying        : gpm-libs-1.20.7-17.el8.x86_64                          1/5 
+  Verifying        : vim-common-2:8.0.1763-16.el8.x86_64                    2/5 
+  Verifying        : vim-enhanced-2:8.0.1763-16.el8.x86_64                  3/5 
+  Verifying        : vim-filesystem-2:8.0.1763-16.el8.noarch                4/5 
+  Verifying        : which-2.21-16.el8.x86_64                               5/5 
+
+Installed:
+  gpm-libs-1.20.7-17.el8.x86_64         vim-common-2:8.0.1763-16.el8.x86_64    
+  vim-enhanced-2:8.0.1763-16.el8.x86_64 vim-filesystem-2:8.0.1763-16.el8.noarch
+  which-2.21-16.el8.x86_64             
+
+Complete!
+Removing intermediate container cbb86b6cc4f0
+ ---> fe6959ade0bb
+Step 13/15 : WORKDIR $MYPATH
+ ---> Running in 2e0cb71f154e
+Removing intermediate container 2e0cb71f154e
+ ---> 3cef1dd61013
+Step 14/15 : EXPOSE 8080
+ ---> Running in 33b6411dd6bd
+Removing intermediate container 33b6411dd6bd
+ ---> f561e4aa9d78
+Step 15/15 : CMD /usr/local/apache-tomcat-9.0.22/bin/startup.sh && tail -F /usr/local/apache-tomcat-9.0.22/bin/logs/catalina.out
+ ---> Running in 37b53b979796
+Removing intermediate container 37b53b979796
+ ---> 557bbba1fae8
+Successfully built 557bbba1fae8
+Successfully tagged zytomcat:latest
+[root@rootuser tomcatcentos]# 
+```
+
+- 因为dockerfile的文件名为docker默认的`Dockerfile`，所以不需要使用-f指定文件。
+- 不要忘记命令最后的`.`
+
+5，根据生成的镜像启动容器
+
+```bash
+[root@rootuser tomcatcentos]# docker run -d -p 8081:8080 --name zhangyuntomcat -v /root/build/tomcat/test:/usr/local/apache-tomcat-9.0.22/webapps/test -v /root/build/tomcat/tomcatlogs/:/usr/local/apache-tomcat-9.0.22/logs zytomcat
+ad1da1376608b2655d82ceabc069ca4f3c984000a995f515bcf708b75099bfda
+[root@rootuser tomcatcentos]# 
+```
+
+- 8081为宿主机端口，和容器8080端口绑定。
+- 两个-v挂载，分别是“webapps”和“日志”。-v指定的宿主机或者容器目录原不存在时会被自动创建。
+- 网友说：”-d是后台运行，启动容器时记得加上一个持续运行的命令，否则容器会自动停止“。但是这里没加持续运行的命令也没停止，猜测是tomcat的特性。
+
+6，进入容器查看：
+
+```bash
+[root@rootuser tomcatcentos]# docker ps
+CONTAINER ID   IMAGE      COMMAND                  CREATED              STATUS              PORTS                                       NAMES
+ad1da1376608   zytomcat   "/bin/sh -c '/usr/lo…"   About a minute ago   Up About a minute   0.0.0.0:8081->8080/tcp, :::8081->8080/tcp   zhangyuntomcat
+[root@rootuser tomcatcentos]# docker exec -it zhangyuntomcat /bin/bash
+# 进入容器后所在的目录和dockerfile中设置的相符
+[root@ad1da1376608 local]# pwd
+/usr/local
+# 看到jdk和tomcat被成功解压
+[root@ad1da1376608 local]# ls
+apache-tomcat-9.0.22  etc    include	   lib	  libexec     sbin   src
+bin		      games  jdk1.8.0_202  lib64  readme.txt  share
+[root@ad1da1376608 local]# 
+```
+
+7，外网访问tomcat测试，成功：
+
+![image-20220117155936797](docker.assets/image-20220117155936797.png)
+
+8，通过tomcatdocker发布项目，在tomcat容器的webapps目录挂载的宿主机目录下执行如下操作：
+
+```bash
+[root@rootuser test]# pwd
+/root/build/tomcat/test
+# 创建WEB-INF和web.xml
+[root@rootuser test]# mkdir WEB-INF
+[root@rootuser test]# cd WEB-INF/
+[root@rootuser WEB-INF]# vim web.xml
+```
+
+9，在WEB-INF下编写web.xml文件的内容，用于展示：
+
+```bash
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4" 
+    xmlns="http://java.sun.com/xml/ns/j2ee" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+        http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+</web-app>
+```
+
+- web.xml的模板可以百度搜到。
+
+10，回到test目录下，新建一个index.jsp文件：
+
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>hello zhangyun</title>
+</head>
+<body>
+Hello World!<br/>
+<%
+System.out.println("----my test web logs----");
+%>
+</body>
+</html>
+```
+
+- 编写保存后，用cat检查一遍，因为复制黏贴命令的时候可能导致新增额外符号。
+- index.jsp 与WEB-INF**同一级**
+
+11，访问`http://宿主机ip:8081/test/`：
+
+![image-20220117163052803](docker.assets/image-20220117163052803.png)
+
+- 访问路径一定要带上`test`，因为容器的webapps/test下才有web-inf和index.js。
+
+12，来到`/root/build/tomcat/tomcatlogs`，查看日志：
+
+```bash
+[root@rootuser tomcatlogs]# pwd
+/root/build/tomcat/tomcatlogs
+[root@rootuser tomcatlogs]# ls
+catalina.2022-01-17.log      localhost.2022-01-17.log
+catalina.out                 localhost_access_log.2022-01-17.txt
+host-manager.2022-01-17.log  manager.2022-01-17.log
+```
+
+- 如果看不到日志：查看数据卷绑定是否目录对应上，查看tomcat是否正常运行。
+
+
+
+#### 后话
+
+至此，项目部署成功，可以直接访问。
+
+我们以后开发的步骤︰需要掌握Dokcerfile的编写。我们之后的一切都是使用docker镜像来发布运行!
+
+
+
+### Docker镜像发布
+
+#### 发布镜像到DockerHub
+
+1，来到[dockerhub](https://hub.docker.com/),注册账号并登录
+
+![image-20220117214224416](docker.assets/image-20220117214224416.png)
+
+2，在我们的宿主机服务器上登录dockerhub：
+
+```bash
+[root@rootuser ~]# docker help login
+
+Usage:  docker login [OPTIONS] [SERVER]
+
+Log in to a Docker registry.
+If no server is specified, the default is defined by the daemon.
+
+Options:
+  -p, --password string   Password
+      --password-stdin    Take the password from stdin
+  -u, --username string   Username
+[root@rootuser ~]# docker login -u XXXdockerhubid
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+[root@rootuser ~]# 
+```
+
+4，登录完毕后就可以提交镜像了
+
+```bash
+# 在镜像名前加上自己的dockerhubid，才能被push到dockerhub。修改镜像名及版本号可以用docker tag命令，实际上是为镜像取别名。
+[root@rootuser ~]# docker help tag
+
+Usage:  docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+
+Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+[root@rootuser ~]# docker tag zytomcat XXXdockerhubid/zytomcat:1.0
+[root@rootuser ~]# docker images
+REPOSITORY               TAG       IMAGE ID       CREATED         SIZE
+zytomcat                 latest    557bbba1fae8   6 hours ago     716MB
+XXXdockerhubid/zytomcat     1.0       557bbba1fae8   6 hours ago     716MB
+entrypoint-test-centos   1.0       5e49f47a089e   24 hours ago    231MB
+cmd-test-centos          1.0       2547ab4bd7e2   24 hours ago    231MB
+mycentos                 1.0       1a37cb7e9a61   30 hours ago    326MB
+zhangyun/centos          1.0       f068c50a3a3d   2 days ago      231MB
+tomcatzyk                1.0       1a7b840d09e7   3 days ago      685MB
+docker72590/alpine       latest    f5a69fceabd2   2 weeks ago     5.59MB
+nginx                    latest    605c77e624dd   2 weeks ago     141MB
+tomcat                   9.0       b8e65a4d736d   3 weeks ago     680MB
+redis                    latest    7614ae9453d1   3 weeks ago     113MB
+mysql                    5.7       c20987f18b13   3 weeks ago     448MB
+centos                   latest    5d0da3dc9764   4 months ago    231MB
+portainer/portainer      latest    580c0e4e98b0   10 months ago   79.1MB
+elasticsearch            7.6.2     f29a1ee41030   22 months ago   791MB
+[root@rootuser ~]# docker push XXXdockerhubid/zytomcat:1.0
+The push refers to repository [docker.io/XXXdockerhubid/zytomcat]
+3de3dcbdb217: Pushed 
+e4f91ad85b5c: Pushed 
+26c86fd0b966: Pushed 
+ebd98b7c14fb: Pushed 
+74ddd0ec08fa: Pushed 
+1.0: digest: sha256:3a5f4ea2021f14eec4b783ee7dbe9ec1dad82656ae217e84e4de8d3ea7dc2849 size: 1373
+[root@rootuser ~]# 
+```
+
+- 使用docker tag 命令将镜像名字 改为自己dockerhub名字的前缀加名字，再push
+- docker push命令：`docker push (dockerhubid用户名)/(镜像文件名):(版本号)`
+
+
+
+5，dockerhub网站上查看自己发布的镜像，成功搜索到自己刚发布的镜像：
+
+![image-20220117223131108](docker.assets/image-20220117223131108.png)
+
+6，结束宿主机与dockerhub的连接
+
+```bash
+docker logout
+```
+
+
+
+发布到dockerhub上会比较**慢**，科学上网后仍然不快。
+
+
+
+#### 发布镜像到阿里云镜像
+
+1，登录[阿里云](https://cr.console.aliyun.com/cn-hangzhou/instances),找到容器镜像服务
+
+![image-20220117222341059](docker.assets/image-20220117222341059.png)
+
+![image-20220117222400267](docker.assets/image-20220117222400267.png)
+
+- 个人容器镜像服务是限额免费使用
+
+2，新建registry登录密码
+
+![image-20220117223223097](docker.assets/image-20220117223223097.png)
+
+3，创建命名空间
+
+![image-20220117223333402](docker.assets/image-20220117223333402.png)
+
+4，创建镜像仓库
+
+![image-20220117223548797](docker.assets/image-20220117223548797.png)
+
+![image-20220117224116095](docker.assets/image-20220117224116095.png)
+
+![image-20220117224213003](docker.assets/image-20220117224213003.png)
+
+5，浏览阿里云docker镜像仓库
+
+![image-20220117224503364](docker.assets/image-20220117224503364.png)
+
+6，在宿主机服务器上登录阿里云docker registry
+
+```bash
+# 先从dockerhub的登录上退出来
+[root@rootuser ~]# docker logout
+Removing login credentials for https://index.docker.io/v1/
+You have new mail in /var/spool/mail/root
+# 登录阿里云docker registry
+[root@rootuser ~]# docker login --username=XXX registry.cn-hangzhou.aliyuncs.com
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+[root@rootuser ~]# 
+```
+
+7，推送宿主机镜像到阿里云镜像仓库
+
+```bash
+[root@rootuser ~]# docker tag 557bbba1fae8 registry.cn-hangzhou.aliyuncs.com/XXX命名空间/dockerstudy:1.0
+[root@rootuser ~]# docker push registry.cn-hangzhou.aliyuncs.com/XXX命名空间/dockerstudy:1.0
+The push refers to repository [registry.cn-hangzhou.aliyuncs.com/XXX命名空间/dockerstudy]
+3de3dcbdb217: Pushed 
+e4f91ad85b5c: Pushed 
+26c86fd0b966: Pushed 
+ebd98b7c14fb: Pushed 
+74ddd0ec08fa: Pushed 
+1.0: digest: sha256:3a5f4ea2021f14eec4b783ee7dbe9ec1dad82656ae217e84e4de8d3ea7dc2849 size: 1373
+[root@rootuser ~]# 
+```
+
+8，阿里云docker镜像仓库查看自己推送的镜像，看到了：
+
+![image-20220117230055862](docker.assets/image-20220117230055862.png)
+
+9，宿主机退出阿里云docker镜像仓库登录
+
+```bash
+docker logout
+```
+
+- 使用dockerhub做镜像仓库的话，也是用这个命令退出宿主机与镜像仓库的连接。
+
+
+
+感觉阿里云容器镜像push也慢。。。
+
+
+
+## 小结
+
+docker工作图示1：
+
+![image-20220117225729386](docker.assets/image-20220117225729386.png)
+
+- save和load是镜像压缩成压缩包，然后拷贝给朋友。这个命令用的少，一般不如直接放到dockerhub上。
+
+
+
+Docker工作图示2（更细）：
+
+![image-20220117230408522](docker.assets/image-20220117230408522.png)
+
+
+
+学到目前为止基本能用docker了，后面学的就更偏运维了。但是还是得学一些，懂点原理能用的更好。
 
 ## Docker网络
+
+https://www.bilibili.com/video/BV1og4y1q7M4?p=34&spm_id_from=pageDriver
+
+## 后端建议学完docker-compose
 
