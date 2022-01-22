@@ -6,6 +6,25 @@ javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远�
 
 
 
+操作系统：
+
+- 课程：[蒋炎岩bilibili](https://www.bilibili.com/video/BV1N741177F5?spm_id_from=333.999.0.0)。老师为[南大蒋炎岩](https://zhuanlan.zhihu.com/p/130318023)。
+- 教材：[OSTEP免费在线pdf版](https://pages.cs.wisc.edu/~remzi/OSTEP/)。[github一个人](https://github.com/mthipparthi/operating-systems-three-easy-pieces)提供了免费的pdf版下载。课程教材中文版在淘宝搜索《操作系统导论》。
+- 代码：[github一人](https://github.com/xxyzz/ostep-hw)提供了c语言的代码。
+
+
+
+计算机网络：
+
+- [计算机网络自顶向下]，之前学过部分，不太记得了。
+- 课程为[]
+
+
+
+JVM:
+
+
+
 ## 算法学习
 
 刷题量目标

@@ -3704,7 +3704,3702 @@ Docker工作图示2（更细）：
 
 ## Docker网络
 
-https://www.bilibili.com/video/BV1og4y1q7M4?p=34&spm_id_from=pageDriver
+### Docker0网络详解
 
-## 后端建议学完docker-compose
+#### 观察宿主机网络
+
+1，清空所有环境，方便观察学习:
+
+```bash
+# 清除所有容器，-f包括清除正在运行的容器
+docker rm -f $(docker ps -aq)
+# 清除所有镜像
+docker rmi -f $(docker images -aq)
+```
+
+2，在linux宿主机中获取当前ip地址
+
+```bash
+[root@rootuser ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    # 127.0.0.1本机回环地址
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:65:68:7f brd ff:ff:ff:ff:ff:ff
+    # 10.0.24.2腾讯云宿主机内网地址
+    inet 10.0.24.2/22 brd 10.0.27.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe65:687f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:59:10:a1:61 brd ff:ff:ff:ff:ff:ff
+    # 172.17.0.1为docker0地址
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:59ff:fe10:a161/64 scope link 
+       valid_lft forever preferred_lft forever
+[root@rootuser ~]# 
+```
+
+- 1: lo，2: eth0，3: docker0是三个基本网卡，即三个网络。
+
+
+
+思考：docker是如何处理容器的网络访问的？
+
+
+
+#### 查看容器一内部网络
+
+1，启动tomcat容器
+
+```bash
+[root@rootuser ~]# docker run -d -P --name tomcatdocker0test tomcat:9.0
+Unable to find image 'tomcat:9.0' locally
+9.0: Pulling from library/tomcat
+0e29546d541c: Pull complete 
+9b829c73b52b: Pull complete 
+cb5b7ae36172: Pull complete 
+6494e4811622: Pull complete 
+668f6fcc5fa5: Pull complete 
+dc120c3e0290: Pull complete 
+8f7c0eebb7b1: Pull complete 
+77b694f83996: Pull complete 
+0f611256ec3a: Pull complete 
+4f25def12f23: Pull complete 
+7662046c36cb: Pull complete 
+b93639122cb4: Pull complete 
+Digest: sha256:cd96d4f7d3f5fc4d3bc1622ec678207087b8215d55021a607ecaefba80b403ea
+Status: Downloaded newer image for tomcat:9.0
+3150aa434ef0bb75d0b34d5260307f49c5998ccc21dd0fbd010142b47e0297bc
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# 
+```
+
+- 端口-P使用默认映射
+- dockerrun在 宿主机中找不到tomcat镜像，会自动下载该镜像
+
+2，查看容器的内部网络地址：
+
+方式1进入容器使用ifconfig获取网络细节：
+
+```bash
+# 尝试在容器外直接使用命令，但是命令不存在，只得进入容器安装命令。
+[root@rootuser ~]# docker exec -it tomcatdocker0test ip addr
+OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: exec: "ip": executable file not found in $PATH: unknown
+[root@rootuser ~]# docker exec -it tomcatdocker0test ifconfig
+OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: exec: "ifconfig": executable file not found in $PATH: unknown
+# 进入容器
+[root@rootuser ~]# docker exec -it tomcatdocker0test /bin/bash
+# 直接安装ifconfig需要的nettools包失败，因为没yum命令
+root@3150aa434ef0:/usr/local/tomcat# yum install net-tools
+bash: yum: command not found
+# 安装yum也失败
+root@3150aa434ef0:/usr/local/tomcat# apt install yum
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+E: Unable to locate package yum
+# 尝试通过apt命令直接安装nettools，成功
+root@3150aa434ef0:/usr/local/tomcat# apt update
+Get:1 http://security.debian.org/debian-security bullseye-security InRelease [44.1 kB]
+Get:2 http://security.debian.org/debian-security bullseye-security/main amd64 Packages [107 kB]
+Get:3 http://deb.debian.org/debian bullseye InRelease [116 kB]                                                                                                              
+Get:4 http://deb.debian.org/debian bullseye-updates InRelease [39.4 kB]
+Get:5 http://deb.debian.org/debian bullseye/main amd64 Packages [8183 kB]                                                                                                   
+Get:6 http://deb.debian.org/debian bullseye-updates/main amd64 Packages [2592 B]                                                                                            
+Fetched 8492 kB in 2min 57s (47.9 kB/s)                                                                                                                                     
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+root@3150aa434ef0:/usr/local/tomcat# apt install net-tools
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  net-tools
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 250 kB of archives.
+After this operation, 1015 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bullseye/main amd64 net-tools amd64 1.60+git20181103.0eebece-1 [250 kB]
+Fetched 250 kB in 33s (7494 B/s)                                                                                                                                            
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package net-tools.
+(Reading database ... 12672 files and directories currently installed.)
+Preparing to unpack .../net-tools_1.60+git20181103.0eebece-1_amd64.deb ...
+Unpacking net-tools (1.60+git20181103.0eebece-1) ...
+Setting up net-tools (1.60+git20181103.0eebece-1) ...
+# nettools包不支持ip addr命令
+root@3150aa434ef0:/usr/local/tomcat# ip addr
+bash: ip: command not found
+# nettools包支持ifconfig命令，成功看到了tomcat容器内部的网络细节
+root@3150aa434ef0:/usr/local/tomcat# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether 02:42:ac:11:00:02  txqueuelen 0  (Ethernet)
+        RX packets 4337  bytes 9033153 (8.6 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3779  bytes 261744 (255.6 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+root@3150aa434ef0:/usr/local/tomcat# 
+```
+
+方式2安装iproute2后退出容器，使用ip add获取容器网络细节：
+
+```bash
+# 容器内安装iproute2
+root@3150aa434ef0:/usr/local/tomcat# apt update && apt install -y iproute2
+Hit:1 http://deb.debian.org/debian bullseye InRelease
+Hit:2 http://deb.debian.org/debian bullseye-updates InRelease
+Hit:3 http://security.debian.org/debian-security bullseye-security InRelease
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libatm1 libbpf0 libcap2 libcap2-bin libelf1 libmnl0 libpam-cap libxtables12
+Suggested packages:
+  iproute2-doc
+The following NEW packages will be installed:
+  iproute2 libatm1 libbpf0 libcap2 libcap2-bin libelf1 libmnl0 libpam-cap libxtables12
+0 upgraded, 9 newly installed, 0 to remove and 0 not upgraded.
+Need to get 1394 kB of archives.
+After this operation, 4686 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bullseye/main amd64 libelf1 amd64 0.183-1 [165 kB]
+Get:2 http://deb.debian.org/debian bullseye/main amd64 libbpf0 amd64 1:0.3-2 [98.3 kB]                                                                                      
+Get:3 http://deb.debian.org/debian bullseye/main amd64 libcap2 amd64 1:2.44-1 [23.6 kB]                                                                                     
+Get:4 http://deb.debian.org/debian bullseye/main amd64 libmnl0 amd64 1.0.4-3 [12.5 kB]                                                                                      
+Get:5 http://deb.debian.org/debian bullseye/main amd64 libxtables12 amd64 1.8.7-1 [45.1 kB]                                                                                 
+Get:6 http://deb.debian.org/debian bullseye/main amd64 libcap2-bin amd64 1:2.44-1 [32.6 kB]                                                                                 
+Get:7 http://deb.debian.org/debian bullseye/main amd64 iproute2 amd64 5.10.0-4 [930 kB]                                                                                     
+Get:8 http://deb.debian.org/debian bullseye/main amd64 libatm1 amd64 1:2.5.1-4 [71.3 kB]                                                                                    
+Get:9 http://deb.debian.org/debian bullseye/main amd64 libpam-cap amd64 1:2.44-1 [15.4 kB]                                                                                  
+Fetched 1394 kB in 2min 7s (11.0 kB/s)                                                                                                                                      
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package libelf1:amd64.
+(Reading database ... 12729 files and directories currently installed.)
+Preparing to unpack .../0-libelf1_0.183-1_amd64.deb ...
+Unpacking libelf1:amd64 (0.183-1) ...
+Selecting previously unselected package libbpf0:amd64.
+Preparing to unpack .../1-libbpf0_1%3a0.3-2_amd64.deb ...
+Unpacking libbpf0:amd64 (1:0.3-2) ...
+Selecting previously unselected package libcap2:amd64.
+Preparing to unpack .../2-libcap2_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2:amd64 (1:2.44-1) ...
+Selecting previously unselected package libmnl0:amd64.
+Preparing to unpack .../3-libmnl0_1.0.4-3_amd64.deb ...
+Unpacking libmnl0:amd64 (1.0.4-3) ...
+Selecting previously unselected package libxtables12:amd64.
+Preparing to unpack .../4-libxtables12_1.8.7-1_amd64.deb ...
+Unpacking libxtables12:amd64 (1.8.7-1) ...
+Selecting previously unselected package libcap2-bin.
+Preparing to unpack .../5-libcap2-bin_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2-bin (1:2.44-1) ...
+Selecting previously unselected package iproute2.
+Preparing to unpack .../6-iproute2_5.10.0-4_amd64.deb ...
+Unpacking iproute2 (5.10.0-4) ...
+Selecting previously unselected package libatm1:amd64.
+Preparing to unpack .../7-libatm1_1%3a2.5.1-4_amd64.deb ...
+Unpacking libatm1:amd64 (1:2.5.1-4) ...
+Selecting previously unselected package libpam-cap:amd64.
+Preparing to unpack .../8-libpam-cap_1%3a2.44-1_amd64.deb ...
+Unpacking libpam-cap:amd64 (1:2.44-1) ...
+Setting up libatm1:amd64 (1:2.5.1-4) ...
+Setting up libcap2:amd64 (1:2.44-1) ...
+Setting up libcap2-bin (1:2.44-1) ...
+Setting up libmnl0:amd64 (1.0.4-3) ...
+Setting up libxtables12:amd64 (1.8.7-1) ...
+Setting up libelf1:amd64 (0.183-1) ...
+Setting up libpam-cap:amd64 (1:2.44-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Setting up libbpf0:amd64 (1:0.3-2) ...
+Setting up iproute2 (5.10.0-4) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Processing triggers for libc-bin (2.31-13+deb11u2) ...
+# 退出容器
+root@3150aa434ef0:/usr/local/tomcat# exit
+exit
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED          STATUS          PORTS                                         NAMES
+3150aa434ef0   tomcat:9.0   "catalina.sh run"   29 minutes ago   Up 29 minutes   0.0.0.0:49156->8080/tcp, :::49156->8080/tcp   tomcatdocker0test
+# 容器外使用iproute2包支持的ip addr命令，成功得到容器的内部网络地址
+[root@rootuser ~]# docker exec -it tomcatdocker0test ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+98: eth0@if99: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+[root@rootuser ~]# 
+
+```
+
+3，分析网络地址，以上一步方式2用ip addr得到的信息为例：
+
+```bash
+[root@rootuser ~]# docker exec -it tomcatdocker0test ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+# 容器启动的时候会得到一个“eth0@if99”网卡，对应地址是172.17.0.2，是docker分配的。
+98: eth0@if99: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+[root@rootuser ~]#
+```
+
+- 这里lo和eth0 是网卡不是单纯的指ip，学过网络原理的应该都记得
+
+#### 宿主机尝试ping容器一内部
+
+```bash
+# ping通了。容器一的ip，可以通过查看容器一内部的eth0网卡的inet ip得到。
+[root@rootuser ~]# ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.058 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.048 ms
+# ctrl+c退出ping
+^C
+--- 172.17.0.2 ping statistics ---
+15 packets transmitted, 15 received, 0% packet loss, time 13999ms
+rtt min/avg/max/mdev = 0.045/0.050/0.058/0.008 ms
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# 
+```
+
+linux可以ping到容器内部！
+
+网友说：“两个容器互相ping也能ping通”
+
+
+
+#### 再次宿主机查看网卡
+
+前面开启了dockertomcat，现在再查看一次网卡：
+
+```bash
+[root@rootuser ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:65:68:7f brd ff:ff:ff:ff:ff:ff
+    inet 10.0.24.2/22 brd 10.0.27.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe65:687f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:59:10:a1:61 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:59ff:fe10:a161/64 scope link 
+       valid_lft forever preferred_lft forever
+# 发现对比之前多了一个网卡
+99: veth47a7f49@if98: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 9a:c4:04:73:4f:7e brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::98c4:4ff:fe73:4f7e/64 scope link 
+       valid_lft forever preferred_lft forever
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED       STATUS       PORTS                                         NAMES
+3150aa434ef0   tomcat:9.0   "catalina.sh run"   2 hours ago   Up 2 hours   0.0.0.0:49156->8080/tcp, :::49156->8080/tcp   tomcatdocker0test
+```
+
+- 我们每启动一个docker容器，docker就会给docker容器分配一个ip，我们只要安装了docker，就会有一个网卡docker0桥接模式，使用的技术是veth-pair技术!
+- 宿主机查到的一对网卡`99: veth47a7f49@if98: `和容器一内部的一对网卡`98: eth0@if99:`在数字上很相似
+
+
+
+#### 再开容器二并查看宿主机网卡
+
+```bash
+# 开启容器二，为tomcat容器
+[root@rootuser ~]# docker run -d -P --name tomcatdocker0test02 tomcat:9.0
+a5bb7e5559a789fa51f0050cd4d912b6354b17fcc7107590637226c52c204810
+You have new mail in /var/spool/mail/root
+# 确认容器一二都开启着
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED         STATUS         PORTS                                         NAMES
+a5bb7e5559a7   tomcat:9.0   "catalina.sh run"   3 seconds ago   Up 3 seconds   0.0.0.0:49157->8080/tcp, :::49157->8080/tcp   tomcatdocker0test02
+3150aa434ef0   tomcat:9.0   "catalina.sh run"   2 hours ago     Up 2 hours     0.0.0.0:49156->8080/tcp, :::49156->8080/tcp   tomcatdocker0test
+# 查看宿主机网卡
+[root@rootuser ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:65:68:7f brd ff:ff:ff:ff:ff:ff
+    inet 10.0.24.2/22 brd 10.0.27.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe65:687f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:59:10:a1:61 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:59ff:fe10:a161/64 scope link 
+       valid_lft forever preferred_lft forever
+99: veth47a7f49@if98: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 9a:c4:04:73:4f:7e brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::98c4:4ff:fe73:4f7e/64 scope link 
+       valid_lft forever preferred_lft forever
+# 比只开启容器一时，又多了一对网卡
+101: vethe394a26@if100: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether ae:69:95:9d:2c:e3 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::ac69:95ff:fe9d:2ce3/64 scope link 
+       valid_lft forever preferred_lft forever
+[root@rootuser ~]# 
+```
+
+- 注意新开docker后，宿主机查网卡，多得是**“一对”**网卡，不是一个。
+
+
+
+#### 进入容器二查看网卡
+
+```bash
+# 进入容器
+[root@rootuser ~]# docker exec -it tomcatdocker0test02 /bin/bash
+# 容器内部安装ip addr。安装失败的话可能是网络问题，重试试试。
+root@a5bb7e5559a7:/usr/local/tomcat# apt update && apt install -y iproute2
+Hit:1 http://security.debian.org/debian-security bullseye-security InRelease
+Hit:2 http://deb.debian.org/debian bullseye InRelease
+Hit:3 http://deb.debian.org/debian bullseye-updates InRelease
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+All packages are up to date.
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libatm1 libbpf0 libcap2 libcap2-bin libelf1 libmnl0 libpam-cap libxtables12
+Suggested packages:
+  iproute2-doc
+The following NEW packages will be installed:
+  iproute2 libatm1 libbpf0 libcap2 libcap2-bin libelf1 libmnl0 libpam-cap libxtables12
+0 upgraded, 9 newly installed, 0 to remove and 0 not upgraded.
+Need to get 1394 kB of archives.
+After this operation, 4686 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bullseye/main amd64 libelf1 amd64 0.183-1 [165 kB]
+Get:2 http://deb.debian.org/debian bullseye/main amd64 libbpf0 amd64 1:0.3-2 [98.3 kB]                                                                                      
+Get:3 http://deb.debian.org/debian bullseye/main amd64 libcap2 amd64 1:2.44-1 [23.6 kB]                                                                                     
+Get:4 http://deb.debian.org/debian bullseye/main amd64 libmnl0 amd64 1.0.4-3 [12.5 kB]                                                                                      
+Get:5 http://deb.debian.org/debian bullseye/main amd64 libxtables12 amd64 1.8.7-1 [45.1 kB]                                                                                 
+Get:6 http://deb.debian.org/debian bullseye/main amd64 libcap2-bin amd64 1:2.44-1 [32.6 kB]                                                                                 
+Get:7 http://deb.debian.org/debian bullseye/main amd64 iproute2 amd64 5.10.0-4 [930 kB]                                                                                     
+Get:8 http://deb.debian.org/debian bullseye/main amd64 libatm1 amd64 1:2.5.1-4 [71.3 kB]                                                                                    
+Get:9 http://deb.debian.org/debian bullseye/main amd64 libpam-cap amd64 1:2.44-1 [15.4 kB]                                                                                  
+Fetched 1394 kB in 1min 34s (14.8 kB/s)                                                                                                                                     
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package libelf1:amd64.
+(Reading database ... 12672 files and directories currently installed.)
+Preparing to unpack .../0-libelf1_0.183-1_amd64.deb ...
+Unpacking libelf1:amd64 (0.183-1) ...
+Selecting previously unselected package libbpf0:amd64.
+Preparing to unpack .../1-libbpf0_1%3a0.3-2_amd64.deb ...
+Unpacking libbpf0:amd64 (1:0.3-2) ...
+Selecting previously unselected package libcap2:amd64.
+Preparing to unpack .../2-libcap2_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2:amd64 (1:2.44-1) ...
+Selecting previously unselected package libmnl0:amd64.
+Preparing to unpack .../3-libmnl0_1.0.4-3_amd64.deb ...
+Unpacking libmnl0:amd64 (1.0.4-3) ...
+Selecting previously unselected package libxtables12:amd64.
+Preparing to unpack .../4-libxtables12_1.8.7-1_amd64.deb ...
+Unpacking libxtables12:amd64 (1.8.7-1) ...
+Selecting previously unselected package libcap2-bin.
+Preparing to unpack .../5-libcap2-bin_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2-bin (1:2.44-1) ...
+Selecting previously unselected package iproute2.
+Preparing to unpack .../6-iproute2_5.10.0-4_amd64.deb ...
+Unpacking iproute2 (5.10.0-4) ...
+Selecting previously unselected package libatm1:amd64.
+Preparing to unpack .../7-libatm1_1%3a2.5.1-4_amd64.deb ...
+Unpacking libatm1:amd64 (1:2.5.1-4) ...
+Selecting previously unselected package libpam-cap:amd64.
+Preparing to unpack .../8-libpam-cap_1%3a2.44-1_amd64.deb ...
+Unpacking libpam-cap:amd64 (1:2.44-1) ...
+Setting up libatm1:amd64 (1:2.5.1-4) ...
+Setting up libcap2:amd64 (1:2.44-1) ...
+Setting up libcap2-bin (1:2.44-1) ...
+Setting up libmnl0:amd64 (1.0.4-3) ...
+Setting up libxtables12:amd64 (1.8.7-1) ...
+Setting up libelf1:amd64 (0.183-1) ...
+Setting up libpam-cap:amd64 (1:2.44-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Setting up libbpf0:amd64 (1:0.3-2) ...
+Setting up iproute2 (5.10.0-4) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Processing triggers for libc-bin (2.31-13+deb11u2) ...
+# 运行ip addr看到容器二内的一对网卡“100: eth0@if101”
+root@a5bb7e5559a7:/usr/local/tomcat# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+100: eth0@if101: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+root@a5bb7e5559a7:/usr/local/tomcat# 
+```
+
+- 容器二内部查看的一对网卡`100: eth0@if101`，和在宿主机中看到的新增的一对网卡“101: vethe394a26@if100”，在数据上很相似
+
+
+
+这种一对一对网卡的技术，就叫 veth-pair
+
+
+
+#### veth-pair
+
+evth-pair 就是一对的虚拟设备接口，他们都是成对出现的，一段连着协议，一段彼此相连。
+
+正因为有这个特性，evth-pair充当一个桥梁，连接各种虚拟网络设备的。
+
+openStack，Docker容器之间的连接，ovs的连接，都是使用evth-pair 技术
+
+
+
+#### 尝试容器一二互相ping
+
+在容器二中ping容器一：
+
+```bash
+# 为容器二安装ping命令
+root@a5bb7e5559a7:/usr/local/tomcat# apt-get install inetutils-ping
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following NEW packages will be installed:
+  inetutils-ping
+0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 245 kB of archives.
+After this operation, 373 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bullseye/main amd64 inetutils-ping amd64 2:2.0-1 [245 kB]
+Fetched 245 kB in 4s (59.8 kB/s)           
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package inetutils-ping.
+(Reading database ... 12909 files and directories currently installed.)
+Preparing to unpack .../inetutils-ping_2%3a2.0-1_amd64.deb ...
+Unpacking inetutils-ping (2:2.0-1) ...
+Setting up inetutils-ping (2:2.0-1) ...
+# 容器一的ip，可以通过查看容器一内部的eth0网卡的inet ip得到。ping成功了
+root@a5bb7e5559a7:/usr/local/tomcat# ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: icmp_seq=0 ttl=64 time=0.097 ms
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.075 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.072 ms
+64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.072 ms
+# ctrl+c退出ping命令
+^C--- 172.17.0.2 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.072/0.079/0.097/0.000 ms
+root@a5bb7e5559a7:/usr/local/tomcat# 
+```
+
+结论：容器和容器之间是可以ping通的。
+
+
+
+虽然容器隔离但是网络互通。其实就是容器间依靠docker0作为网关，网关下的各个子ip间当然可以ping通了。docker四种网络模式，运行容器时候不指定的话，默认就是这种veth-pair网络模式
+
+
+
+#### 图解docker网络
+
+docker内部图：
+
+![image-20220118141448754](docker.assets/image-20220118141448754.png)
+
+- 网友：“docker0  相当于网桥，扩大讲 应该是交换机，并非是路由器，特别注意，路由器和交换机的区别。”
+
+- tomcat01和tomcat02是公用的一个路由器,docker0。
+- 所有的容器不指定网络的情况下，都是 docker0路由的，docker会给我们的容器分配一个默认的可用IP
+- Docker中的所有的网络接口都是虚拟的。虚拟的转发效率高。(内网传递文件很快)
+
+
+
+整个宿主机范围内的图：
+
+![image-20220118142556046](docker.assets/image-20220118142556046.png)
+
+- docker使用是linux的桥接。
+- docker0是宿主机中docker容器的网桥。
+- 宿主机中，每新启动一个容器，宿主机使用`ip addr`就会发现多一对网卡；每关闭一个容器，就会少一对网卡。
+
+
+
+### 容器互联--link
+
+思考一个场景，springcloud中我们编写了一个微服务，指定database url=ip:，使用ip不是使用服务名指定好，使用服务名更利于容灾。场景切换到docker，项目不重启，数据库ip换掉了，我们希望可以处理这个问题，可以名字来进行访问容器?这时候就得引入`--link`了。
+
+#### 尝试容器间ping容器名
+
+在宿主机中使用容器内部的命令：
+
+```bash
+# 宿主机查看正开启的容器，确保容器一二都开启着
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED       STATUS       PORTS                                         NAMES
+a5bb7e5559a7   tomcat:9.0   "catalina.sh run"   2 hours ago   Up 2 hours   0.0.0.0:49157->8080/tcp, :::49157->8080/tcp   tomcatdocker0test02
+3150aa434ef0   tomcat:9.0   "catalina.sh run"   4 hours ago   Up 4 hours   0.0.0.0:49156->8080/tcp, :::49156->8080/tcp   tomcatdocker0test
+# 使用容器二ping容器一，只有容器二内部安装了ping命令。tomcatdocker0test没有被识别
+[root@rootuser ~]# docker exec -it tomcatdocker0test02 ping tomcatdocker0test
+ping: unknown host
+```
+
+- 思考：怎么解决tomcatdocker0test没有被识别的问题
+
+#### 启动容器时--link连接容器
+
+```bash
+# 启动容器三的时候，让容器三连接容器一
+[root@rootuser ~]# docker run -d -P --name tomcatdocker0test03 --link tomcatdocker0test tomcat
+0d72e06dcafac0c9987f796bfbe3fcc576a1d76d941487e33366ea539ce7c1f2
+# 进入容器
+[root@rootuser ~]# docker exec -it tomcatdocker0test03 /bin/bash
+# 尝试给容器三安装inetutils-ping，但是因为未知原因突然安不了了，改为安装iputils-ping。两者都能实现ping功能。
+root@0d72e06dcafa:/usr/local/tomcat# apt-get install inetutils-ping
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+E: Unable to locate package inetutils-ping
+# 安装iputils-ping来使用ping功能。下载时间可能比较长，耐心等待。
+root@0d72e06dcafa:/usr/local/tomcat# apt-get update && apt-get install iputils-ping
+Get:1 http://security.debian.org/debian-security bullseye-security InRelease [44.1 kB]
+Get:2 http://deb.debian.org/debian bullseye InRelease [116 kB]                                
+Get:3 http://security.debian.org/debian-security bullseye-security/main amd64 Packages [107 kB]
+Get:4 http://deb.debian.org/debian bullseye-updates InRelease [39.4 kB]                                                                                                     
+Get:5 http://deb.debian.org/debian bullseye/main amd64 Packages [8183 kB]                                                                                                   
+Get:6 http://deb.debian.org/debian bullseye-updates/main amd64 Packages [2592 B]                                                                                            
+Fetched 8492 kB in 14min 42s (9629 B/s)                                                                                                                                     
+Reading package lists... Done
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libcap2 libcap2-bin libpam-cap
+The following NEW packages will be installed:
+  iputils-ping libcap2 libcap2-bin libpam-cap
+0 upgraded, 4 newly installed, 0 to remove and 0 not upgraded.
+Need to get 121 kB of archives.
+After this operation, 348 kB of additional disk space will be used.
+Do you want to continue? [Y/n] y
+Get:1 http://deb.debian.org/debian bullseye/main amd64 libcap2 amd64 1:2.44-1 [23.6 kB]
+Get:2 http://deb.debian.org/debian bullseye/main amd64 libcap2-bin amd64 1:2.44-1 [32.6 kB]
+Get:3 http://deb.debian.org/debian bullseye/main amd64 iputils-ping amd64 3:20210202-1 [49.8 kB]
+Get:4 http://deb.debian.org/debian bullseye/main amd64 libpam-cap amd64 1:2.44-1 [15.4 kB]
+Fetched 121 kB in 3s (48.5 kB/s)      
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package libcap2:amd64.
+(Reading database ... 12672 files and directories currently installed.)
+Preparing to unpack .../libcap2_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2:amd64 (1:2.44-1) ...
+Selecting previously unselected package libcap2-bin.
+Preparing to unpack .../libcap2-bin_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2-bin (1:2.44-1) ...
+Selecting previously unselected package iputils-ping.
+Preparing to unpack .../iputils-ping_3%3a20210202-1_amd64.deb ...
+Unpacking iputils-ping (3:20210202-1) ...
+Selecting previously unselected package libpam-cap:amd64.
+Preparing to unpack .../libpam-cap_1%3a2.44-1_amd64.deb ...
+Unpacking libpam-cap:amd64 (1:2.44-1) ...
+Setting up libcap2:amd64 (1:2.44-1) ...
+Setting up libcap2-bin (1:2.44-1) ...
+Setting up libpam-cap:amd64 (1:2.44-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Setting up iputils-ping (3:20210202-1) ...
+Processing triggers for libc-bin (2.31-13+deb11u2) ...
+#容器三ping容器一的名字，成功ping通。也可以退出容器后在宿主机下执行容器内部命令。
+root@0d72e06dcafa:/usr/local/tomcat# ping tomcatdocker0test
+PING tomcatdocker0test (172.17.0.2) 56(84) bytes of data.
+64 bytes from tomcatdocker0test (172.17.0.2): icmp_seq=1 ttl=64 time=0.119 ms
+64 bytes from tomcatdocker0test (172.17.0.2): icmp_seq=2 ttl=64 time=0.060 ms
+64 bytes from tomcatdocker0test (172.17.0.2): icmp_seq=3 ttl=64 time=0.058 ms
+^C
+--- tomcatdocker0test ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.058/0.079/0.119/0.028 ms
+root@0d72e06dcafa:/usr/local/tomcat# 
+```
+
+- 通过--link就实现了”让网络不通过ip，通过名字“联通的目标。
+- 容器三ping容器一可以，但是反过来容器一ping容器三不可以。因为是容器三启动的时候--link连接容器一，而不是容器一连接上容器三。
+- 网友说：“--link 就是/etc/hosts文件中加了一行”
+
+
+
+#### dockernetwork命令细看
+
+```bash
+# 查询docker network的使用方式
+[root@rootuser ~]# docker help network
+
+Usage:  docker network COMMAND
+
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+# 查询所有的网卡
+[root@rootuser ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+5f9bc0a0faaa   bridge    bridge    local
+1cfd162b3e0a   host      host      local
+2afe51518266   none      null      local
+
+
+# 使用网卡id查看docker0网卡的细节，可以看到docker0的ip地址。docker0网卡的name为bridge。
+[root@rootuser ~]# docker network inspect 5f9bc0a0faaa
+		# 网卡id对应的名字
+        "Name": "bridge",
+        "Id": "5f9bc0a0faaa995d376fd6edbac2b55e086fdd4382c7b5219eae78c967168a1c",
+        "Created": "2022-01-10T11:07:45.298294763+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                	# /16的掩码代表“255*255”
+                    "Subnet": "172.17.0.0/16",
+                    # "172.17.0.1"为docker0的ip地址。
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        。。。省。。。
+        # 每启动一个容器，docker0就会为该容器随机分配一个ip
+         "Containers": {
+            "0d72e06dcafac0c9987f796bfbe3fcc576a1d76d941487e33366ea539ce7c1f2": {
+                "Name": "tomcatdocker0test03",
+                "EndpointID": "7eafbea0ea05c602a107cb53001b9079fbf985b0dcb6665a559713474b3eae4c",
+                "MacAddress": "02:42:ac:11:00:04",
+                "IPv4Address": "172.17.0.4/16",
+                "IPv6Address": ""
+            },
+            "3150aa434ef0bb75d0b34d5260307f49c5998ccc21dd0fbd010142b47e0297bc": {
+                "Name": "tomcatdocker0test",
+                "EndpointID": "784e2d85e557cbd6d793302389091d4a05eda36cdd52b5550c368b9a265b71ac",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "a5bb7e5559a789fa51f0050cd4d912b6354b17fcc7107590637226c52c204810": {
+                "Name": "tomcatdocker0test02",
+                "EndpointID": "6bae56466cbcdba00f75973c112d60c73686cc913b377b52dd0912ad3319db72",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+
+```
+
+#### 查看主动--link的容器发生了什么
+
+使用docker inspect：
+
+```bash
+# 查看容器的id
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE        COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0d72e06dcafa   tomcat       "catalina.sh run"   46 minutes ago   Up 46 minutes   0.0.0.0:49158->8080/tcp, :::49158->8080/tcp   tomcatdocker0test03
+a5bb7e5559a7   tomcat:9.0   "catalina.sh run"   3 hours ago      Up 3 hours      0.0.0.0:49157->8080/tcp, :::49157->8080/tcp   tomcatdocker0test02
+3150aa434ef0   tomcat:9.0   "catalina.sh run"   5 hours ago      Up 5 hours      0.0.0.0:49156->8080/tcp, :::49156->8080/tcp   tomcatdocker0test
+You have new mail in /var/spool/mail/root
+# 容器三启动的时候主动link容器一，查看容器三的底层细节
+[root@rootuser ~]# docker inspect 0d72e06dcafa
+"HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "host",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            # ！！！看到了容器三绑定的容器
+            "Links": [
+                "/tomcatdocker0test:/tomcatdocker0test03/tomcatdocker0test"
+            ],
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": true,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "KernelMemory": 0,
+            "KernelMemoryTCP": 0,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        。。。省。。。
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "efb37153fd6e416e3ca9dbfae98cebcfdcd4d5f9d47f67958ac128821944a012",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {
+                "8080/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "49158"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "49158"
+                    }
+                ]
+            },
+            "SandboxKey": "/var/run/docker/netns/efb37153fd6e",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "7eafbea0ea05c602a107cb53001b9079fbf985b0dcb6665a559713474b3eae4c",
+            "Gateway": "172.17.0.1",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "172.17.0.4",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "MacAddress": "02:42:ac:11:00:04",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "5f9bc0a0faaa995d376fd6edbac2b55e086fdd4382c7b5219eae78c967168a1c",
+                    "EndpointID": "7eafbea0ea05c602a107cb53001b9079fbf985b0dcb6665a559713474b3eae4c",
+                     # 当前容器（容器三）的网关是docker0
+                    "Gateway": "172.17.0.1",
+                    # 容器三的ip为"172.17.0.4"
+                    "IPAddress": "172.17.0.4",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:04",
+                    "DriverOpts": null
+                }
+            }
+        }
+
+
+```
+
+- `"Links"`处看到了容器三与容器一的绑定关系。` "/tomcatdocker0test:/tomcatdocker0test03/tomcatdocker0test"`意为`:/接收容器名/源容器名或者别名`
+
+
+
+#### --link本质
+
+容器三主动--link容器一，查看的容器三的hosts文件：
+
+```bash
+# 在宿主机查看容器三内部的host文件
+[root@rootuser ~]# docker exec -it tomcatdocker0test03 cat /etc/hosts
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+# --link的时候添加了“172.17.0.2:tomcatdocker0test”映射
+172.17.0.2	tomcatdocker0test 3150aa434ef0
+172.17.0.4	0d72e06dcafa
+[root@rootuser ~]# 
+```
+
+- 其实就是”容器三 --link 容器一“时在本容器内的hosts文件配置了容器一的“ip:容器name”映射和“ip:容器id”映射。
+
+
+
+**--link**其实不好，现在已经**不推荐使用**了。现在**倾向于自定义网络**，而不使用docker0网桥。原因：
+
+- docker0是官方的网桥，很多功能是局限的。比如它不支持容器名连接访问。
+- 自定义网络可以实现支持“容器名访问”。
+
+
+
+
+
+### 自定义网络
+
+--link和自定义网络，都叫容器互联。
+
+
+
+#### docker网卡
+
+打印宿主机的所有docker网卡：
+
+```bash
+[root@rootuser ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+5f9bc0a0faaa   bridge    bridge    local
+1cfd162b3e0a   host      host      local
+2afe51518266   none      null      local
+[root@rootuser ~]# 
+```
+
+
+
+#### 网络模式
+
+不同docker网卡对应了不同的网络模式。
+
+1，bridge：
+
+- 桥接模式。意思就是在docker上搭桥。
+- 例子：01和03不能直接互相访问的话，通过02作为桥接来访问。
+- docker默认的网络模式。我们自定义网络也使用桥接模式。
+
+2，none：
+
+- 不配置网络。
+
+3，host：
+
+- 主机模式。和linux宿主机服务器共享网络。
+
+4，container：
+
+- 容器之间直接网络联通（少见，不建议使用，局限大）
+
+
+
+#### 实战
+
+1，理论准备：
+
+- 之前我们直接启动容器时，省略了`--net bridge`，因为--net bridge是默认的网络模式。`bridge`其实是docker0网卡对应的name。
+  - `docker run -d -p--name tomcat01 tomcat`等价于`docker run -d -p--name tomcat01 --net bridge tomcat`
+- docker0网卡特点：
+  - docker默认网卡，使用了桥接模式。
+  - 容器名不能访间，但是可以用 --link可以打通连接!
+- 我们可以自定义一个网络!
+
+
+
+2，准备环境：
+
+```bash
+# 查看docker network的用法
+[root@rootuser ~]# docker help network
+
+Usage:  docker network COMMAND
+
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+You have new mail in /var/spool/mail/root
+# 清除所有容器。docker网络实战还是要让docker尽量干净。
+[root@rootuser ~]# docker rm -f $(docker ps -aq)
+0d72e06dcafa
+a5bb7e5559a7
+3150aa434ef0
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 清除所有容器后，宿主机执行ip addr查看网卡，结果是最初始的样子，即只有三个网卡。
+[root@rootuser ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:65:68:7f brd ff:ff:ff:ff:ff:ff
+    inet 10.0.24.2/22 brd 10.0.27.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe65:687f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:42:59:10:a1:61 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:59ff:fe10:a161/64 scope link 
+       valid_lft forever preferred_lft forever
+# 查看网卡的创建方式
+[root@rootuser ~]# docker network create --help
+
+Usage:  docker network create [OPTIONS] NETWORK
+
+Create a network
+
+Options:
+      --attachable           Enable manual container attachment
+      --aux-address map      Auxiliary IPv4 or IPv6 addresses used by Network driver (default map[])
+      --config-from string   The network from which to copy the configuration
+      --config-only          Create a configuration only network
+      # 默认是桥接
+  -d, --driver string        Driver to manage the Network (default "bridge")
+      --gateway strings      IPv4 or IPv6 Gateway for the master subnet
+      --ingress              Create swarm routing-mesh network
+      --internal             Restrict external access to the network
+      --ip-range strings     Allocate container ip from a sub-range
+      --ipam-driver string   IP Address Management Driver (default "default")
+      --ipam-opt map         Set IPAM driver specific options (default map[])
+      --ipv6                 Enable IPv6 networking
+      --label list           Set metadata on a network
+  -o, --opt map              Set driver specific options (default map[])
+      --scope string         Control the network's scope
+      --subnet strings       Subnet in CIDR format that represents a network segment
+# 查看宿主机的网关，在10.0.x.x段，那么自定义网关的话就要远离10.0.x.x段，可以使用192.168.x.x段
+[root@rootuser ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.0.24.1       0.0.0.0         UG    0      0        0 eth0
+10.0.24.0       0.0.0.0         255.255.252.0   U     0      0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+[root@rootuser ~]# 
+
+
+```
+
+3，创建网卡：
+
+```bash
+[root@rootuser ~]# docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 zynet
+fc4cf8ed84e3d22fa88331e725fd180f930d3a45c95b8e992b4bb17c2b2b6806
+# 查看宿主机的所有docker网卡，可以看到我们新创建的zynet网卡
+[root@rootuser ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+5f9bc0a0faaa   bridge    bridge    local
+1cfd162b3e0a   host      host      local
+2afe51518266   none      null      local
+fc4cf8ed84e3   zynet     bridge    local
+[root@rootuser ~]# 
+
+```
+
+- `--driver bridge`:写不写都行，默认的
+
+- `--subnet 192.168.0.0/16`：子网掩码16表示可以创建255*255个子网，若为24则可创建255个子网。
+  - 从192.168.0.2（gateway+1）到192.168.255.255都是可用内部ip，所有有255*255个子网。
+- `--gateway 192.168.0.1`：本宿主机的网关在10.0.x.x段（route -n查得），那么自定义网关的话就要远离10.0.x.x段，可以使用192.168.x.x段。所有路由的默认网关就是192.168.1.1.
+
+4，检查查看自己创建网卡的详细信息：
+
+```bash
+[root@rootuser ~]# docker network inspect zynet
+[
+    {
+        "Name": "zynet",
+        "Id": "fc4cf8ed84e3d22fa88331e725fd180f930d3a45c95b8e992b4bb17c2b2b6806",
+        "Created": "2022-01-18T21:48:55.001976118+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                # 可以看到subway和gateway是自己配置的
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+[root@rootuser ~]# 
+```
+
+到这一步，我们自己的网络就常见好了。
+
+5，让两个最新版tomcat容器运行在自定义的网络上
+
+```bash
+[root@rootuser ~]# docker run -d -P --name tomcat-sdnet01 --net zynet tomcat
+2286ff2e2699a96c938cf4dee29e50b3ced231b41f736138d7a8b1329e095335
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# docker run -d -P --name tomcat-sdnet02 --net zynet tomcat
+6896ab8f6a5d497141c4319bf09a09ba46866157c6cc992dc3778cda5612e6c1
+[root@rootuser ~]# 
+```
+
+6，查看运行两个容器后的自定义网卡的详情
+
+```bash
+[root@rootuser ~]# docker network inspect zynet
+[
+    {
+        "Name": "zynet",
+        "Id": "fc4cf8ed84e3d22fa88331e725fd180f930d3a45c95b8e992b4bb17c2b2b6806",
+        "Created": "2022-01-18T21:48:55.001976118+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        # 可以看到zynet网卡给两个tomcat容器自动分配的ipv4
+        "Containers": {
+            "2286ff2e2699a96c938cf4dee29e50b3ced231b41f736138d7a8b1329e095335": {
+                "Name": "tomcat-sdnet01",
+                "EndpointID": "f899b5a2147c27cae712676bbf65b1e31f7e81eb83d50a87425c04e94210eabd",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            },
+            "6896ab8f6a5d497141c4319bf09a09ba46866157c6cc992dc3778cda5612e6c1": {
+                "Name": "tomcat-sdnet02",
+                "EndpointID": "bda81a22f00cb2731406bb864d4d99ae9e7ddf6f0fbcf382730e080b2d446256",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+[root@rootuser ~]# 
+```
+
+7，给容器一安装ping命令:
+
+```bash
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 apt-get install -y iputils-ping
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libcap2 libcap2-bin libpam-cap
+The following NEW packages will be installed:
+  iputils-ping libcap2 libcap2-bin libpam-cap
+0 upgraded, 4 newly installed, 0 to remove and 0 not upgraded.
+Need to get 121 kB of archives.
+After this operation, 348 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bullseye/main amd64 libcap2 amd64 1:2.44-1 [23.6 kB]
+Get:2 http://deb.debian.org/debian bullseye/main amd64 libcap2-bin amd64 1:2.44-1 [32.6 kB]
+Get:3 http://deb.debian.org/debian bullseye/main amd64 iputils-ping amd64 3:20210202-1 [49.8 kB]                                                                            
+Get:4 http://deb.debian.org/debian bullseye/main amd64 libpam-cap amd64 1:2.44-1 [15.4 kB]                                                                                  
+Fetched 121 kB in 13s (9289 B/s)                                                                                                                                            
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package libcap2:amd64.
+(Reading database ... 12672 files and directories currently installed.)
+Preparing to unpack .../libcap2_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2:amd64 (1:2.44-1) ...
+Selecting previously unselected package libcap2-bin.
+Preparing to unpack .../libcap2-bin_1%3a2.44-1_amd64.deb ...
+Unpacking libcap2-bin (1:2.44-1) ...
+Selecting previously unselected package iputils-ping.
+Preparing to unpack .../iputils-ping_3%3a20210202-1_amd64.deb ...
+Unpacking iputils-ping (3:20210202-1) ...
+Selecting previously unselected package libpam-cap:amd64.
+Preparing to unpack .../libpam-cap_1%3a2.44-1_amd64.deb ...
+Unpacking libpam-cap:amd64 (1:2.44-1) ...
+Setting up libcap2:amd64 (1:2.44-1) ...
+Setting up libcap2-bin (1:2.44-1) ...
+Setting up libpam-cap:amd64 (1:2.44-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)
+debconf: falling back to frontend: Readline
+Setting up iputils-ping (3:20210202-1) ...
+Processing triggers for libc-bin (2.31-13+deb11u2) ...
+[root@rootuser ~]# 
+```
+
+- 下载速度成迷，22.30的时候下的巨慢，24.00的时候一下就下好了，可能最好先科学上网再启动下载。**下载太慢**的话想办法解决如改源。每次都是这步最花时间，，麻了
+
+8，容器一ping容器二，两种方式都能ping通：
+
+```bash
+# 让容器一通过容器名ping容器二，成功
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping tomcat-sdnet02
+PING tomcat-sdnet02 (192.168.0.3) 56(84) bytes of data.
+64 bytes from tomcat-sdnet02.zynet (192.168.0.3): icmp_seq=1 ttl=64 time=0.075 ms
+64 bytes from tomcat-sdnet02.zynet (192.168.0.3): icmp_seq=2 ttl=64 time=0.057 ms
+64 bytes from tomcat-sdnet02.zynet (192.168.0.3): icmp_seq=3 ttl=64 time=0.052 ms
+^C
+--- tomcat-sdnet02 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.052/0.061/0.075/0.009 ms
+# 让容器一通过zynet网卡分配的ip来ping容器二，成功。192.168.0.3是容器二被分配的ip。
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping 192.168.0.3
+PING 192.168.0.3 (192.168.0.3) 56(84) bytes of data.
+64 bytes from 192.168.0.3: icmp_seq=1 ttl=64 time=0.056 ms
+64 bytes from 192.168.0.3: icmp_seq=2 ttl=64 time=0.053 ms
+64 bytes from 192.168.0.3: icmp_seq=3 ttl=64 time=0.056 ms
+64 bytes from 192.168.0.3: icmp_seq=4 ttl=64 time=0.056 ms
+^C
+--- 192.168.0.3 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 2999ms
+rtt min/avg/max/mdev = 0.053/0.055/0.056/0.001 ms
+[root@rootuser ~]# 
+```
+
+- 所有的docker容器根据zynet网卡启动，那么每个容器的ip都为192.168.x.x递增，在同一网段，必定能互相ping通
+- 而且自定义网卡zynet还天然支持“根据容器名来ping”。
+
+
+
+#### 自定义网络优点
+
+- 自定义docker网卡的功能比默认的docker0要多，比如天然就支持根据容器名来ping。以后我们基本会自己建立docker网卡。
+
+- 不同的集群（redis集群，mysql集群）使用不同的网络，隔离开来 ，保证集群是安全和健康的。图示：
+
+  ![image-20220118222428007](docker.assets/image-20220118222428007.png)
+
+  - 当然，两个集群也是可以打通的，那就到下一讲“网络联通”
+
+
+
+### 网络联通
+
+1，保持用自定义网卡zynet开启的两个容器开启：
+
+```bash
+# 确保tomcat-sdnet01和 tomcat-sdnet02容器正在开启
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND             CREATED        STATUS        PORTS                                         NAMES
+6896ab8f6a5d   tomcat    "catalina.sh run"   14 hours ago   Up 14 hours   0.0.0.0:49160->8080/tcp, :::49160->8080/tcp   tomcat-sdnet02
+2286ff2e2699   tomcat    "catalina.sh run"   14 hours ago   Up 14 hours   0.0.0.0:49159->8080/tcp, :::49159->8080/tcp   tomcat-sdnet01
+[root@rootuser ~]# 
+```
+
+
+
+2，通过docker默认网卡启动两个容器
+
+```bash
+# 使用docker默认的docker0网卡开启两个容器
+[root@rootuser ~]# docker run -d -P --name tomcat01 tomcat
+c0ae5ffaf9d6edec69ded1e62e690b4cddfdd4799fba1abf06b651bdf6c30d1f
+[root@rootuser ~]# docker run -d -P --name tomcat02 tomcat
+efd6f78f857255368cfe1bb0aa850ef9bdede7616e9db62f27568e525c153003
+# 确认docker0网卡管理的两个容器，和zynet网卡管理的两个容器都已开启。
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND             CREATED         STATUS         PORTS                                         NAMES
+efd6f78f8572   tomcat    "catalina.sh run"   3 seconds ago   Up 2 seconds   0.0.0.0:49162->8080/tcp, :::49162->8080/tcp   tomcat02
+c0ae5ffaf9d6   tomcat    "catalina.sh run"   9 seconds ago   Up 8 seconds   0.0.0.0:49161->8080/tcp, :::49161->8080/tcp   tomcat01
+6896ab8f6a5d   tomcat    "catalina.sh run"   14 hours ago    Up 14 hours    0.0.0.0:49160->8080/tcp, :::49160->8080/tcp   tomcat-sdnet02
+2286ff2e2699   tomcat    "catalina.sh run"   14 hours ago    Up 14 hours    0.0.0.0:49159->8080/tcp, :::49159->8080/tcp   tomcat-sdnet01
+[root@rootuser ~]# 
+```
+
+
+
+3，尝试两个网卡管理的容器互相ping，以自定义网卡容器ping docker0网卡容器为例：
+
+```bash
+# 先查看docker0管理的容器的ip
+[root@rootuser ~]# docker network inspect bridge
+"Containers": {
+            "c0ae5ffaf9d6edec69ded1e62e690b4cddfdd4799fba1abf06b651bdf6c30d1f": {
+                "Name": "tomcat01",
+                "EndpointID": "ea109361ace4a8eba178525a43d9489f980946f32cde5dc12b2e0e9a264ce32e",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "efd6f78f857255368cfe1bb0aa850ef9bdede7616e9db62f27568e525c153003": {
+                "Name": "tomcat02",
+                "EndpointID": "60087b6a4960310e8e5ada071604950cee5a18dc8febdb2db83a831371e02e40",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+# 根据容器名ping，无法识别容器名
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping tomcat01
+ping: tomcat01: Name or service not known
+# 根据容器ip来ping，ping不通
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+^C
+--- 172.17.0.2 ping statistics ---
+60 packets transmitted, 0 received, 100% packet loss, time 58999ms
+[root@rootuser ~]# 
+```
+
+- 不同网卡管理的容器不在一个网段，互ping必定失败
+
+
+
+4，把容器连接到别的网络上
+
+```bash
+# 查看把容器连接到别的网络上的方法
+[root@rootuser ~]# docker network connect --help
+
+Usage:  docker network connect [OPTIONS] NETWORK CONTAINER
+
+Connect a container to a network
+
+Options:
+      --alias strings           Add network-scoped alias for the container
+      --driver-opt strings      driver options for the network
+      --ip string               IPv4 address (e.g., 172.30.100.104)
+      --ip6 string              IPv6 address (e.g., 2001:db8::33)
+      --link list               Add link to another container
+      --link-local-ip strings   Add a link-local address for the container
+You have new mail in /var/spool/mail/root
+# 把自定义的zynet网卡，和使用docker默认的docker0网卡创建的tomcat01容器连接
+[root@rootuser ~]# docker network connect zynet tomcat01
+#查看zynet网卡管理的容器，可以看到containers中增加了tomcat01容器，该容器原来是属于docker0网卡管理的，现在它被两个网卡共同管理。
+[root@rootuser ~]# docker network inspect zynet
+ "Containers": {
+            "2286ff2e2699a96c938cf4dee29e50b3ced231b41f736138d7a8b1329e095335": {
+                "Name": "tomcat-sdnet01",
+                "EndpointID": "f899b5a2147c27cae712676bbf65b1e31f7e81eb83d50a87425c04e94210eabd",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            },
+            "6896ab8f6a5d497141c4319bf09a09ba46866157c6cc992dc3778cda5612e6c1": {
+                "Name": "tomcat-sdnet02",
+                "EndpointID": "bda81a22f00cb2731406bb864d4d99ae9e7ddf6f0fbcf382730e080b2d446256",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            },
+            "c0ae5ffaf9d6edec69ded1e62e690b4cddfdd4799fba1abf06b651bdf6c30d1f": {
+            # tomcat01容器被加入了zynet网卡管理的网络
+                "Name": "tomcat01",
+                "EndpointID": "5c8f610a51969a03b32ff5141ed36708b77a8b22272a581e5801b0c8242ce542",
+                "MacAddress": "02:42:c0:a8:00:04",
+                "IPv4Address": "192.168.0.4/16",
+                "IPv6Address": ""
+            }
+        },
+        
+# 宿主机中查看veth-pair地址
+[root@rootuser ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:65:68:7f brd ff:ff:ff:ff:ff:ff
+    inet 10.0.24.2/22 brd 10.0.27.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe65:687f/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:59:10:a1:61 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:59ff:fe10:a161/64 scope link 
+       valid_lft forever preferred_lft forever
+# 发现开启了四个容器，本来应该是四对vethpair，但是现在有6对，这就是因为有一个容器连接了两个网络。
+104: br-fc4cf8ed84e3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:22:71:a1:2d brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.1/16 brd 192.168.255.255 scope global br-fc4cf8ed84e3
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:22ff:fe71:a12d/64 scope link 
+       valid_lft forever preferred_lft forever
+106: veth9070701@if105: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-fc4cf8ed84e3 state UP group default 
+    link/ether 4e:0f:6e:13:63:16 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::4c0f:6eff:fe13:6316/64 scope link 
+       valid_lft forever preferred_lft forever
+108: vethac187a8@if107: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-fc4cf8ed84e3 state UP group default 
+    link/ether 2a:71:5d:2a:ae:83 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::2871:5dff:fe2a:ae83/64 scope link 
+       valid_lft forever preferred_lft forever
+110: vethfea5dff@if109: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 8e:b6:ee:1e:d5:1f brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::8cb6:eeff:fe1e:d51f/64 scope link 
+       valid_lft forever preferred_lft forever
+112: veth7d99fdb@if111: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 82:8f:14:7d:1c:94 brd ff:ff:ff:ff:ff:ff link-netnsid 3
+    inet6 fe80::808f:14ff:fe7d:1c94/64 scope link 
+       valid_lft forever preferred_lft forever
+114: vethfe38c21@if113: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master br-fc4cf8ed84e3 state UP group default 
+    link/ether 46:f5:c2:cc:d5:c3 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::44f5:c2ff:fecc:d5c3/64 scope link 
+       valid_lft forever preferred_lft forever
+[root@rootuser ~]# 
+```
+
+- 本质就是将docker0网卡管理的tomcat01容器上加一张zynet网段的网卡，可以了理解为虚拟vlan。结果就相当于一个容器连了两个网络（被两个网卡管理），给分配了两个ip。
+  - 两个ip是可以理解的，比如阿里云服务器就有公网ip和内网ip。
+  - 一个容器有两个ip是网络交叠，不符合业务专网思路。应该用网关中转，网关上可以做控制
+- docker0网卡和zynet网卡不能打通，但是容器和网卡可以如此打通
+
+
+
+5，尝试使用zynet网卡管理的容器tomcat-sdnet01，ping新连上zynet网卡的tomcat01容器：
+
+```bash
+# ping容器tomcat01被docker01网卡管理的ip还是不能ping通，因为两个ip不是一个网段。
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+^C
+--- 172.17.0.2 ping statistics ---
+19 packets transmitted, 0 received, 100% packet loss, time 18000ms
+# ping容器tomcat01被zynet网卡管理的ip可以ping通，因为两者在一个网段
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping 192.168.0.4
+PING 192.168.0.4 (192.168.0.4) 56(84) bytes of data.
+64 bytes from 192.168.0.4: icmp_seq=1 ttl=64 time=0.060 ms
+64 bytes from 192.168.0.4: icmp_seq=2 ttl=64 time=0.045 ms
+64 bytes from 192.168.0.4: icmp_seq=3 ttl=64 time=0.042 ms
+^C
+--- 192.168.0.4 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.042/0.049/0.060/0.007 ms
+You have new mail in /var/spool/mail/root
+# 直接ping容器名“tomcat01”也能ping通，因为tomcat01有ip和tomcat-sdnet01的ip在一个网段
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping tomcat01
+PING tomcat01 (192.168.0.4) 56(84) bytes of data.
+64 bytes from tomcat01.zynet (192.168.0.4): icmp_seq=1 ttl=64 time=0.057 ms
+64 bytes from tomcat01.zynet (192.168.0.4): icmp_seq=2 ttl=64 time=0.043 ms
+64 bytes from tomcat01.zynet (192.168.0.4): icmp_seq=3 ttl=64 time=0.044 ms
+^C
+--- tomcat01 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2000ms
+rtt min/avg/max/mdev = 0.043/0.048/0.057/0.006 ms
+[root@rootuser ~]# 
+```
+
+
+
+6，尝试使用zynet网卡管理的容器tomcat-sdnet01，ping只被docker0管理的容器tomcat02：
+
+```bash
+# ping容器ip无法ping通
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping 172.17.0.3
+PING 172.17.0.3 (172.17.0.3) 56(84) bytes of data.
+^C
+--- 172.17.0.3 ping statistics ---
+3 packets transmitted, 0 received, 100% packet loss, time 2000ms
+# ping容器名字无法ping通
+[root@rootuser ~]# docker exec -it tomcat-sdnet01 ping tomcat02
+ping: tomcat02: Name or service not known
+[root@rootuser ~]# 
+```
+
+- tomcat02和tomcat01不一样，tomcat02没连接zynet网卡，tomcat02和tomcat-sdnet01不在一个网络，不能ping通。
+
+
+
+结论：
+
+- 假设要跨网络操作别的容器，即操作别的网卡管理的容器，就需要使用`docker network connect`联通。
+
+
+
+### redis集群部署实战
+
+#### 思路
+
+图示“三主三从redis集群”：
+
+![image-20220119142913958](docker.assets/image-20220119142913958.png)
+
+- 主机为提供可用服务，从机为备份。主机宕机（红色）的话，从机要顶替主机的位置。
+- 本实战不用哨兵模式，用的是“分片部署”。
+- 要启动六个redis容器。六个容器一个个启动太慢了，可以写一个shell脚本统一启动。
+- redis集群既然是集群，就要有集群自己的网卡。
+
+
+
+#### 实战
+
+1，关闭所有正在运行的容器，保持一个干净的docker环境：
+
+```bash
+# 删除所有容器，-f表示把正在运行的也强制删除。
+[root@rootuser ~]# docker rm -f $(docker ps -aq)
+efd6f78f8572
+c0ae5ffaf9d6
+6896ab8f6a5d
+2286ff2e2699
+# 打印正在运行的容器列表，确认清理干净了
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+[root@rootuser ~]# 
+```
+
+2，创建redis集群专用的网卡，网卡名为redis：
+
+```bash
+# 确认现在有哪些网卡，分别占用哪些网段，避免网段重复
+[root@rootuser ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+5f9bc0a0faaa   bridge    bridge    local
+1cfd162b3e0a   host      host      local
+2afe51518266   none      null      local
+fc4cf8ed84e3   zynet     bridge    local
+# 查看bridge网卡(即docker0网卡)管理的网段，
+[root@rootuser ~]# docker network inspect bridge
+ "Name": "bridge",
+        "Id": "5f9bc0a0faaa995d376fd6edbac2b55e086fdd4382c7b5219eae78c967168a1c",
+        "Created": "2022-01-10T11:07:45.298294763+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                #通过subnet和gateway看出管理网段为172.17.0.1~172.17.255.255
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+# 查看zynet网卡管理的网段
+[root@rootuser ~]# docker network inspect zynet
+"Name": "zynet",
+        "Id": "fc4cf8ed84e3d22fa88331e725fd180f930d3a45c95b8e992b4bb17c2b2b6806",
+        "Created": "2022-01-18T21:48:55.001976118+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                # 通过subnet和gateway看出管理网段为192.168.0.1~192.168.255.255
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+# 新建redis网卡，避免使用zynet和bridge网卡的网段
+[root@rootuser ~]# docker network create redis --subnet 172.38.0.0/16
+0289440c267350afec10a508ca2eecab0a0fddb09c7ae66ba2d1eb2ac0e39ef4
+[root@rootuser ~]# docker network inspect redis
+[
+    {
+        "Name": "redis",
+        "Id": "0289440c267350afec10a508ca2eecab0a0fddb09c7ae66ba2d1eb2ac0e39ef4",
+        "Created": "2022-01-19T14:52:13.726397499+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                # 没定义gateway，根据subnet猜测gateway默认为172.38.0.1
+                    "Subnet": "172.38.0.0/16"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+[root@rootuser ~]# 
+```
+
+3，编写shell脚本，用该脚本创建六个redis配置：
+
+```bash
+for port in $(seq 1 6); \
+do \
+mkdir -p /mydata/redis/node-${port}/conf
+touch /mydata/redis/node-${port}/conf/redis.conf
+cat << EOF >/mydata/redis/node-${port}/conf/redis.conf
+port 6379 
+bind 0.0.0.0
+cluster-enabled yes 
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+cluster-announce-ip 172.38.0.1${port}
+cluster-announce-port 6379
+cluster-announce-bus-port 16379
+appendonly yes
+EOF
+done
+```
+
+- `for port in $(seq 1 6); \
+  do \`，表示循环六次，代表六个redis容器
+- `mkdir -p /mydata/redis/node-${port}/conf
+  touch /mydata/redis/node-${port}/conf/redis.conf`，表示创建目录和文件
+- `cluster-enabled yes `，是集群的核心配置，表示开启集群
+- `cluster-announce-ip 172.38.0.1${port}`，连接具体的ip，不同redis容器的ip通过`${port}`改变。
+
+4，运行编写的shell脚本，直接黏贴到命令行执行即可：
+
+```bash
+[root@rootuser ~]# for port in $(seq 1 6); \
+> do \
+> mkdir -p /mydata/redis/node-${port}/conf
+> touch /mydata/redis/node-${port}/conf/redis.conf
+> cat << EOF >/mydata/redis/node-${port}/conf/redis.conf
+> port 6379 
+> bind 0.0.0.0
+> cluster-enabled yes 
+> cluster-config-file nodes.conf
+> cluster-node-timeout 5000
+> cluster-announce-ip 172.38.0.1${port}
+> cluster-announce-port 6379
+> cluster-announce-bus-port 16379
+> appendonly yes
+> EOF
+> done
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# cd  /mydata/redis
+# 可以看到六个节点，每个节点代表一个redis
+[root@rootuser redis]# ls
+node-1  node-2  node-3  node-4  node-5  node-6
+[root@rootuser redis]# cd node-1/conf
+[root@rootuser conf]# ls
+redis.conf
+# 查看通过命令配置的redis.conf文件，内容正确。
+[root@rootuser conf]# cat redis.conf 
+port 6379 
+bind 0.0.0.0
+cluster-enabled yes 
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+cluster-announce-ip 172.38.0.11
+cluster-announce-port 6379
+cluster-announce-bus-port 16379
+appendonly yes
+[root@rootuser conf]# 
+```
+
+5，编写用于启动redis-X容器的脚本：
+
+```bash
+# redis-1容器是作为redisserver的
+docker run -p 6371:6379 -p 16371:16379 --name redis-1 -v /mydata/redis/node-1/data:/data -v /mydata/redis/node-1/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+# redis-2容器是作为redisserver的
+docker run -p 6372:6379 -p 16372:16379 --name redis-2 -v /mydata/redis/node-2/data:/data -v /mydata/redis/node-2/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.12 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+# redis-3容器是作为redisserver的
+docker run -p 6373:6379 -p 16373:16379 --name redis-3 -v /mydata/redis/node-3/data:/data -v /mydata/redis/node-3/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.13 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+# redis-4容器是作为redisserver的
+docker run -p 6374:6379 -p 16374:16379 --name redis-4 -v /mydata/redis/node-4/data:/data -v /mydata/redis/node-4/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.14 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+# redis-5容器是作为redisserver的
+docker run -p 6375:6379 -p 16375:16379 --name redis-5 -v /mydata/redis/node-5/data:/data -v /mydata/redis/node-5/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.15 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+# redis-6容器是作为redisserver的
+docker run -p 6376:6379 -p 16376:16379 --name redis-6 -v /mydata/redis/node-6/data:/data -v /mydata/redis/node-6/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.16 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+
+```
+
+- -p：端口映射
+- -v：容器内部目录挂载在宿主机的数据卷上，方便从容器外部修改容器配置
+- -d：后台运行
+- --net：指定使用redis集群专用网卡
+- --ip：指定ip
+- `redis:5.0.9-alpine3.11`：redis镜像名
+- `redis-server /etc/redis/redis.conf `：指定了运行方式，通过redisserver的"/etc/redis/redis.conf"文件运行，表示当前运行的redis的角色是server。
+- 如果像“步骤3”用shell编程的话，用for循环搞定，方便且不容易错，但是这里还是一步步运行。
+
+6，在控制台运行所有启动redis的脚本，启动所有redis：
+
+```bash
+# 运行redis-1
+[root@rootuser conf]# docker run -p 6371:6379 -p 16371:16379 --name redis-1 -v /mydata/redis/node-1/data:/data -v /mydata/redis/node-1/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+Unable to find image 'redis:5.0.9-alpine3.11' locally
+5.0.9-alpine3.11: Pulling from library/redis
+cbdbe7a5bc2a: Pull complete 
+dc0373118a0d: Pull complete 
+cfd369fe6256: Pull complete 
+3e45770272d9: Pull complete 
+558de8ea3153: Pull complete 
+a2c652551612: Pull complete 
+Digest: sha256:83a3af36d5e57f2901b4783c313720e5fa3ecf0424ba86ad9775e06a9a5e35d0
+Status: Downloaded newer image for redis:5.0.9-alpine3.11
+0c2ad99ec882bfb6d80aa35e7adbc8ed4a8146891127e7ad6292326c6721ae18
+
+# 运行redis-2
+[root@rootuser conf]# docker run -p 6372:6379 -p 16372:16379 --name redis-2 -v /mydata/redis/node-2/data:/data -v /mydata/redis/node-2/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.12 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+ef47bc863efcec7eff996238631757abdd9614f1505317296e942cd1a74a3f95
+
+# 运行redis-3
+[root@rootuser conf]# docker run -p 6373:6379 -p 16373:16379 --name redis-3 -v /mydata/redis/node-3/data:/data -v /mydata/redis/node-3/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.13 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+7556b3bdac11611c5f25f17a3a5eaec8f75326daf577046fae6fdf261a39b64d
+
+# 运行redis-4
+[root@rootuser conf]# docker run -p 6374:6379 -p 16374:16379 --name redis-4 -v /mydata/redis/node-4/data:/data -v /mydata/redis/node-4/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.14 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+988556d549545918768b5a87af9b977aaaf1befb59b6c3ec182d8de0a398854c
+
+# 运行redis-5
+[root@rootuser conf]# docker run -p 6375:6379 -p 16375:16379 --name redis-5 -v /mydata/redis/node-5/data:/data -v /mydata/redis/node-5/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.15 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+bdbfcf27967cfa345b1b8a1e3ec481bf2bc8b9cc278d14cad04022cae6c5fc3f
+
+# 运行redis-6
+[root@rootuser conf]# docker run -p 6376:6379 -p 16376:16379 --name redis-6 -v /mydata/redis/node-6/data:/data -v /mydata/redis/node-6/conf/redis.conf:/etc/redis/redis.conf -d --net redis --ip 172.38.0.16 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf 
+19a8859752f4008300cc84ef5c10e9fe8cb379078095d826fbea1becf5376cf4
+
+# 确认六个容器都正常运行了
+[root@rootuser conf]# docker ps
+CONTAINER ID   IMAGE                    COMMAND                  CREATED              STATUS              PORTS                                                                                      NAMES
+19a8859752f4   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   3 seconds ago        Up 2 seconds        0.0.0.0:6376->6379/tcp, :::6376->6379/tcp, 0.0.0.0:16376->16379/tcp, :::16376->16379/tcp   redis-6
+bdbfcf27967c   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   About a minute ago   Up About a minute   0.0.0.0:6375->6379/tcp, :::6375->6379/tcp, 0.0.0.0:16375->16379/tcp, :::16375->16379/tcp   redis-5
+988556d54954   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   4 minutes ago        Up 4 minutes        0.0.0.0:6374->6379/tcp, :::6374->6379/tcp, 0.0.0.0:16374->16379/tcp, :::16374->16379/tcp   redis-4
+7556b3bdac11   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   5 minutes ago        Up 5 minutes        0.0.0.0:6373->6379/tcp, :::6373->6379/tcp, 0.0.0.0:16373->16379/tcp, :::16373->16379/tcp   redis-3
+ef47bc863efc   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   6 minutes ago        Up 6 minutes        0.0.0.0:6372->6379/tcp, :::6372->6379/tcp, 0.0.0.0:16372->16379/tcp, :::16372->16379/tcp   redis-2
+0c2ad99ec882   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   12 minutes ago       Up 12 minutes       0.0.0.0:6371->6379/tcp, :::6371->6379/tcp, 0.0.0.0:16371->16379/tcp, :::16371->16379/tcp   redis-1
+[root@rootuser conf]# 
+```
+
+
+
+7，进入任意redisserver容器，完成集群设置，这里进入redis-1容器：
+
+```sh
+# redis镜像没有bash命令，只有sh命令
+[root@rootuser conf]# docker exec -it redis-1 /bin/bash
+OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: exec: "/bin/bash": stat /bin/bash: no such file or directory: unknown
+[root@rootuser conf]# docker exec -it redis-1 /bin/sh
+
+# 进入容器后可以看到aof文件和nodes配置文件
+/data # ls
+appendonly.aof  nodes.conf
+
+# 创建集群：rediscli连接redisserver。连接方式为--cluster。create后接上集群成员的ip:port。--cluster-replicas定义从节点的个数(https://www.cnblogs.com/zhoujinyi/p/11606935.html)。
+/data #redis-cli --cluster create 172.38.0.11:6379 172.38.0.12:6379 172.38.0.13:6379 172.38.0.14:6379 172.38.0.15:6379 172.38.0.16:6379 --cluster-replicas 1
+>>> Performing hash slots allocation on 6 nodes...
+Master[0] -> Slots 0 - 5460
+Master[1] -> Slots 5461 - 10922
+Master[2] -> Slots 10923 - 16383
+Adding replica 172.38.0.15:6379 to 172.38.0.11:6379
+Adding replica 172.38.0.16:6379 to 172.38.0.12:6379
+Adding replica 172.38.0.14:6379 to 172.38.0.13:6379
+M: 541b7d237b641ac2ffc94d17c6ab96b18b26a638 172.38.0.11:6379
+   slots:[0-5460] (5461 slots) master
+M: a89c1f1245b264e4a402a3cf99766bcb6138dbca 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+M: 259e804d6df74e67a72e4206d7db691a300c775e 172.38.0.13:6379
+   slots:[10923-16383] (5461 slots) master
+S: 9b19170eea3ea1b92c58ad18c0b5522633a9e271 172.38.0.14:6379
+   replicates 259e804d6df74e67a72e4206d7db691a300c775e
+S: 061a9d38f22910aaf0ba1dbd21bf1d8f57bcb7d5 172.38.0.15:6379
+   replicates 541b7d237b641ac2ffc94d17c6ab96b18b26a638
+S: 7a16b9bbb0615ec95fc978fa62fc054df60536f0 172.38.0.16:6379
+   replicates a89c1f1245b264e4a402a3cf99766bcb6138dbca
+# 因为我们使用--cluster-replicas定义了每个主节点的从节点的个数是1，redis默认把六个ip对应的六个redisserver分成三主三从，如果同意这种集群设计就yes。这里打yes的时候要小心，因为打错了不能删除！！！
+Can I set the above configuration? (type 'yes' to accept): yes
+>>> Nodes configuration updated
+>>> Assign a different config epoch to each node
+>>> Sending CLUSTER MEET messages to join the cluster
+Waiting for the cluster to join
+...
+>>> Performing Cluster Check (using node 172.38.0.11:6379)
+M: 541b7d237b641ac2ffc94d17c6ab96b18b26a638 172.38.0.11:6379
+   slots:[0-5460] (5461 slots) master
+   1 additional replica(s)
+M: a89c1f1245b264e4a402a3cf99766bcb6138dbca 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+   1 additional replica(s)
+S: 7a16b9bbb0615ec95fc978fa62fc054df60536f0 172.38.0.16:6379
+   slots: (0 slots) slave
+   replicates a89c1f1245b264e4a402a3cf99766bcb6138dbca
+S: 061a9d38f22910aaf0ba1dbd21bf1d8f57bcb7d5 172.38.0.15:6379
+   slots: (0 slots) slave
+   replicates 541b7d237b641ac2ffc94d17c6ab96b18b26a638
+M: 259e804d6df74e67a72e4206d7db691a300c775e 172.38.0.13:6379
+   slots:[10923-16383] (5461 slots) master
+   1 additional replica(s)
+S: 9b19170eea3ea1b92c58ad18c0b5522633a9e271 172.38.0.14:6379
+   slots: (0 slots) slave
+   replicates 259e804d6df74e67a72e4206d7db691a300c775e
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+```
+
+- redis镜像中没有bash命令，只有sh命令
+- 网友：“这是三切片，一副本吧”
+
+8，在redis容器中，使用rediscli连接redisserver，查看信息：
+
+```sh
+# 注意连接方式为-c，表示用集群模式连接
+/data # redis-cli -c
+
+# 连接redisserver成功，查看一下集群信息，和配置的一致
+127.0.0.1:6379> cluster info
+cluster_state:ok
+cluster_slots_assigned:16384
+cluster_slots_ok:16384
+cluster_slots_pfail:0
+cluster_slots_fail:0
+cluster_known_nodes:6
+cluster_size:3
+cluster_current_epoch:6
+cluster_my_epoch:1
+cluster_stats_messages_ping_sent:278
+cluster_stats_messages_pong_sent:281
+cluster_stats_messages_sent:559
+cluster_stats_messages_ping_received:276
+cluster_stats_messages_pong_received:278
+cluster_stats_messages_meet_received:5
+cluster_stats_messages_received:559
+
+# 查看集群的节点信息
+127.0.0.1:6379> cluster nodes
+f6aedd084e20cddecd0c5a76d82ec9c7dde51bdb 172.38.0.15:6379@16379 slave 6f7ac6407729f1401c26de693c6de1f04d1f9021 0 1642584307619 5 connected
+# 看到当前节点的信息，myself体现本节点是当前节点
+6f7ac6407729f1401c26de693c6de1f04d1f9021 172.38.0.11:6379@16379 myself,master - 0 1642584304000 1 connected 0-5460
+dc8e664c50d473864d5f172a9ae8d26766e8fd6c 172.38.0.13:6379@16379 master - 0 1642584306015 3 connected 10923-16383
+c51169b6c02d43a995455539979296862f76749e 172.38.0.12:6379@16379 master - 0 1642584307519 2 connected 5461-10922
+20f0decd67f868d8ee7c5d0806031bec1ae43c16 172.38.0.16:6379@16379 slave c51169b6c02d43a995455539979296862f76749e 0 1642584307000 6 connected
+4f9bb7b1a0fb78f9db077e3e14caff2d4776ac03 172.38.0.14:6379@16379 slave dc8e664c50d473864d5f172a9ae8d26766e8fd6c 0 1642584306617 4 connected
+127.0.0.1:6379> 
+```
+
+9，保持rediscli到redisserver的连接，做一些处理：
+
+```sh
+# 通过rediscli操作存值
+127.0.0.1:6379> set k v
+-> Redirected to slot [7629] located at 172.38.0.12:6379
+OK
+172.38.0.12:6379> 
+```
+
+- "k"的值被ip为172.38.0.12:6379的节点处理，根据“步骤8”中的信息可以看到该节点是master节点。
+- 那么该master节点对应的slave节点应该也存了“k”的值，并且master172.38.0.12:6379宕机的话，它的从节点应该能顶上。
+
+10，新开xshell连接2，关闭master“172.38.0.12:6379”对应的容器，以看看slave节点表现：
+
+```bash
+# ip为172.38.0.12，那么宿主机端口应该使用的是6372，那么master的容器名应该是redis-2
+[root@rootuser ~]# docker ps
+CONTAINER ID   IMAGE                    COMMAND                  CREATED          STATUS          PORTS                                                                                      NAMES
+19a8859752f4   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   43 minutes ago   Up 43 minutes   0.0.0.0:6376->6379/tcp, :::6376->6379/tcp, 0.0.0.0:16376->16379/tcp, :::16376->16379/tcp   redis-6
+bdbfcf27967c   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   44 minutes ago   Up 44 minutes   0.0.0.0:6375->6379/tcp, :::6375->6379/tcp, 0.0.0.0:16375->16379/tcp, :::16375->16379/tcp   redis-5
+988556d54954   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   47 minutes ago   Up 47 minutes   0.0.0.0:6374->6379/tcp, :::6374->6379/tcp, 0.0.0.0:16374->16379/tcp, :::16374->16379/tcp   redis-4
+7556b3bdac11   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   48 minutes ago   Up 48 minutes   0.0.0.0:6373->6379/tcp, :::6373->6379/tcp, 0.0.0.0:16373->16379/tcp, :::16373->16379/tcp   redis-3
+ef47bc863efc   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   50 minutes ago   Up 50 minutes   0.0.0.0:6372->6379/tcp, :::6372->6379/tcp, 0.0.0.0:16372->16379/tcp, :::16372->16379/tcp   redis-2
+0c2ad99ec882   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   55 minutes ago   Up 55 minutes   0.0.0.0:6371->6379/tcp, :::6371->6379/tcp, 0.0.0.0:16371->16379/tcp, :::16371->16379/tcp   redis-1
+
+# 关闭master
+[root@rootuser ~]# docker stop redis-2
+redis-2
+[root@rootuser ~]# 
+```
+
+![image-20220119174219707](docker.assets/image-20220119174219707.png)
+
+
+
+11，回到xshell连接1对应的redis-cli的连接页面，尝试获取“k”的值：
+
+```sh
+# 尝试从redis集群获取k的值。redirect改变了redisserver，可以看到server的ip（每行命令的左边）从初始默认的127.0.0.1变成了存了“k”的值的172.38.0.16。
+127.0.0.1:6379> get k
+-> Redirected to slot [7629] located at 172.38.0.16:6379
+"v"
+
+# 查看关闭ip172.38.0.12对应容器后的集群情况
+172.38.0.16:6379> cluster nodes
+dc8e664c50d473864d5f172a9ae8d26766e8fd6c 172.38.0.13:6379@16379 master - 0 1642585710000 3 connected 10923-16383
+4f9bb7b1a0fb78f9db077e3e14caff2d4776ac03 172.38.0.14:6379@16379 slave dc8e664c50d473864d5f172a9ae8d26766e8fd6c 0 1642585709475 4 connected
+6f7ac6407729f1401c26de693c6de1f04d1f9021 172.38.0.11:6379@16379 master - 0 1642585710477 1 connected 0-5460
+f6aedd084e20cddecd0c5a76d82ec9c7dde51bdb 172.38.0.15:6379@16379 slave 6f7ac6407729f1401c26de693c6de1f04d1f9021 0 1642585711479 5 connected
+# 可以看到原172.38.0.12的slave172.38.0.16变成master了。
+20f0decd67f868d8ee7c5d0806031bec1ae43c16 172.38.0.16:6379@16379 myself,master - 0 1642585708000 7 connected 5461-10922
+# 可以看到master172.38.0.12fail了
+c51169b6c02d43a995455539979296862f76749e 172.38.0.12:6379@16379 master,fail - 1642585119832 1642585118529 2 connected
+172.38.0.16:6379> 
+```
+
+- 成功从ip“172.38.0.16”对应的node拿到了值，ip”172.38.0.16“对应的node是ip”172.38.0.12“对应的从机。说明slave节点替换了宕机的master节点。
+  - master和slave的绑定关系，可以在cluster创建时的命令行输出看到，是redis自动绑定的。
+
+
+
+## spingboot微服务打包docker镜像实战
+
+#### 构建springboot项目
+
+1，创建微服务
+
+![image-20220120112613569](docker.assets/image-20220120112613569.png)
+
+![image-20220120112702590](docker.assets/image-20220120112702590.png)
+
+2，编写一个controller用于测试，controller的名字为`ControllerForDockerTest.java`：
+
+```java
+package com.zhangyun.dockerspringboot.controller;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class ControllerForDockerTest {
+
+    @RequestMapping("/hello")
+    public String hello(){
+        return "hello zy";
+    }
+}
+```
+
+![image-20220120113601507](docker.assets/image-20220120113601507.png)
+
+3，本地启动springboot项目自测一下，成功展示controller规定的内容：
+
+![image-20220120113730529](docker.assets/image-20220120113730529.png)
+
+![image-20220120113742469](docker.assets/image-20220120113742469.png)
+
+#### 打包应用
+
+1，点击maven-》package，把springboot打成jar包：
+
+![image-20220120113920793](docker.assets/image-20220120113920793.png)
+
+![image-20220120114048706](docker.assets/image-20220120114048706.png)
+
+2，把idea运行的web关闭：![image-20220120114229105](docker.assets/image-20220120114229105.png)
+
+![image-20220120114249552](docker.assets/image-20220120114249552.png)
+
+3，在打出来的jar包的目录再次测试controller，还是能成功：
+
+![image-20220120114605902](docker.assets/image-20220120114605902.png)
+
+![image-20220120114644408](docker.assets/image-20220120114644408.png)
+
+![image-20220120114746495](docker.assets/image-20220120114746495.png)
+
+![image-20220120114759551](docker.assets/image-20220120114759551.png)
+
+
+
+
+
+#### 编写dockerfile
+
+1，idea中安装插件，不装的话Dockerfile不高亮：
+
+![image-20220120115141505](docker.assets/image-20220120115141505.png)
+
+![image-20220120115345465](docker.assets/image-20220120115345465.png)
+
+- 我这idea是自带了，就不用额外下载。
+
+2，编写dockerfile，注意dockerfile的位置：
+
+![image-20220120120038380](docker.assets/image-20220120120038380.png)
+
+```dockerfile
+# 基于java8镜像
+FROM java:8
+
+# 如果想导入当前文件夹的所有jar包的话，可以使用"*.jar"。“/app.jar”表示打包最后生成的一个应用。
+COPY *.jar /app.jar
+
+# 这个CMD信息会附加到ENTRYPOINT后，指定容器server使用的端口，这样docker run -P的时候就会为容器内的8080端口默认映射一个宿主机端口。
+CMD ["--server.port=8080"]
+
+# 镜像暴露8080端口
+EXPOSE 8080
+
+# build docker的时候执行命令
+ENTRYPOINT ["java","-jar","/app.jar"]
+```
+
+
+
+#### 构建镜像
+
+1，删除所有容器，营造干净docker环境：
+
+![image-20220120122043329](docker.assets/image-20220120122043329.png)
+
+2，构建目录`/home/idea`/dockerSpringBootTest，并把Dockerfile和Dockerfile需要的jar包上传到idea目录下:
+
+![image-20220120122727603](docker.assets/image-20220120122727603.png)
+
+3，xshell连接远程宿主机，构建镜像：
+
+```bash
+# 确保文件传上来了
+[root@rootuser dockerSpringBootTest]# ls
+Dockerfile  dockerspringboot-0.0.1-SNAPSHOT.jar
+
+# 构建镜像。球球不要忘了命令最后的“.”，表示当前路径。
+[root@rootuser dockerSpringBootTest]# docker build -f Dockerfile -t docker-springboot-integration .
+Sending build context to Docker daemon  17.56MB
+Step 1/5 : FROM java:8
+8: Pulling from library/java
+5040bd298390: Pull complete 
+fce5728aad85: Pull complete 
+76610ec20bf5: Pull complete 
+60170fec2151: Pull complete 
+e98f73de8f0d: Pull complete 
+11f7af24ed9c: Pull complete 
+49e2d6393f32: Pull complete 
+bb9cdec9c7f3: Pull complete 
+Digest: sha256:c1ff613e8ba25833d2e1940da0940c3824f03f802c449f3d1815a66b7f8c0e9d
+Status: Downloaded newer image for java:8
+ ---> d23bdf5b1b1b
+Step 2/5 : COPY *.jar /app.jar
+ ---> 8304867239aa
+Step 3/5 : CMD ["--server.port=8080"]
+ ---> Running in 188717b4917e
+Removing intermediate container 25b18fa6dd18
+ ---> a08705c8cd83
+Step 4/5 : EXPOSE 8080
+ ---> Running in e9b5cf4d6a2d
+Removing intermediate container e9b5cf4d6a2d
+ ---> 023ce6f51dc4
+Step 5/5 : ENTRYPOINT ["java","-jar","/app.jar"]
+ ---> Running in a8c16a72c731
+Removing intermediate container a8c16a72c731
+ ---> ff65de710aa6
+Successfully built ff65de710aa6
+Successfully tagged docker-springboot-integration:latest
+You have new mail in /var/spool/mail/root
+
+# 查看构建了的镜像
+[root@rootuser dockerSpringBootTest]# docker images
+REPOSITORY                      TAG                IMAGE ID       CREATED              SIZE
+# 看到了自己构建的镜像
+docker-springboot-integration   latest             ee92ba6b434e   About a minute ago   661MB
+docker72590/alpine              latest             f5a69fceabd2   2 weeks ago          5.59MB
+tomcat                          9.0                b8e65a4d736d   4 weeks ago          680MB
+tomcat                          latest             fb5657adc892   4 weeks ago          680MB
+redis                           5.0.9-alpine3.11   3661c84ee9d0   21 months ago        29.8MB
+java                            8                  d23bdf5b1b1b   5 years ago          643MB
+[root@rootuser dockerSpringBootTest]# 
+```
+
+#### 发布运行
+
+1，运行镜像：
+
+```bash
+# 根据镜像运行容器
+[root@rootuser dockerSpringBootTest]# docker run -d -P --name zy-springboot01 docker-springboot-integration
+1a73e66aa017b6492da8c5a043113119ee92b2550039e5489a712095f8323127
+
+# 确认容器运行起来了
+[root@rootuser dockerSpringBootTest]# docker ps
+CONTAINER ID   IMAGE                           COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+1a73e66aa017   docker-springboot-integration   "java -jar /app.jar …"   5 seconds ago   Up 4 seconds   0.0.0.0:49168->8080/tcp, :::49168->8080/tcp   zy-springboot01
+[root@rootuser dockerSpringBootTest]# 
+```
+
+- -d：后台运行
+- -P：使用默认端口映射
+- 容器**启动异常**使用`docker logs`命令查看容器运行细节即可。
+
+
+
+2，宿主机访问“/hello”请求：
+
+```bash
+# 在宿主机查看容器的49168port是否能接受请求，这个port49168是运行容器时-P默认映射的宿主机端口。能接收请求！
+[root@rootuser dockerSpringBootTest]# curl localhost:49168
+{"timestamp":"2022-01-20T06:05:55.284+00:00","status":404,"error":"Not Found","path":"/"}
+
+# 向宿主机本机49168端口发送“/hello”请求。成功显示hello zy。
+[root@rootuser dockerSpringBootTest]# curl localhost:49168/hello
+hello zy
+[root@rootuser dockerSpringBootTest]# 
+
+```
+
+
+
+3，尝试用浏览器发送请求，确保腾讯云安全组放开了49168端口。成功展示数据：
+
+![image-20220120141224235](docker.assets/image-20220120141224235.png)
+
+![image-20220120141312588](docker.assets/image-20220120141312588.png)
+
+
+
+#### 展望
+
+我们学会了docker之后，给别人交付的是一个镜像即可。
+
+但是企业实战的时候要编写很多镜像，所以最好学会compose+swarm处理多镜像的情况。
+
+
+
+
+
+
+
+## Docker Compose
+
+Docker Compose~=yaml。后端建议学完
+
+### 简介
+
+#### 之前VS现在
+
+之前使用容器的步骤：
+
+1. 编写Dockerfile
+2. docker build，根据Dockerfile构建镜像
+3. docker run，根据镜像运行容器
+
+对**每个**容器都要**手动**执行上面步骤，比较繁琐。
+
+
+
+现在管理使用容器的方式：
+
+- docker compose来轻松高效得管理容器，定义运行多个容器。
+
+#### 官方介绍
+
+[官网网址](https://docs.docker.com/compose/)
+
+Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure your application’s services. Then, with a single command, you create and start all the services from your configuration. To learn more about all the features of Compose, see [the list of features](https://docs.docker.com/compose/#features).
+
+意思核心：
+
+- 定义，运行多个容器
+- yaml配置文件
+-  single command，命令有哪些
+
+
+
+Compose works in all environments: production, staging, development, testing, as well as CI workflows. You can learn more about each case in [Common Use Cases](https://docs.docker.com/compose/#common-use-cases).
+
+意思核心：
+
+- 所有的环境都可以使用docker compose
+
+
+
+Using Compose is basically a three-step process:
+
+- 使用compose有三步
+
+1. Define your app’s environment with a `Dockerfile` so it can be reproduced anywhere.
+   - 编写Dockerfile保证项目可以在任何位置运行
+2. Define the services that make up your app in `docker-compose.yml` so they can be run together in an isolated environment.
+   - `the services`:要理解是什么
+   - `docker-compose.yml`:掌握怎么写
+3. Run `docker compose up` and the [Docker compose command](https://docs.docker.com/compose/cli-command/) starts and runs your entire app. You can alternatively run `docker-compose up` using the docker-compose binary.
+   - 启动项目
+
+
+
+docker compose作用总结为一句话：批量容器编排。
+
+
+
+#### 另外的理解
+
+docker compose是docker官方的开源项目，docker里没自带，需要安装。 
+
+
+
+`Dockerfile`让程序在任何地方运行。如果有web服务，服务需要redis容器，mysql容器，nginx容器等等多个容器，那么就需要频繁build+run，很麻烦。
+
+
+
+docker-compose.yml文件实例：
+
+```yaml
+version: "3.9"  # optional since v1.27.0
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    # 这个links会让启动web服务之前，先启动redis服务
+    links:
+      - redis
+  redis:
+    image: redis
+# 数据卷用于持久化
+volumes:
+  logvolume01: {}
+```
+
+- 有成百上千个服务的话，只要docker-compose.yml没写错，就能一个命令同时启动众多服务。
+
+
+
+docker-compose重要的概念：
+
+- services：服务。本质就是容器，应用。比如一个单独的redis/mysql/...容器，可以把它看做一个服务。
+- project：项目。一组互相关联的容器，形成的一个单独的对外的业务单元。
+  - 比如要上线一个博客项目，那么至少需要web+mysql容器，组合一起成为一个project。
+
+
+
+### Compose安装
+
+#### 下载
+
+1，下载docker-compose
+
+```bash
+# 不推荐使用官方的仓库，下载很慢
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# 使用国内仓库，快不少，安全性没仔细调查，但是目前看daocloud是正规公司。
+[root@rootuser ~]# curl -L https://get.daocloud.io/docker/compose/releases/download/1.25.5/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   423  100   423    0     0    606      0 --:--:-- --:--:-- --:--:--   606
+100 16.7M  100 16.7M    0     0  10.6M      0  0:00:01  0:00:01 --:--:-- 26.5M
+[root@rootuser ~]# 
+```
+
+- docker compose本质就是去github上下载一个文件，并安装到本地。
+- 这个下载命令别重复执行，因为目前没研究命令是往文件附加内容，还是覆盖文件。
+
+2，确认下载的docker-compose存在：
+
+![image-20220121115731770](docker.assets/image-20220121115731770.png)
+
+
+
+#### 授权
+
+使用官方授权命令：
+
+```bash
+# 授权
+[root@rootuser bin]# chmod +x /usr/local/bin/docker-compose
+You have new mail in /var/spool/mail/root
+
+# 查看docker-compose文件的权限
+[root@rootuser bin]# ll docker-compose 
+-rwxr-xr-x 1 root root 17586312 Jan 21 11:54 docker-compose
+[root@rootuser bin]# 
+```
+
+
+
+#### 检验安装
+
+查看docker-compose的version，能成功打印则安装成功：
+
+```bash
+[root@rootuser bin]# docker-compose version
+docker-compose version 1.25.5, build 8a1c60f6
+docker-py version: 4.1.0
+CPython version: 3.7.5
+OpenSSL version: OpenSSL 1.1.0l  10 Sep 2019
+[root@rootuser bin]#
+```
+
+- docker-compose命令在任何目录位置都能执行。
+
+
+
+### 体验Compose
+
+####  准备
+
+[官网网址](https://docs.docker.com/compose/gettingstarted/)
+
+思想：
+
+- 使用Compose做一个python web，用到了redis。
+
+准备：
+
+- 需要安装Docker Engine（即Docker）+Docker Compose
+- 不需要安装python+redis，因为docker镜像提供了python+redis。
+
+
+
+#### 初始设置
+
+1，为项目创建一个文件夹（项目目录），并来到项目目录：
+
+```bash
+[root@rootuser home]# mkdir composetest
+[root@rootuser home]# cd composetest
+[root@rootuser composetest]# pwd
+/home/composetest
+[root@rootuser composetest]# 
+```
+
+2，在项目文件夹创建一个`app.py`文件，然后写入如下内容：
+
+```python
+# 导入time+redis包，和flask框架
+import time
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+# 使用了redis缓存（cache）
+cache = redis.Redis(host='redis', port=6379)
+
+def get_hit_count():
+    retries = 5
+    while True:
+        try:
+            # 每次调用本方法会让hits自增
+            return cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
+
+# 类似于springboot的路由，访问该方法会打印自增的次数 
+@app.route('/')
+def hello():
+    count = get_hit_count()
+    return 'Hello World! I have been seen {} times.\n'.format(count)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0",debug=True)
+```
+
+![image-20220121161930892](docker.assets/image-20220121161930892.png)
+
+
+
+3，新建文件`requirements.txt`来记录导入的依赖包，存入如下内容：
+
+```txt
+flask
+redis
+```
+
+![image-20220121133630104](docker.assets/image-20220121133630104.png)
+
+
+
+#### 创建Dockerfile
+
+在这一步，使用Dockerfile创建一个镜像。镜像包含了python应用需要的所有依赖。
+
+1，**(废弃，原因见步骤2)**，在项目目录中创建文件`Dockerfile`，并写入如下内容：
+
+```dockerfile
+# syntax=docker/dockerfile:1
+
+# 基于Python 3.7 编写镜像
+FROM python:3.7-alpine
+
+# 设置工作目录
+WORKDIR /code
+
+# 设置flask命令需要的环境变量
+ENV FLASK_APP=app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+
+# 安装gcc和其他的依赖
+RUN apk add --no-cache gcc musl-dev linux-headers
+
+# 从宿主机复制requirements.txt进容器，并安装python依赖
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+# 为镜像添加元数据，让容器监听5000端口
+EXPOSE 5000
+
+# 把宿主机的当前目录（项目目录）下的内容，复制到容器内的工作目录（workdir）下
+COPY . .
+
+# 设置容器的默认命令`flask run`来启动flask框架
+CMD ["flask", "run"]
+```
+
+2，但是官方这个要用gcc，下载很慢，我们只使用python+flask即可,把Dockerfile文件内容改为如下：
+
+```dockerfile
+# 基于python3.6镜像构建镜像
+FROM python:3.6-alpine
+# 将宿主机当前目录（项目目录）添加.到镜像的/code路径（workdir）下
+ADD . /code
+# 将容器的工作目录设置为/code
+WORKDIR /code
+# 根据requirements.txt的内容安装python依赖
+RUN pip install -r requirements.txt
+# 把启动容器时运行的默认命令设置为“python app.py”
+CMD ["python","app.py"]
+```
+
+
+
+3，确保文件已成功创建并写入：
+
+![image-20220121154352662](docker.assets/image-20220121154352662.png)
+
+- 注释的如果有中文乱码不用管，不影响运行
+
+#### Compose文件中定义服务
+
+1，项目目录下创建`docker-compose.yml`，并写入如下内容：
+
+```yml
+# 官网上示例version是3.9，但是版本太高会报错；根据报错提示降版本成3.8或3；这里使用“docker-compose version”拿到的版本会报错，是因为这里的version是Compose file format的版本，而不是Docker Compose的版本。
+version: "3.8"
+services:
+  web:
+    # 不使用Docker Compose的时候，我们就是根据Dockerfile用Docker build命令生成一个镜像。
+    build: .
+    ports:
+      - "5000:5000"
+  redis:
+    image: "redis:alpine"
+```
+
+- 这个Compose文件定义了两个服务：web+redis
+  - web服务：web服务使用**Dockerfile**在当前目录构建了镜像。web服务把宿主机和容器的5000端口绑定了，容器在dockerfile中设置了暴露的也正是5000端口。这个示例服务使用的是flaskweb服务提供者默认的5000端口。
+  - redis服务：redis服务使用从Docker Hub registry**拉下来**的官方redis镜像。
+
+2，确保文件已成功创建并写入：
+
+![image-20220121154540912](docker.assets/image-20220121154540912.png)
+
+#### 使用Compose构建+运行应用程序
+
+1，在宿主机的项目目录中，使用`docker-compose up`来启动项目：
+
+```bash
+# 查看当前目录中有哪些文件
+[root@rootuser composetest]# ls
+app.py  docker-compose.yml  Dockerfile  requirements.txt
+
+# 运行up命令
+[root@rootuser composetest]# docker-compose up
+```
+
+- 提示版本不对的，根据报错提示依次降docker-compose.yml中version测试（版本改为3.8，3，2试试）
+
+- 卡在11/13的话尝试：
+
+  - 不下载gcc那行的东西，在Dockerfile中注释掉gcc所在的行（没尝试）
+  - 科学上网+重复docker-compose up（结果：还是卡死）
+  - 给下不下来的换个源（没尝试，不知道这个源是宿主机还是容器的）
+  - 不使用官方的Dockerfile，而是用狂神的Dockerfile（我选择的方案）
+
+- 使用狂神的Dockerfile还报错的话：
+
+  - 这里报错的还有一个原因就是python的版本过低导致，需要执行pip install requests和pip install build来解决。
+
+  - pip更新出问题的话，可能是pip版本太低导致的；web服务exit也可能和pip版本有关。尝试用提示的`pip install --upgrade pip`更新：
+
+    ![image-20220121160229584](docker.assets/image-20220121160229584.png)
+
+  - 使用`pip install --upgrade pip`更新失败报错`Command “python setup.py egg_info“ failed with error code 1 in /tmp/pip-build-*`的话，参考[文章](https://blog.csdn.net/xiaojun1288/article/details/121357721)的方法2更新（即我接下来步骤2的操作）。
+
+
+
+2，更新pip：
+
+```bash
+# 删除之前的pip
+[root@rootuser composetest]# yum -y remove python2-pip python-pip
+Loaded plugins: fastestmirror, langpacks, product-id, search-disabled-repos, subscription-manager
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+No Match for argument: python2-pip
+No Match for argument: python-pip
+No Packages marked for removal
+
+# 安装新pip
+[root@rootuser composetest]# yum -y install python2-pip
+Loaded plugins: fastestmirror, langpacks, product-id, search-disabled-repos, subscription-manager
+
+This system is not registered with an entitlement server. You can use subscription-manager to register.
+
+Loading mirror speeds from cached hostfile
+Resolving Dependencies
+--> Running transaction check
+---> Package python2-pip.noarch 0:8.1.2-14.el7 will be installed
+--> Finished Dependency Resolution
+
+Dependencies Resolved
+
+=============================================================================================================================================================================
+ Package                                     Arch                                   Version                                       Repository                            Size
+=============================================================================================================================================================================
+Installing:
+ python2-pip                                 noarch                                 8.1.2-14.el7                                  epel                                 1.7 M
+
+Transaction Summary
+=============================================================================================================================================================================
+Install  1 Package
+
+Total download size: 1.7 M
+Installed size: 7.2 M
+Downloading packages:
+python2-pip-8.1.2-14.el7.noarch.rpm                                                                                                                   | 1.7 MB  00:00:01     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : python2-pip-8.1.2-14.el7.noarch                                                                                                                           1/1 
+  Verifying  : python2-pip-8.1.2-14.el7.noarch                                                                                                                           1/1 
+
+Installed:
+  python2-pip.noarch 0:8.1.2-14.el7                                                                                                                                          
+
+Complete!
+[root@rootuser composetest]# pip install zabbix-api
+Collecting zabbix-api
+  Downloading http://mirrors.tencentyun.com/pypi/packages/e3/ed/2092731880f0de5b07067fc446dc0fc5166f2ee98018b6d524cd3e28a69d/zabbix-api-0.5.4.tar.gz
+Installing collected packages: zabbix-api
+  Running setup.py install for zabbix-api ... done
+Successfully installed zabbix-api-0.5.4
+You are using pip version 8.1.2, however version 21.3.1 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
+You have new mail in /var/spool/mail/root
+[root@rootuser composetest]# 
+```
+
+
+
+3，**清空所有之前安装的容器和镜像**，确保宿主机项目目录中四个文件都在，重新运行up，这回两个服务都没exit：
+
+```bash
+# 查看当前目录中有哪些文件
+[root@rootuser composetest]# ls
+app.py  docker-compose.yml  Dockerfile  requirements.txt
+
+[root@rootuser composetest]# docker-compose up
+Building web
+Step 1/5 : FROM python:3.6-alpine
+ ---> 3a9e80fa4606
+Step 2/5 : ADD . /code
+ ---> Using cache
+ ---> f5e01655d652
+Step 3/5 : WORKDIR /code
+ ---> Using cache
+ ---> 908b56235d6c
+Step 4/5 : RUN pip install -r requirements.txt
+ ---> Running in f5e0b478dd22
+Collecting flask
+  Downloading Flask-2.0.2-py3-none-any.whl (95 kB)
+Collecting redis
+  Downloading redis-4.1.1-py3-none-any.whl (173 kB)
+Collecting Jinja2>=3.0
+  Downloading Jinja2-3.0.3-py3-none-any.whl (133 kB)
+Collecting Werkzeug>=2.0
+  Downloading Werkzeug-2.0.2-py3-none-any.whl (288 kB)
+Collecting click>=7.1.2
+  Downloading click-8.0.3-py3-none-any.whl (97 kB)
+Collecting itsdangerous>=2.0
+  Downloading itsdangerous-2.0.1-py3-none-any.whl (18 kB)
+Collecting packaging>=20.4
+  Downloading packaging-21.3-py3-none-any.whl (40 kB)
+Collecting deprecated>=1.2.3
+  Downloading Deprecated-1.2.13-py2.py3-none-any.whl (9.6 kB)
+Collecting importlib-metadata>=1.0
+  Downloading importlib_metadata-4.8.3-py3-none-any.whl (17 kB)
+Collecting wrapt<2,>=1.10
+  Downloading wrapt-1.13.3-cp36-cp36m-musllinux_1_1_x86_64.whl (77 kB)
+Collecting typing-extensions>=3.6.4
+  Downloading typing_extensions-4.0.1-py3-none-any.whl (22 kB)
+Collecting zipp>=0.5
+  Downloading zipp-3.6.0-py3-none-any.whl (5.3 kB)
+Collecting MarkupSafe>=2.0
+  Downloading MarkupSafe-2.0.1-cp36-cp36m-musllinux_1_1_x86_64.whl (29 kB)
+Collecting pyparsing!=3.0.5,>=2.0.2
+  Downloading pyparsing-3.0.7-py3-none-any.whl (98 kB)
+Collecting dataclasses
+  Downloading dataclasses-0.8-py3-none-any.whl (19 kB)
+Installing collected packages: zipp, typing-extensions, wrapt, pyparsing, MarkupSafe, importlib-metadata, dataclasses, Werkzeug, packaging, Jinja2, itsdangerous, deprecated, click, redis, flask
+Successfully installed Jinja2-3.0.3 MarkupSafe-2.0.1 Werkzeug-2.0.2 click-8.0.3 dataclasses-0.8 deprecated-1.2.13 flask-2.0.2 importlib-metadata-4.8.3 itsdangerous-2.0.1 packaging-21.3 pyparsing-3.0.7 redis-4.1.1 typing-extensions-4.0.1 wrapt-1.13.3 zipp-3.6.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+WARNING: You are using pip version 21.2.4; however, version 21.3.1 is available.
+You should consider upgrading via the '/usr/local/bin/python -m pip install --upgrade pip' command.
+Removing intermediate container f5e0b478dd22
+ ---> 603daa87c853
+Step 5/5 : CMD ["python","app.py"]
+ ---> Running in 38e043034582
+Removing intermediate container 38e043034582
+ ---> 93f19e4798b2
+
+Successfully built 93f19e4798b2
+Successfully tagged composetest_web:latest
+WARNING: Image for service web was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating composetest_web_1   ... done
+Creating composetest_redis_1 ... done
+Attaching to composetest_redis_1, composetest_web_1
+redis_1  | 1:C 21 Jan 2022 08:34:11.422 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1  | 1:C 21 Jan 2022 08:34:11.422 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1  | 1:C 21 Jan 2022 08:34:11.422 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1  | 1:M 21 Jan 2022 08:34:11.423 * monotonic clock: POSIX clock_gettime
+redis_1  | 1:M 21 Jan 2022 08:34:11.424 * Running mode=standalone, port=6379.
+redis_1  | 1:M 21 Jan 2022 08:34:11.424 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1  | 1:M 21 Jan 2022 08:34:11.424 # Server initialized
+redis_1  | 1:M 21 Jan 2022 08:34:11.424 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis_1  | 1:M 21 Jan 2022 08:34:11.424 * Ready to accept connections
+web_1    |  * Serving Flask app 'app' (lazy loading)
+web_1    |  * Environment: production
+web_1    |    WARNING: This is a development server. Do not use it in a production deployment.
+web_1    |    Use a production WSGI server instead.
+web_1    |  * Debug mode: on
+web_1    |  * Running on all addresses.
+web_1    |    WARNING: This is a development server. Do not use it in a production deployment.
+web_1    |  * Running on http://172.18.0.2:5000/ (Press CTRL+C to quit)
+web_1    |  * Restarting with stat
+web_1    |  * Debugger is active!
+web_1    |  * Debugger PIN: 109-361-712
+
+```
+
+- 启动流程：
+  1. 创建网络
+  2. 执行docker-compose.yaml
+  3. 启动服务composetest_web_1和composetest_redis_1
+     - 宿主机项目目录文件夹的名字叫composetest
+     - docker_compose.yml中定义的服务名为web和redis
+     - "_1"是根据一些默认规则自动生成的，网友说是副本数，之余默认规则一会会讲。
+
+
+
+4，保持pythonweb+redis服务页面不动，另开一个xshell连接，查看服务情况，两个服务都在：
+
+![image-20220121171140138](docker.assets/image-20220121171140138.png)
+
+![image-20220121164317787](docker.assets/image-20220121164317787.png)
+
+
+
+#### 测试项目功能
+
+1，访问宿主机的5000端口，该端口被pythonweb服务监听，成功展示效果：
+
+```bash
+# 第一次访问
+[root@rootuser composetest]# curl localhost:5000
+Hello World! I have been seen 1 times.
+You have new mail in /var/spool/mail/root
+
+# 第二次访问
+[root@rootuser composetest]# curl localhost:5000
+Hello World! I have been seen 2 times.
+[root@rootuser composetest]# 
+```
+
+- 每次访问端口，都会让redis缓存中的“hits”计数加一，并打印出来
+
+
+
+2，放开腾讯云的5000端口，在浏览器上刷新页面，成功展示效果：
+
+![image-20220121171842853](docker.assets/image-20220121171842853.png)
+
+![image-20220121171630997](docker.assets/image-20220121171630997.png)
+
+
+
+![image-20220121171819991](docker.assets/image-20220121171819991.png)
+
+
+
+#### 思考项目
+
+1，查看镜像：
+
+![image-20220121172116198](docker.assets/image-20220121172116198.png)
+
+- 有pythonweb+redis两个服务的来源镜像
+
+2，查看容器：
+
+![image-20220121172304987](docker.assets/image-20220121172304987.png)
+
+- 两个正在运行的容器在提供服务
+- 服务名构成：项目目录名\_服务名\_副本数量。副本数目是因为，在集群状态下，服务不可能只有一个运行实例，而是有多个实例，是弹性的。
+
+3，查看docker-compose up时创建的网络：
+
+![image-20220121173225245](docker.assets/image-20220121173225245.png)
+
+- 只要项目通过compose启动，compose就会给项目生成一个独有的网络。
+- 如果是10个服务构建了一个项目，那么compose会自动帮我们维护一个网络，项目的所有服务都在同一个网络下；服务在同一个网络下就可以通过容器名访问服务，这么久自动实现任务分配（参见docker redis集群实战）。
+
+4，细看docker-compose up时创建的网络：
+
+```bash
+[root@rootuser composetest]# docker inspect composetest_default
+[
+    {
+        "Name": "composetest_default",
+        "Id": "b69f4393d3ad0c7f5444e5b44f804c0b43b70373ef6b5e387b60aade11f3be3d",
+        "Created": "2022-01-21T14:24:55.192546034+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": true,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        # 看到网络内包含的两个提供服务的容器
+        "Containers": {
+            "84c08f5009c30acb9639f31be093f118165c0cd6a090c4fa4844cd1c5cd9bbb7": {
+                "Name": "composetest_web_1",
+                "EndpointID": "36886c0d3d84032a356aad62f2c139dbb76c0f0042a749356e9d0845bd566839",
+                "MacAddress": "02:42:ac:12:00:02",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            },
+            "d8854435bce5806bd2111d9ad5ec22713d2c7f6e0cd84b957c1b408ffcc6ff4b": {
+                "Name": "composetest_redis_1",
+                "EndpointID": "5d35c11356d750270b7ea06a8f8037edc7cac160736c3876678c7c990229b725",
+                "MacAddress": "02:42:ac:12:00:03",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {
+            "com.docker.compose.network": "default",
+            "com.docker.compose.project": "composetest",
+            "com.docker.compose.version": "1.25.5"
+        }
+    }
+]
+[root@rootuser composetest]# 
+```
+
+5，审视redis的使用：
+
+![image-20220121174012226](docker.assets/image-20220121174012226.png)
+
+- 这里直接用redis，redis是服务名，能通过服务名访问容器就是因为pythonweb服务和redis服务在一个网络下；网络不同则不能通过服务名联通。
+
+
+
+#### 停止项目
+
+1，方法1,在项目维持页使用`ctrl+c`，一键关闭项目中的所有容器（推荐）：
+
+![image-20220121174517674](docker.assets/image-20220121174517674.png)
+
+2，在项目目录下使用`docker-compose down`
+
+
+
+#### 最后思考
+
+之前都是使用单个的docker run来启动单个容器。现在使用docker-compose，通过编写docker-compose.yml配置文件，可以通过compose一键启动/停止项目的所有服务。
+
+
+
+docker小结：
+
+1. docker镜像，run后为容器
+2. Dockerfile构建镜像，即服务打包
+3. docker-compose启动含多个服务的项目（app）。(编排，多个微服务/环境)
+
+
+
+### Compose 配置编写规则
+
+[官方文档](https://docs.docker.com/compose/compose-file/)
+
+Docker Compose的核心是`docker-compose.yaml`。
+
+docker-compose.yaml可以理解为只有三层！
+
+
+
+#### 三层介绍
+
+```yaml
+# 第一层，Compose file format的版本，不是docker compose的版本。
+version:'' 
+
+# 第二层，服务们
+services:
+	# 具体某服务
+	服务1: web
+		# 服务配置。原来写的docker容器的配置，都可以在这做。
+		images:
+		build:
+		network:
+		...	
+	服务2: redis
+		...
+    服务3: xxx
+    	...
+    	
+# 第三层，其他配置。网络/卷,全局规则等。。
+volumes:
+networks:
+configs:
+```
+
+- 第一层的Compose file format的版本和docker engine的版本有关系（见官网）。写错是不行的。
+
+- 核心是第一层和第二层。项目中没要求的话，不配置第三层也是可以的
+
+
+
+#### Version3为例学官网
+
+1，第一层version根据Docker Engine release定：
+
+![image-20220121213917017](docker.assets/image-20220121213917017.png)
+
+2，第二层services+第三层的内容，根据网页右侧提示来写：
+
+![image-20220121214458527](docker.assets/image-20220121214458527.png)
+
+
+
+#### 重点学习
+
+1，depends_on：
+
+![image-20220121215556845](docker.assets/image-20220121215556845.png)
+
+- 很多服务是有依赖关系的，比如web服务依赖redis服务，所以要保证先启动redis再启动web；这个时候可以使用depends_on来指明依赖关系。
+- 以本图片为例，当前的“web服务（Dockerfile自建的镜像）“依赖于“redis镜像提供的服务”和“postgres镜像提供的服务”，则”web服务“的`depends_on`指定依赖服务的服务名即”redis“和”db“。
+
+
+
+2，deploy：
+
+![image-20220121220406428](docker.assets/image-20220121220406428.png)
+
+- 这是集群中用的
+- replicas：副本个数
+- 这个deploy都是集群相关的内容，后面都用k8s替代了。
+
+
+
+#### 学习方式
+
+1，[官方文档](https://docs.docker.com/compose/compose-file)
+
+2，开源项目的compose.yaml
+
+- 开源项目里会有web，mysql，redis等各个服务单元，看看它们是怎么编写，然后才能一键启动的。
+
+
+
+### 使用Compose一键部署WP博客
+
+如果不使用Compose，每个人部署博客都需要 下载程序，安装数据库，配置（麻烦）。。。但是使用Compose的话，所有人都可以根据Compose一键安装。
+
+根据[官方部署教程网址](https://docs.docker.com/samples/wordpress/)实战如下：
+
+
+
+1，创建空项目目录，进入项目目录：
+
+```bash
+[root@rootuser home]# mkdir my_wordpress
+[root@rootuser home]# cd my_wordpress/
+[root@rootuser my_wordpress]# pwd
+/home/my_wordpress
+[root@rootuser my_wordpress]# 
+```
+
+
+
+2，编写`docker-compose.yml`的内容如下：
+
+```yaml
+# 官方教程为3.9，但是会报步骤3的错，我调成3.8
+version: "3.8"
+    
+services:
+  # 数据持久化服务
+  db:
+    # 数据持久化服务使用的是官方mysql5.7镜像
+    image: mysql:5.7
+    # 数据卷挂载做数据持久化；与最下面的volumes对应。-是 子结构，yaml'语法就是如此
+    volumes:
+      - db_data:/var/lib/mysql
+    # 总是重启
+    restart: always
+    # 环境配置，配置了一些键值对
+    environment:
+      MYSQL_ROOT_PASSWORD: somewordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+  
+  # wordpress服务  
+  wordpress:
+    depends_on:
+      # 先启动db再启动wordpress
+      - db
+    # 下载了官方wordpress的镜像提供服务
+    image: wordpress:latest
+    # 数据卷挂载，但是这猜测是为了方便操控容器而不是为了数据持久化；与最下面的volumes对应。
+    volumes:
+      - wordpress_data:/var/www/html
+    # 暴露端口；宿主机的8000端口绑定wp容器内部的80端口。
+    ports:
+      - "8000:80"
+    # 总是重启
+    restart: always
+    # 配置一些环境变量
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+# 这块的作用是？
+volumes:
+  db_data: {}
+  wordpress_data: {}
+```
+
+- 开启WordPress和Mysql服务；Mysql服务使用了数据卷挂载做数据持久化，这样Mysql容器被删除的话数据不会丢失。
+- wordpress镜像自带了php和web
+
+![image-20220122102032526](docker.assets/image-20220122102032526.png)
+
+
+
+3，尝试启动项目,报错：
+
+```bash
+[root@rootuser my_wordpress]# docker-compose up
+ERROR: Version in "./docker-compose.yml" is unsupported. You might be seeing this error because you're using the wrong Compose file version. Either specify a supported version (e.g "2.2" or "3.3") and place your service definitions under the `services` key, or omit the `version` key and place your service definitions at the root of the file to use version 1.
+For more on the Compose file format versions, see https://docs.docker.com/compose/compose-file/
+You have new mail in /var/spool/mail/root
+[root@rootuser my_wordpress]# 
+```
+
+- 根据提示是版本不合适，把版本从3.9改成3.8试试。
+
+
+
+4，再起尝试启动项目，成功“
+
+```bash
+[root@rootuser my_wordpress]# docker-compose up
+Creating network "my_wordpress_default" with the default driver
+Creating volume "my_wordpress_db_data" with default driver
+Creating volume "my_wordpress_wordpress_data" with default driver
+Pulling db (mysql:5.7)...
+5.7: Pulling from library/mysql
+72a69066d2fe: Pull complete
+93619dbc5b36: Pull complete
+99da31dd6142: Pull complete
+626033c43d70: Pull complete
+37d5d7efb64e: Pull complete
+ac563158d721: Pull complete
+d2ba16033dad: Pull complete
+0ceb82207cd7: Pull complete
+37f2405cae96: Pull complete
+e2482e017e53: Pull complete
+70deed891d42: Pull complete
+Digest: sha256:f2ad209efe9c67104167fc609cca6973c8422939491c9345270175a300419f94
+Status: Downloaded newer image for mysql:5.7
+Pulling wordpress (wordpress:latest)...
+latest: Pulling from library/wordpress
+a2abf6c4d29d: Pull complete
+c5608244554d: Pull complete
+2d07066487a0: Pull complete
+1b6dfaf1958c: Pull complete
+32c5e6a60073: Pull complete
+90cf855b27cc: Pull complete
+8b0f1068c586: Pull complete
+5355461305e8: Pull complete
+ad1eec592342: Pull complete
+e03fbc76cb78: Pull complete
+1f5796e48b39: Pull complete
+72fbe8e1d4e7: Pull complete
+96edece66175: Pull complete
+5f46f0743de2: Pull complete
+c9f9671a5e1f: Pull complete
+3f543dcd35b1: Pull complete
+c88e21a0c2a0: Pull complete
+964b4457a910: Pull complete
+0d55fb9a64ef: Pull complete
+fb009ff7c567: Pull complete
+4f058a67a50d: Pull complete
+Digest: sha256:fc33b796b04162a0db2e9ea9b4c361a07058b21597b1317ad9ab3ea4593de241
+Status: Downloaded newer image for wordpress:latest
+Creating my_wordpress_db_1 ... done
+Creating my_wordpress_wordpress_1 ... done
+Attaching to my_wordpress_db_1, my_wordpress_wordpress_1
+db_1         | 2022-01-22 02:36:29+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.36-1debian10 started.
+db_1         | 2022-01-22 02:36:29+00:00 [Note] [Entrypoint]: Switching to dedicated user 'mysql'
+db_1         | 2022-01-22 02:36:29+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.36-1debian10 started.
+db_1         | 2022-01-22 02:36:29+00:00 [Note] [Entrypoint]: Initializing database files
+db_1         | 2022-01-22T02:36:29.419205Z 0 [Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+wordpress_1  | WordPress not found in /var/www/html - copying now...
+db_1         | 2022-01-22T02:36:29.811862Z 0 [Warning] InnoDB: New log files created, LSN=45790
+db_1         | 2022-01-22T02:36:29.924784Z 0 [Warning] InnoDB: Creating foreign key constraint system tables.
+db_1         | 2022-01-22T02:36:30.029125Z 0 [Warning] No existing UUID has been found, so we assume that this is the first time that this server has been started. Generating a new UUID: 1ad07bf0-7b2c-11ec-b3b5-0242ac130002.
+db_1         | 2022-01-22T02:36:30.039266Z 0 [Warning] Gtid table is not ready to be used. Table 'mysql.gtid_executed' cannot be opened.
+wordpress_1  | Complete! WordPress has been successfully copied to /var/www/html
+wordpress_1  | No 'wp-config.php' found in /var/www/html, but 'WORDPRESS_...' variables supplied; copying 'wp-config-docker.php' (WORDPRESS_DB_HOST WORDPRESS_DB_NAME WORDPRESS_DB_PASSWORD WORDPRESS_DB_USER)
+db_1         | 2022-01-22T02:36:30.601912Z 0 [Warning] A deprecated TLS version TLSv1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:30.601932Z 0 [Warning] A deprecated TLS version TLSv1.1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:30.602631Z 0 [Warning] CA certificate ca.pem is self signed.
+wordpress_1  | AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.19.0.3. Set the 'ServerName' directive globally to suppress this message
+wordpress_1  | AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.19.0.3. Set the 'ServerName' directive globally to suppress this message
+wordpress_1  | [Sat Jan 22 02:36:30.725404 2022] [mpm_prefork:notice] [pid 1] AH00163: Apache/2.4.51 (Debian) PHP/7.4.27 configured -- resuming normal operations
+wordpress_1  | [Sat Jan 22 02:36:30.725458 2022] [core:notice] [pid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+db_1         | 2022-01-22T02:36:30.868032Z 1 [Warning] root@localhost is created with an empty password ! Please consider switching off the --initialize-insecure option.
+db_1         | 2022-01-22 02:36:34+00:00 [Note] [Entrypoint]: Database files initialized
+db_1         | 2022-01-22 02:36:34+00:00 [Note] [Entrypoint]: Starting temporary server
+db_1         | 2022-01-22 02:36:34+00:00 [Note] [Entrypoint]: Waiting for server startup
+db_1         | 2022-01-22T02:36:35.207524Z 0 [Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+db_1         | 2022-01-22T02:36:35.209483Z 0 [Note] mysqld (mysqld 5.7.36) starting as process 77 ...
+db_1         | 2022-01-22T02:36:35.212493Z 0 [Note] InnoDB: PUNCH HOLE support available
+db_1         | 2022-01-22T02:36:35.212514Z 0 [Note] InnoDB: Mutexes and rw_locks use GCC atomic builtins
+db_1         | 2022-01-22T02:36:35.212519Z 0 [Note] InnoDB: Uses event mutexes
+db_1         | 2022-01-22T02:36:35.212523Z 0 [Note] InnoDB: GCC builtin __atomic_thread_fence() is used for memory barrier
+db_1         | 2022-01-22T02:36:35.212526Z 0 [Note] InnoDB: Compressed tables use zlib 1.2.11
+db_1         | 2022-01-22T02:36:35.212532Z 0 [Note] InnoDB: Using Linux native AIO
+db_1         | 2022-01-22T02:36:35.212866Z 0 [Note] InnoDB: Number of pools: 1
+db_1         | 2022-01-22T02:36:35.213024Z 0 [Note] InnoDB: Using CPU crc32 instructions
+db_1         | 2022-01-22T02:36:35.215484Z 0 [Note] InnoDB: Initializing buffer pool, total size = 128M, instances = 1, chunk size = 128M
+db_1         | 2022-01-22T02:36:35.224024Z 0 [Note] InnoDB: Completed initialization of buffer pool
+db_1         | 2022-01-22T02:36:35.226671Z 0 [Note] InnoDB: If the mysqld execution user is authorized, page cleaner thread priority can be changed. See the man page of setpriority().
+db_1         | 2022-01-22T02:36:35.238649Z 0 [Note] InnoDB: Highest supported file format is Barracuda.
+db_1         | 2022-01-22T02:36:35.257829Z 0 [Note] InnoDB: Creating shared tablespace for temporary tables
+db_1         | 2022-01-22T02:36:35.257902Z 0 [Note] InnoDB: Setting file './ibtmp1' size to 12 MB. Physically writing the file full; Please wait ...
+db_1         | 2022-01-22T02:36:35.295525Z 0 [Note] InnoDB: File './ibtmp1' size is now 12 MB.
+db_1         | 2022-01-22T02:36:35.296216Z 0 [Note] InnoDB: 96 redo rollback segment(s) found. 96 redo rollback segment(s) are active.
+db_1         | 2022-01-22T02:36:35.296237Z 0 [Note] InnoDB: 32 non-redo rollback segment(s) are active.
+db_1         | 2022-01-22T02:36:35.296797Z 0 [Note] InnoDB: 5.7.36 started; log sequence number 2749723
+db_1         | 2022-01-22T02:36:35.297141Z 0 [Note] Plugin 'FEDERATED' is disabled.
+db_1         | 2022-01-22T02:36:35.299492Z 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+db_1         | 2022-01-22T02:36:35.301216Z 0 [Note] InnoDB: Buffer pool(s) load completed at 220122  2:36:35
+db_1         | 2022-01-22T02:36:35.306691Z 0 [Note] Found ca.pem, server-cert.pem and server-key.pem in data directory. Trying to enable SSL support using them.
+db_1         | 2022-01-22T02:36:35.306707Z 0 [Note] Skipping generation of SSL certificates as certificate files are present in data directory.
+db_1         | 2022-01-22T02:36:35.306712Z 0 [Warning] A deprecated TLS version TLSv1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:35.306717Z 0 [Warning] A deprecated TLS version TLSv1.1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:35.307488Z 0 [Warning] CA certificate ca.pem is self signed.
+db_1         | 2022-01-22T02:36:35.307531Z 0 [Note] Skipping generation of RSA key pair as key files are present in data directory.
+db_1         | 2022-01-22T02:36:35.313720Z 0 [Warning] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+db_1         | 2022-01-22T02:36:35.323712Z 0 [Note] Event Scheduler: Loaded 0 events
+db_1         | 2022-01-22T02:36:35.324119Z 0 [Note] mysqld: ready for connections.
+db_1         | Version: '5.7.36'  socket: '/var/run/mysqld/mysqld.sock'  port: 0  MySQL Community Server (GPL)
+db_1         | 2022-01-22 02:36:36+00:00 [Note] [Entrypoint]: Temporary server started.
+db_1         | Warning: Unable to load '/usr/share/zoneinfo/iso3166.tab' as time zone. Skipping it.
+db_1         | Warning: Unable to load '/usr/share/zoneinfo/leap-seconds.list' as time zone. Skipping it.
+db_1         | Warning: Unable to load '/usr/share/zoneinfo/zone.tab' as time zone. Skipping it.
+db_1         | Warning: Unable to load '/usr/share/zoneinfo/zone1970.tab' as time zone. Skipping it.
+db_1         | 2022-01-22 02:36:38+00:00 [Note] [Entrypoint]: Creating database wordpress
+db_1         | 2022-01-22 02:36:38+00:00 [Note] [Entrypoint]: Creating user wordpress
+db_1         | 2022-01-22 02:36:38+00:00 [Note] [Entrypoint]: Giving user wordpress access to schema wordpress
+db_1         | 
+db_1         | 2022-01-22 02:36:38+00:00 [Note] [Entrypoint]: Stopping temporary server
+db_1         | 2022-01-22T02:36:38.154038Z 0 [Note] Giving 0 client threads a chance to die gracefully
+db_1         | 2022-01-22T02:36:38.154064Z 0 [Note] Shutting down slave threads
+db_1         | 2022-01-22T02:36:38.154072Z 0 [Note] Forcefully disconnecting 0 remaining clients
+db_1         | 2022-01-22T02:36:38.154078Z 0 [Note] Event Scheduler: Purging the queue. 0 events
+db_1         | 2022-01-22T02:36:38.154131Z 0 [Note] Binlog end
+db_1         | 2022-01-22T02:36:38.154797Z 0 [Note] Shutting down plugin 'ngram'
+db_1         | 2022-01-22T02:36:38.154811Z 0 [Note] Shutting down plugin 'partition'
+db_1         | 2022-01-22T02:36:38.154815Z 0 [Note] Shutting down plugin 'BLACKHOLE'
+db_1         | 2022-01-22T02:36:38.154820Z 0 [Note] Shutting down plugin 'ARCHIVE'
+db_1         | 2022-01-22T02:36:38.154823Z 0 [Note] Shutting down plugin 'PERFORMANCE_SCHEMA'
+db_1         | 2022-01-22T02:36:38.154857Z 0 [Note] Shutting down plugin 'MRG_MYISAM'
+db_1         | 2022-01-22T02:36:38.154864Z 0 [Note] Shutting down plugin 'MyISAM'
+db_1         | 2022-01-22T02:36:38.154874Z 0 [Note] Shutting down plugin 'INNODB_SYS_VIRTUAL'
+db_1         | 2022-01-22T02:36:38.154878Z 0 [Note] Shutting down plugin 'INNODB_SYS_DATAFILES'
+db_1         | 2022-01-22T02:36:38.154881Z 0 [Note] Shutting down plugin 'INNODB_SYS_TABLESPACES'
+db_1         | 2022-01-22T02:36:38.154885Z 0 [Note] Shutting down plugin 'INNODB_SYS_FOREIGN_COLS'
+db_1         | 2022-01-22T02:36:38.154888Z 0 [Note] Shutting down plugin 'INNODB_SYS_FOREIGN'
+db_1         | 2022-01-22T02:36:38.154892Z 0 [Note] Shutting down plugin 'INNODB_SYS_FIELDS'
+db_1         | 2022-01-22T02:36:38.154895Z 0 [Note] Shutting down plugin 'INNODB_SYS_COLUMNS'
+db_1         | 2022-01-22T02:36:38.154898Z 0 [Note] Shutting down plugin 'INNODB_SYS_INDEXES'
+db_1         | 2022-01-22T02:36:38.154901Z 0 [Note] Shutting down plugin 'INNODB_SYS_TABLESTATS'
+db_1         | 2022-01-22T02:36:38.154904Z 0 [Note] Shutting down plugin 'INNODB_SYS_TABLES'
+db_1         | 2022-01-22T02:36:38.154907Z 0 [Note] Shutting down plugin 'INNODB_FT_INDEX_TABLE'
+db_1         | 2022-01-22T02:36:38.154910Z 0 [Note] Shutting down plugin 'INNODB_FT_INDEX_CACHE'
+db_1         | 2022-01-22T02:36:38.154913Z 0 [Note] Shutting down plugin 'INNODB_FT_CONFIG'
+db_1         | 2022-01-22T02:36:38.154916Z 0 [Note] Shutting down plugin 'INNODB_FT_BEING_DELETED'
+db_1         | 2022-01-22T02:36:38.154919Z 0 [Note] Shutting down plugin 'INNODB_FT_DELETED'
+db_1         | 2022-01-22T02:36:38.154922Z 0 [Note] Shutting down plugin 'INNODB_FT_DEFAULT_STOPWORD'
+db_1         | 2022-01-22T02:36:38.154925Z 0 [Note] Shutting down plugin 'INNODB_METRICS'
+db_1         | 2022-01-22T02:36:38.154929Z 0 [Note] Shutting down plugin 'INNODB_TEMP_TABLE_INFO'
+db_1         | 2022-01-22T02:36:38.154932Z 0 [Note] Shutting down plugin 'INNODB_BUFFER_POOL_STATS'
+db_1         | 2022-01-22T02:36:38.154934Z 0 [Note] Shutting down plugin 'INNODB_BUFFER_PAGE_LRU'
+db_1         | 2022-01-22T02:36:38.154937Z 0 [Note] Shutting down plugin 'INNODB_BUFFER_PAGE'
+db_1         | 2022-01-22T02:36:38.154940Z 0 [Note] Shutting down plugin 'INNODB_CMP_PER_INDEX_RESET'
+db_1         | 2022-01-22T02:36:38.154943Z 0 [Note] Shutting down plugin 'INNODB_CMP_PER_INDEX'
+db_1         | 2022-01-22T02:36:38.154947Z 0 [Note] Shutting down plugin 'INNODB_CMPMEM_RESET'
+db_1         | 2022-01-22T02:36:38.154950Z 0 [Note] Shutting down plugin 'INNODB_CMPMEM'
+db_1         | 2022-01-22T02:36:38.154953Z 0 [Note] Shutting down plugin 'INNODB_CMP_RESET'
+db_1         | 2022-01-22T02:36:38.154956Z 0 [Note] Shutting down plugin 'INNODB_CMP'
+db_1         | 2022-01-22T02:36:38.154960Z 0 [Note] Shutting down plugin 'INNODB_LOCK_WAITS'
+db_1         | 2022-01-22T02:36:38.154963Z 0 [Note] Shutting down plugin 'INNODB_LOCKS'
+db_1         | 2022-01-22T02:36:38.154966Z 0 [Note] Shutting down plugin 'INNODB_TRX'
+db_1         | 2022-01-22T02:36:38.154969Z 0 [Note] Shutting down plugin 'InnoDB'
+db_1         | 2022-01-22T02:36:38.155316Z 0 [Note] InnoDB: FTS optimize thread exiting.
+db_1         | 2022-01-22T02:36:38.155610Z 0 [Note] InnoDB: Starting shutdown...
+db_1         | 2022-01-22T02:36:38.255781Z 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+db_1         | 2022-01-22T02:36:38.261111Z 0 [Note] InnoDB: Buffer pool(s) dump completed at 220122  2:36:38
+db_1         | 2022-01-22T02:36:39.273612Z 0 [Note] InnoDB: Shutdown completed; log sequence number 12659811
+db_1         | 2022-01-22T02:36:39.276058Z 0 [Note] InnoDB: Removed temporary tablespace data file: "ibtmp1"
+db_1         | 2022-01-22T02:36:39.276089Z 0 [Note] Shutting down plugin 'MEMORY'
+db_1         | 2022-01-22T02:36:39.276101Z 0 [Note] Shutting down plugin 'CSV'
+db_1         | 2022-01-22T02:36:39.276106Z 0 [Note] Shutting down plugin 'sha256_password'
+db_1         | 2022-01-22T02:36:39.276109Z 0 [Note] Shutting down plugin 'mysql_native_password'
+db_1         | 2022-01-22T02:36:39.276250Z 0 [Note] Shutting down plugin 'binlog'
+db_1         | 2022-01-22T02:36:39.278382Z 0 [Note] mysqld: Shutdown complete
+db_1         | 
+db_1         | 2022-01-22 02:36:40+00:00 [Note] [Entrypoint]: Temporary server stopped
+db_1         | 
+db_1         | 2022-01-22 02:36:40+00:00 [Note] [Entrypoint]: MySQL init process done. Ready for start up.
+db_1         | 
+db_1         | 2022-01-22T02:36:40.369474Z 0 [Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+db_1         | 2022-01-22T02:36:40.371436Z 0 [Note] mysqld (mysqld 5.7.36) starting as process 1 ...
+db_1         | 2022-01-22T02:36:40.374449Z 0 [Note] InnoDB: PUNCH HOLE support available
+db_1         | 2022-01-22T02:36:40.374471Z 0 [Note] InnoDB: Mutexes and rw_locks use GCC atomic builtins
+db_1         | 2022-01-22T02:36:40.374476Z 0 [Note] InnoDB: Uses event mutexes
+db_1         | 2022-01-22T02:36:40.374480Z 0 [Note] InnoDB: GCC builtin __atomic_thread_fence() is used for memory barrier
+db_1         | 2022-01-22T02:36:40.374483Z 0 [Note] InnoDB: Compressed tables use zlib 1.2.11
+db_1         | 2022-01-22T02:36:40.374489Z 0 [Note] InnoDB: Using Linux native AIO
+db_1         | 2022-01-22T02:36:40.374825Z 0 [Note] InnoDB: Number of pools: 1
+db_1         | 2022-01-22T02:36:40.374983Z 0 [Note] InnoDB: Using CPU crc32 instructions
+db_1         | 2022-01-22T02:36:40.376937Z 0 [Note] InnoDB: Initializing buffer pool, total size = 128M, instances = 1, chunk size = 128M
+db_1         | 2022-01-22T02:36:40.385375Z 0 [Note] InnoDB: Completed initialization of buffer pool
+db_1         | 2022-01-22T02:36:40.388029Z 0 [Note] InnoDB: If the mysqld execution user is authorized, page cleaner thread priority can be changed. See the man page of setpriority().
+db_1         | 2022-01-22T02:36:40.399958Z 0 [Note] InnoDB: Highest supported file format is Barracuda.
+db_1         | 2022-01-22T02:36:40.438218Z 0 [Note] InnoDB: Creating shared tablespace for temporary tables
+db_1         | 2022-01-22T02:36:40.438490Z 0 [Note] InnoDB: Setting file './ibtmp1' size to 12 MB. Physically writing the file full; Please wait ...
+db_1         | 2022-01-22T02:36:40.468529Z 0 [Note] InnoDB: File './ibtmp1' size is now 12 MB.
+db_1         | 2022-01-22T02:36:40.469347Z 0 [Note] InnoDB: 96 redo rollback segment(s) found. 96 redo rollback segment(s) are active.
+db_1         | 2022-01-22T02:36:40.469367Z 0 [Note] InnoDB: 32 non-redo rollback segment(s) are active.
+db_1         | 2022-01-22T02:36:40.469723Z 0 [Note] InnoDB: Waiting for purge to start
+db_1         | 2022-01-22T02:36:40.519901Z 0 [Note] InnoDB: 5.7.36 started; log sequence number 12659811
+db_1         | 2022-01-22T02:36:40.520322Z 0 [Note] Plugin 'FEDERATED' is disabled.
+db_1         | 2022-01-22T02:36:40.520905Z 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+db_1         | 2022-01-22T02:36:40.526861Z 0 [Note] InnoDB: Buffer pool(s) load completed at 220122  2:36:40
+db_1         | 2022-01-22T02:36:40.532094Z 0 [Note] Found ca.pem, server-cert.pem and server-key.pem in data directory. Trying to enable SSL support using them.
+db_1         | 2022-01-22T02:36:40.532114Z 0 [Note] Skipping generation of SSL certificates as certificate files are present in data directory.
+db_1         | 2022-01-22T02:36:40.532119Z 0 [Warning] A deprecated TLS version TLSv1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:40.532124Z 0 [Warning] A deprecated TLS version TLSv1.1 is enabled. Please use TLSv1.2 or higher.
+db_1         | 2022-01-22T02:36:40.532897Z 0 [Warning] CA certificate ca.pem is self signed.
+db_1         | 2022-01-22T02:36:40.532953Z 0 [Note] Skipping generation of RSA key pair as key files are present in data directory.
+db_1         | 2022-01-22T02:36:40.533856Z 0 [Note] Server hostname (bind-address): '*'; port: 3306
+db_1         | 2022-01-22T02:36:40.533908Z 0 [Note] IPv6 is available.
+db_1         | 2022-01-22T02:36:40.533921Z 0 [Note]   - '::' resolves to '::';
+db_1         | 2022-01-22T02:36:40.533947Z 0 [Note] Server socket created on IP: '::'.
+db_1         | 2022-01-22T02:36:40.540228Z 0 [Warning] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+db_1         | 2022-01-22T02:36:40.548791Z 0 [Note] Event Scheduler: Loaded 0 events
+db_1         | 2022-01-22T02:36:40.548993Z 0 [Note] mysqld: ready for connections.
+db_1         | Version: '5.7.36'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+```
+
+- 如果不想前台启动，即不想xshell页面不停打印本项目日志，可以选择**后台启动**；后台启动命令为`docker-compose up -d`
+
+5，新开一个xshell页面，查看wp和mysql容器是否都在运行，可以看到两个容器都正常运行：
+
+![image-20220122104113442](docker.assets/image-20220122104113442.png)
+
+
+
+6，确保腾讯云防火墙放开了8000端口，使用浏览器访问本项目，成功访问：
+
+![image-20220122105144554](docker.assets/image-20220122105144554.png)
+
+![image-20220122105217833](docker.assets/image-20220122105217833.png)
+
+
+
+7，配置博客；配置博客的时候项目控制台会打印新日志标记配置：
+
+![image-20220122105456417](docker.assets/image-20220122105456417.png)
+
+![image-20220122105701349](docker.assets/image-20220122105701349.png)
+
+
+
+8，登录博客并使用：
+
+![image-20220122105543519](docker.assets/image-20220122105543519.png)
+
+![image-20220122110715030](docker.assets/image-20220122110715030.png)
+
+![image-20220122110758292](docker.assets/image-20220122110758292.png)
+
+
+
+### 自己编写微服务上线-计数器
+
+#### 编写springboot项目
+
+1，新建项目
+
+![image-20220122111349431](docker.assets/image-20220122111349431.png)
+
+![image-20220122111533962](docker.assets/image-20220122111533962.png)
+
+![image-20220122111616361](docker.assets/image-20220122111616361.png)
+
+
+
+2，编写controller文件，文件名为`CountsController.java`：
+
+![image-20220122112634107](docker.assets/image-20220122112634107.png)
+
+```java
+package com.zhangyun.dockercomposespringboot.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class CountsController {
+    //引入redis
+    @Autowired
+    RedisTemplate redisTemplate;
+
+    //每读一次就浏览量加一,并返回浏览量给前端页面
+    @RequestMapping("/vnc")
+    public String viewNumCount(){
+        Long viewNum = redisTemplate.opsForValue().increment("viewNum");
+        return "你好张云，浏览量为："+viewNum;
+    }
+}
+```
+
+
+
+3，编写Springboot的默认配置文件，文件名为`application.properties`：
+
+![image-20220122114635460](docker.assets/image-20220122114635460.png)
+
+```properties
+# 配置提供服务的端口
+server.port=8080
+
+# 指定redis的host。host本来应该存ip的，但是未来都是部署到容器内部，写ip是不可能的，这里就写“redis”。这个项目在本机是跑
+# 不起来的，因为本机没有host叫“redis”的东西，但是我们把它部署到docker上能跑起来。注意这里的host不要误写成port。
+spring.redis.host=redis
+```
+
+- 这里的host写具体的redis容器名“view_num_count_redis_1”也能跑起来（亲测）。但只写“redis”**应该是更合理**的做法，因为docker可能可以根据redis这个hostname去自动把任务分配给不同的”XX_redis_XX“容器。
+
+
+
+4，编写`Dockerfile`：
+
+![image-20220122115651814](docker.assets/image-20220122115651814.png)
+
+```dockerfile
+# 基于java8编写镜像
+FROM java:8
+
+# Dockerfile和jar包后续都会放进宿主机的项目目录；这里是把Dockerfile所在的项目目录的所有jar包拷贝进容器，命名为app.jar;app.jar会被ENTRYPOINT指定的命令运行；
+COPY *.jar /app.jar
+
+# 设置build镜像时默认执行的命令：配置serverport。这个serverport已经通过application.properties在微服务中指定了，这里在镜像中得再指定一下。
+CMD ["--server.port=8080"]
+
+# 暴露容器的端口
+EXPOSE 8080
+
+# 设置build镜像时默认执行的命令，CMD的命令会被附加在ENTRYPOINT后面
+ENTRYPOINT ["java","-jar","/app.jar"]
+```
+
+
+
+5，编写`docker-compose.yml`，其中设置redis服务+springbootweb服务：
+
+![image-20220122121215828](docker.assets/image-20220122121215828.png)
+
+```yaml
+version: '3.8'
+services:
+  # 本springbootweb项目，提供计算访问量的服务
+  zy-view-num-count:
+    # 这个“.”，表示根据当前目录下的”Dockerfile“构建镜像。当然了，也可以在“build”子层级通过“dockerfile”指定dockerfile，但是本项目只有一个dockerfile，就没必要多此一举。
+    build: .
+    # 设置根据build构建的镜像的名字,随意写即可
+    image: zy-view-num-count
+    depends_on:
+      # 表示zy-view-num-count服务依赖与redis服务
+      - redis
+    # 指定本服务使用的端口映射
+    ports:
+      - "8080:8080"
+  redis:
+    # 直接使用官方镜像；本地不存在官方镜像的话会从dockerhub拉取
+    image: "library/redis:alpine"
+```
+
+
+
+#### 把springboot项目打包并上传
+
+1，点击maven->package：
+
+![image-20220122121540802](docker.assets/image-20220122121540802.png)
+
+- 如果因为测试案例没编写，导致打包失败的话，把整个src/test文件夹删掉即可
+
+
+
+2，把打的jar包上传到宿主机的相应位置：
+
+查看jar包路径：
+
+![image-20220122121732259](docker.assets/image-20220122121732259.png)
+
+上传jar包：
+
+![image-20220122122018072](docker.assets/image-20220122122018072.png)
+
+
+
+3，上传`docker-compose.yml`和`Dockerfile`：
+
+![image-20220122122234733](docker.assets/image-20220122122234733.png)
+
+
+
+4，在宿主机的项目目录确认文件都正确上传了：
+
+![image-20220122122424271](docker.assets/image-20220122122424271.png)
+
+
+
+#### 利用Compose启动项目
+
+1，执行up尝试启动项目，启动springboot服务失败：
+
+```bash
+[root@rootuser view_num_count]# docker-compose up
+Creating network "view_num_count_default" with the default driver
+Building zy-view-num-count
+Step 1/5 : FROM java:8
+ ---> d23bdf5b1b1b
+Step 2/5 : COPY *.jar /app.jar
+ ---> 1398276ed79e
+Step 3/5 : CMD ["--server.port=8080"]
+ ---> Running in 05407296d638
+Removing intermediate container 05407296d638
+ ---> 44210a9e7246
+Step 4/5 : EXPOSE 8080
+ ---> Running in 6c8ff3d74623
+Removing intermediate container 6c8ff3d74623
+ ---> f3b4ad54eaad
+Step 5/5 : ENTRYPOINT ["java","-jar","/app.jar"]
+ ---> Running in e1be279948cb
+Removing intermediate container e1be279948cb
+ ---> a3b70eb518c5
+
+Successfully built a3b70eb518c5
+Successfully tagged zy-view-num-count:latest
+WARNING: Image for service zy-view-num-count was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating view_num_count_redis_1 ... done
+Creating view_num_count_zy-view-num-count_1 ... 
+Creating view_num_count_zy-view-num-count_1 ... error
+
+ERROR: for view_num_count_zy-view-num-count_1  Cannot start service zy-view-num-count: driver failed programming external connectivity on endpoint view_num_count_zy-view-num-count_1 (6cddb015c56829a52aa6a08080cc957c0743da72a56277f2e7231497cc8c6c9d): Error starting userland proxy: listen tcp4 0.0.0.0:8080: bind: address already in use
+
+ERROR: for zy-view-num-count  Cannot start service zy-view-num-count: driver failed programming external connectivity on endpoint view_num_count_zy-view-num-count_1 (6cddb015c56829a52aa6a08080cc957c0743da72a56277f2e7231497cc8c6c9d): Error starting userland proxy: listen tcp4 0.0.0.0:8080: bind: address already in use
+ERROR: Encountered errors while bringing up the project.
+[root@rootuser view_num_count]# 
+```
+
+- 报错提示是端口被占用g
+
+
+
+2，清理占用端口的进程：
+
+```bash
+[root@rootuser ~]# netstat -tunlp | grep 8080
+tcp6       0      0 :::8080                 :::*                    LISTEN      19714/java          
+[root@rootuser ~]# kill 19714
+[root@rootuser ~]# netstat -tunlp | grep 8080
+You have new mail in /var/spool/mail/root
+[root@rootuser ~]# 
+```
+
+
+
+3，重新尝试启动项目还是失败,web容器创建后退出，`docker logs 容器名`查看web容器的日志：
+
+![image-20220122123504460](docker.assets/image-20220122123504460.png)
+
+- 应该是数据格式的问题；检查发现application.properties文件中把host错写成port，导致数据格式没对上。
+
+
+
+4，把sprngbootweb的做如下修改，并重新打包（maven clean+package）上传到宿主机：
+
+![image-20220122184200220](docker.assets/image-20220122184200220.png)
+
+- host不要误写成port，不然会报“数据格式不符合”的错误。
+- host的值写“redis”和包含项目名和副本数的完整服务名“view_num_count_redis_1”都能运行；但是为了让redis集群能自动把任务分配给各个redis容器，应在此处写“redis”。如果此处写“view_num_count_redis_1”，相当于所有的redis工作都由view_num_count_redis_1一个容器承担，redis集群自动任务分配的功能就没用上。
+  - 不过本项目中，redis集群就一个容器在提供服务，所以写“redis”和“view_num_count_redis_1”效果上是一致的；但是从真实集群的角度考虑，这里应该写“redis”。
+
+
+
+
+5，删除之前生成的镜像和容器，再次尝试up：
+
+```bash
+# 删除所有存在的容器
+[root@rootuser view_num_count]# docker rm $(docker ps -aq)
+4aa6a7e05d86
+18480550f2c1
+117c03073e08
+c1efd37662d0
+84c08f5009c3
+d8854435bce5
+d32ab53ce44a
+[root@rootuser view_num_count]# docker ps -a
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+# 删除之前生成的不可用的镜像zy-view-num-count
+[root@rootuser view_num_count]# docker images
+REPOSITORY                      TAG                IMAGE ID       CREATED             SIZE
+zy-view-num-count               latest             a3b70eb518c5   About an hour ago   671MB
+composetest_web                 latest             93f19e4798b2   21 hours ago        54.7MB
+docker-springboot-integration   latest             ee92ba6b434e   2 days ago          661MB
+docker72590/alpine              latest             f5a69fceabd2   3 weeks ago         5.59MB
+tomcat                          9.0                b8e65a4d736d   4 weeks ago         680MB
+tomcat                          latest             fb5657adc892   4 weeks ago         680MB
+wordpress                       latest             c3c92cc3dcb1   4 weeks ago         616MB
+mysql                           5.7                c20987f18b13   4 weeks ago         448MB
+redis                           alpine             3900abf41552   7 weeks ago         32.4MB
+python                          3.6-alpine         3a9e80fa4606   7 weeks ago         40.7MB
+python                          3.7-alpine         a1034fd13493   7 weeks ago         41.8MB
+redis                           5.0.9-alpine3.11   3661c84ee9d0   21 months ago       29.8MB
+java                            8                  d23bdf5b1b1b   5 years ago         643MB
+[root@rootuser view_num_count]# docker rmi zy-view-num-count
+Untagged: zy-view-num-count:latest
+Deleted: sha256:a3b70eb518c566ce0f303721596bb0fa7aff000b2735419d5a31bc588c7b03a3
+Deleted: sha256:f3b4ad54eaad3877b5e3f7e2c4c041e6eabd0ee17f14f5bb9294b9be4e7a9c9b
+Deleted: sha256:44210a9e7246b96abeaa7100270162e0c2edab3242cdbb50e4c02d053067970c
+Deleted: sha256:1398276ed79eaba77299950f9b6be52a1a9b6560e400c53e314f4185fb3dada6
+Deleted: sha256:b0f3aa56168bfeb42d3ea066ee8d49e439e633f7097c1f3aae2e7357daae2f5b
+[root@rootuser view_num_count]# 
+```
+
+
+
+6，重新尝试up,成功：
+
+```bash
+[root@rootuser view_num_count]# docker-compose up
+Building zy-view-num-count
+Step 1/5 : FROM java:8
+ ---> d23bdf5b1b1b
+Step 2/5 : COPY *.jar /app.jar
+ ---> e43c91b108c3
+Step 3/5 : CMD ["--server.port=8080"]
+ ---> Running in c3137e5bcdb9
+Removing intermediate container c3137e5bcdb9
+ ---> 83f8a1eda5cf
+Step 4/5 : EXPOSE 8080
+ ---> Running in f3ec71fef30b
+Removing intermediate container f3ec71fef30b
+ ---> 0e4acca4891d
+Step 5/5 : ENTRYPOINT ["java","-jar","/app.jar"]
+ ---> Running in a196c605053e
+Removing intermediate container a196c605053e
+ ---> d21058db660f
+
+Successfully built d21058db660f
+Successfully tagged zy-view-num-count:latest
+WARNING: Image for service zy-view-num-count was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating view_num_count_redis_1 ... done
+Creating view_num_count_zy-view-num-count_1 ... done
+Attaching to view_num_count_redis_1, view_num_count_zy-view-num-count_1
+redis_1              | 1:C 22 Jan 2022 05:34:51.995 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1              | 1:C 22 Jan 2022 05:34:51.995 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1              | 1:C 22 Jan 2022 05:34:51.995 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1              | 1:M 22 Jan 2022 05:34:51.996 * monotonic clock: POSIX clock_gettime
+redis_1              | 1:M 22 Jan 2022 05:34:51.997 * Running mode=standalone, port=6379.
+redis_1              | 1:M 22 Jan 2022 05:34:51.997 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1              | 1:M 22 Jan 2022 05:34:51.997 # Server initialized
+redis_1              | 1:M 22 Jan 2022 05:34:51.997 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis_1              | 1:M 22 Jan 2022 05:34:51.997 * Ready to accept connections
+zy-view-num-count_1  | 
+zy-view-num-count_1  |   .   ____          _            __ _ _
+zy-view-num-count_1  |  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+zy-view-num-count_1  | ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+zy-view-num-count_1  |  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+zy-view-num-count_1  |   '  |____| .__|_| |_|_| |_\__, | / / / /
+zy-view-num-count_1  |  =========|_|==============|___/=/_/_/_/
+zy-view-num-count_1  |  :: Spring Boot ::                (v2.6.3)
+zy-view-num-count_1  | 
+zy-view-num-count_1  | 2022-01-22 05:34:55.358  INFO 1 --- [           main] c.z.d.DockerComposeSpringbootApplication : Starting DockerComposeSpringbootApplication v0.0.1-SNAPSHOT using Java 1.8.0_111 on 0edc4b73e29d with PID 1 (/app.jar started by root in /)
+zy-view-num-count_1  | 2022-01-22 05:34:55.361  INFO 1 --- [           main] c.z.d.DockerComposeSpringbootApplication : No active profile set, falling back to default profiles: default
+zy-view-num-count_1  | 2022-01-22 05:34:57.677  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode!
+zy-view-num-count_1  | 2022-01-22 05:34:57.693  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+zy-view-num-count_1  | 2022-01-22 05:34:57.744  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 14 ms. Found 0 Redis repository interfaces.
+zy-view-num-count_1  | 2022-01-22 05:34:59.260  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+zy-view-num-count_1  | 2022-01-22 05:34:59.300  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+zy-view-num-count_1  | 2022-01-22 05:34:59.301  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.56]
+zy-view-num-count_1  | 2022-01-22 05:34:59.472  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+zy-view-num-count_1  | 2022-01-22 05:34:59.473  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3853 ms
+zy-view-num-count_1  | 2022-01-22 05:35:02.452  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+zy-view-num-count_1  | 2022-01-22 05:35:02.481  INFO 1 --- [           main] c.z.d.DockerComposeSpringbootApplication : Started DockerComposeSpringbootApplication in 8.629 seconds (JVM running for 9.836)
+```
+
+- 若启动项目失败，修改完代码重新上传项目文件后，可以尝试不删除之前的镜像和容器，而使用`docker-compose up --build`来启动，会自动重新构建。（但是效果我暂未验证）
+
+
+
+7，浏览器测试，确保腾讯云放开8080端口，成功：
+
+![image-20220122134009755](docker.assets/image-20220122134009755.png)
+
+![image-20220122134221629](docker.assets/image-20220122134221629.png)
+
+
+
+8，宿主机本地测试：
+
+```bash
+# 测试访问根目录，有响应，说明项目启动确实成功
+[root@rootuser ~]# curl localhost:8080
+{"timestamp":"2022-01-22T05:40:23.325+00:00","status":404,"error":"Not Found","path":"/"}
+
+# 每次发起“/vnc”请求，都能响应的计数加一，成功！！！。浏览量为2是因为步骤7中浏览器测试已经有了一个访问量。
+[root@rootuser ~]# curl localhost:8080/vnc
+你好张云，浏览量为：2
+[root@rootuser ~]# curl localhost:8080/vnc
+你好张云，浏览量为：3
+[root@rootuser ~]# 
+```
+
+- 其实应该先宿主机本地测试，再放开腾讯云防火墙做浏览器测试，这里步骤78顺序应该调换。
+
+
+
+
+
+#### 小结
+
+核心名词凑成一句话：docker中，**项目**是一个完整的工程，项目包含若干个**服务**，每个服务由每个**容器**运行起来提供。
+
+- 项目即Compose：三层。
+
+
+
+k8s弃用docker了，见[文章](https://cloud.tencent.com/developer/article/1758588)
+
+## Docker Swarm 
+
+~=精简的k8s
+
+swarm是以集群的方式部署docker，更符合真实业务上线；compose是单机部署，只适合自己玩玩。swarm是比compose更进步的一种部署方式。
+
+
+
+要买好几（推荐4）台服务器（推荐2核4g）学。**建议不学，直接学k8s**。
+
+
+
+## Docker Stack
+
+
+
+## Docker Secret
+
+
+
+## Docker Config
+
+
+
+## K8S
+
+容器单独没有什么意义，容器编排才有意义。
+
+
+
+DockerSwarm已经没什么人用了，但是学了DockerSwarm的话有利于帮助理解K8S。
+
+
+
+## CI/CD之jenkins
 
