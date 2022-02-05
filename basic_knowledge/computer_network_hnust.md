@@ -5667,5 +5667,401 @@ TCP通过4报文挥手来释放连接。
 
 ### 文件传送协议FTP
 
-https://www.bilibili.com/video/BV1c4411d7jb?p=71&spm_id_from=pageDriver
+#### 概述
+
+![image-20220205113347433](computer_network_hnust.assets/image-20220205113347433.png)
+
+#### 文件传送协议FTP的应用
+
+1，FTP采用C/S方式；因特网上的FTP客户计算机可将各种类型的文件上传到FTP服务器计算机：
+
+![image-20220205152450337](computer_network_hnust.assets/image-20220205152450337.png)
+
+2，FTP客户计算机也可以从FTP服务器计算机下载文件：
+
+![image-20220205152744425](computer_network_hnust.assets/image-20220205152744425.png)
+
+3，根据应用需求的不同，FTP服务器可能需要一台高性能高可靠性的服务器计算机；也可能只需要一台普通的个人计算机即可。
+
+4，为了简单起见，我们假设FTP客户计算机与FTP服务器计算机处于同一局域网中；我们在FTP服务器计算机中创建FTP服务器，可以使用第三方的FTP服务器软件，也可以使用操作系统自带的FTP服务器软件，假设我们所创建的FTP服务器的IP地址如图所示：
+
+![image-20220205153252581](computer_network_hnust.assets/image-20220205153252581.png)
+
+5，我们可以在FTP客户计算机中使用浏览器软件，通过该地址来访问FTP服务器：
+
+![image-20220205153454784](computer_network_hnust.assets/image-20220205153454784.png)
+
+- 需要注意的是，这里使用的是文件传送协议FTP，而不是浏览器最常用的超文本传送协议HTTP；
+
+6，我们也可以在FTP客户计算机中使用windows系统自带的命令行工具，通过该地址来访问FTP服务器：
+
+![image-20220205153751181](computer_network_hnust.assets/image-20220205153751181.png)
+
+7，命令行方式需要用户记住相关命令，这对普通用户而言并不友好，因此大多数用户在FTP客户计算机上使用第三方的FTP客户工具软件；通过友好的用户界面，来完成FTP服务器的登录以及文件的上传下载：
+
+![image-20220205154011402](computer_network_hnust.assets/image-20220205154011402.png)
+
+8，FTP的常见用途：
+
+- FTP的常见用途是在计算机之间传输文件，尤其是用于批量传输文件。
+- FTP的另一个常见用途是让网站设计者将构成网站内容的大量文件批量上传到他们的Web服务器。
+
+
+
+#### FTP基本工作原理
+
+1，FTP服务器监听熟知端口号21；FTP客户随机选择一个临时端口号与其建立TCP连接，这条TCP连接用于FTP客户与服务器之间传送FTP的相关控制命令，也就是说这条TCP连接是FTP客户端与服务器之间的命令通道：
+
+![image-20220205154655394](computer_network_hnust.assets/image-20220205154655394.png)
+
+2，当有数据要传输时，FTP客户通过命令通道告知FTP服务器来与自己的另一个临时端口号建立TCP连接，即建立数据通道，如图有FTP客户随机选择的另一个端口号；FTP服务器使用自己的熟知端口号20与其建立TCP连接，这条TCP连接用于FTP客户与服务器之间传送文件，也就是说这条TCP连接是FTP客户与服务器之间的数据通道：
+
+![image-20220205155349415](computer_network_hnust.assets/image-20220205155349415.png)
+
+- 由于在建立数据通道时，FTP服务器主动连接FTP客户，因此称为“主动模式”
+- 需要注意的是：控制连接在整个会话期间一直保持打开，用于传送FTP相关控制命令；数据连接用于文件传输，在每次文件传输时才建立，传输结束就关闭。
+
+3，再来看”被动模式“；位于FTP客户与服务器之间命令通道的建立，它与主动模式并没有什么不同；不同之处在于，当有数据要传输时，FTP客户通过命令通道通知FTP服务器开启某个协商好的临时端口，被动等待来自FTP客户的TCP连接以建立数据通道；FTP服务器使用的与FTP客户协商号的临时端口号如图所示，FTP客户随机选择的另一个端口如图所示：
+
+![image-20220205160922742](computer_network_hnust.assets/image-20220205160922742.png)
+
+4，FTP客户发起与FTP服务器的TCP连接以建立数据通道：
+
+![image-20220205161119864](computer_network_hnust.assets/image-20220205161119864.png)
+
+- 由于在建立数据通道时，FTP服务器被动等待FTP客户的连接，因此称为被动模式。
+
+
+
+#### 小练习
+
+1，
+
+![image-20220205161408853](computer_network_hnust.assets/image-20220205161408853.png)
+
+2，
+
+![image-20220205161509536](computer_network_hnust.assets/image-20220205161509536.png)
+
+
+
+#### 小结
+
+![image-20220205161541667](computer_network_hnust.assets/image-20220205161541667.png)
+
+
+
+### 电子邮件
+
+#### 概述
+
+![image-20220205172317407](computer_network_hnust.assets/image-20220205172317407.png)
+
+#### 电子邮件系统的主要组成构件
+
+1，
+
+![image-20220205172730039](computer_network_hnust.assets/image-20220205172730039.png)
+
+- 我们可以简单地认为邮件服务器中有很多邮箱，还有用来缓存待转发邮件的缓存。
+
+2，
+
+![image-20220205172919949](computer_network_hnust.assets/image-20220205172919949.png)
+
+
+
+#### SMTP基本工作原理
+
+![image-20220205173257505](computer_network_hnust.assets/image-20220205173257505.png)
+
+- 网友：“这个不是重点；考试应该不考吧，了解一下就好啦;考研不考这么细”。
+
+
+
+#### 电子邮件信息格式
+
+![image-20220205173533182](computer_network_hnust.assets/image-20220205173533182.png)
+
+- 最重要的关键字是“To”和“Subject”，他两往往是必填选项
+
+
+
+#### 由SMTP引入MIME
+
+1，
+
+![image-20220205173744374](computer_network_hnust.assets/image-20220205173744374.png)
+
+2，MIME图示：
+
+![image-20220205173842655](computer_network_hnust.assets/image-20220205173842655.png)
+
+
+
+
+
+#### 常用的邮件读取协议简述
+
+![image-20220205175554021](computer_network_hnust.assets/image-20220205175554021.png)
+
+- 基本概念了解本节“电子邮件”这么多就够了，如果以后要自己设计“电子邮件系统”，则还需要对相关协议的RFC文档进行深入阅读。
+
+
+
+#### 基于万维网的电子邮件
+
+![image-20220205180528854](computer_network_hnust.assets/image-20220205180528854.png)
+
+- 用户A要给用户C发送邮件时：
+  1. 用户A使用浏览器登录自己的邮件服务器网站，撰写并发送邮件给用户C，使用的是HTTP协议；
+  2. 用户A的邮件服务器使用SMTP将邮件发送给用户C的邮件服务器；
+  3. 用户C也使用浏览器登录自己的邮件服务器网站，读取收到的邮件，使用的也是HTTP协议；
+  4. 
+
+
+
+#### 小练习
+
+1，
+
+![image-20220205180554252](computer_network_hnust.assets/image-20220205180554252.png)
+
+
+
+2，
+
+![image-20220205180639432](computer_network_hnust.assets/image-20220205180639432.png)
+
+- 7比特不是指数据大小，是因为ASCII码只有7比特这么多个码
+
+3，
+
+![image-20220205180715567](computer_network_hnust.assets/image-20220205180715567.png)
+
+
+
+#### 小结
+
+![image-20220205180731609](computer_network_hnust.assets/image-20220205180731609.png)
+
+
+
+### 万维网WWW
+
+#### 简述
+
+1，WWW是什么：
+
+![image-20220205194707337](computer_network_hnust.assets/image-20220205194707337.png)
+
+2，早期浏览器：
+
+![image-20220205194816838](computer_network_hnust.assets/image-20220205194816838.png)
+
+3，目前主流浏览器，和渲染引擎：
+
+![image-20220205194921526](computer_network_hnust.assets/image-20220205194921526.png)
+
+4，请求报文和响应报文：
+
+![image-20220205195054864](computer_network_hnust.assets/image-20220205195054864.png)
+
+#### 统一资源定位符URL
+
+1，
+
+![image-20220205195251747](computer_network_hnust.assets/image-20220205195251747.png)
+
+- URL各部分的颜色对应了URL的四个组成部分。
+- 我：“端口号为80时可以省略“
+
+2，点击网页中的某个超链接跳转到另一个网页时，可以看到跳转后的URL的“协议，主机，端口”与网站首页相同，不同的是路径和网页文件：
+
+![image-20220205195501775](computer_network_hnust.assets/image-20220205195501775.png)
+
+
+
+#### 万维网的文档
+
+1，
+
+![image-20220205200019320](computer_network_hnust.assets/image-20220205200019320.png)
+
+2，万维网文档包含：
+
+![image-20220205200203134](computer_network_hnust.assets/image-20220205200203134.png)
+
+- 由HTML，CSS，JavaScript编写的万维网文档，由浏览器内核负责解析和渲染。
+
+3，HTML使用多种“标签”来描述网页的结构和内容，但是所呈现的内容过于简单(不够美观)，我们可以在CSS文档中定义一些所需的样式对网页显示内容进行美化：
+
+![image-20220205200441286](computer_network_hnust.assets/image-20220205200441286.png)
+
+4，CSS样式作用如下：
+
+![image-20220205200629534](computer_network_hnust.assets/image-20220205200629534.png)
+
+刷新浏览器可以看到，“Hello World”的颜色和字体大小都发生了变化：
+
+![image-20220205200646655](computer_network_hnust.assets/image-20220205200646655.png)
+
+5，JavaScript作用如下：
+
+![image-20220205201028259](computer_network_hnust.assets/image-20220205201028259.png)
+
+刷新浏览器后，可以看到按钮及点击按钮后的效果；点击按钮后的效果如下：
+
+![image-20220205201121611](computer_network_hnust.assets/image-20220205201121611.png)
+
+6，需要注意的是，这些文档都部署在服务器端，有一些是WEB前端开发人员设计好的静态页面，有一些是服务器后端程序根据用户需求自动生成的动态页面；他们都需要从服务器传送给用户浏览器进行解析和渲染，这就不提到TCP/IP体系应用层的一个十分重要的协议”HTTP“
+
+
+
+#### HTTP基本信息
+
+1，概念
+
+![image-20220205202253172](computer_network_hnust.assets/image-20220205202253172.png)
+
+2，HTTP/1.0：
+
+![image-20220205202500140](computer_network_hnust.assets/image-20220205202500140.png)
+
+3，HTTP/1.1采用持续连接方式，效率比HTTP/1.0更高：
+
+![image-20220205202626021](computer_network_hnust.assets/image-20220205202626021.png)
+
+#### HTTP报文格式
+
+1，HTTP是**面向文本**的，其报文中的每一个**字段**都是一些**ASCII码串**，并且每个字段的**长度**都是**不确定**的。
+
+2，HTTP请求报文格式：
+
+![image-20220205204346301](computer_network_hnust.assets/image-20220205204346301.png)
+
+请求方法：
+
+![image-20220205204456995](computer_network_hnust.assets/image-20220205204456995.png)
+
+3，HTTP响应报文格式：
+
+![image-20220205204619615](computer_network_hnust.assets/image-20220205204619615.png)
+
+相应报文中常见的状态行：
+
+![image-20220205204740654](computer_network_hnust.assets/image-20220205204740654.png)
+
+
+
+一般来说服务器不会直接显示出服务器发来的这些状态行信息，而是以更友好的形式，向用户告知服务器所返回的状态信息：
+
+![image-20220205204911084](computer_network_hnust.assets/image-20220205204911084.png)
+
+- 该页面本质是浏览器收到了包含状态行`HTTP/1.1 404 Not Found`的响应报文。
+
+
+
+#### cookie概述
+
+1，概念：
+
+![image-20220205205138931](computer_network_hnust.assets/image-20220205205138931.png)
+
+2，记住用户信息的例子“记住我”：
+
+![image-20220205205218938](computer_network_hnust.assets/image-20220205205218938.png)
+
+#### cookie工作原理
+
+1，用户主机中的浏览器进程首先与万维网服务器中的服务器进程建立TCP连接；当用户的浏览器进程初次向服务器进程发送HTTP请求报文时，服务器进程就会为其产生一个唯一的Cookie识别码：
+
+![image-20220205210351203](computer_network_hnust.assets/image-20220205210351203.png)
+
+2，接着就会给浏览器进程发回HTTP响应报文，在相应报文中包含有一个首部字段为Set-Cookie的首部行，该字段的取值就是Cokkie识别码：
+
+![image-20220205210547388](computer_network_hnust.assets/image-20220205210547388.png)
+
+3，当浏览器进程收到该响应报文后，就在一个特定的cookie文件中添加一行，记录该服务器的域名和cookie识别码：
+
+![image-20220205210647143](computer_network_hnust.assets/image-20220205210647143.png)
+
+4，当该用户再次使用该浏览器访问该网站时，每发送一个HTTP请求报文，浏览器都会从Cookie文件中取出该网站的Cookie识别码，并放到HTTP请求报文的Cookie首部行中：
+
+![image-20220205210809252](computer_network_hnust.assets/image-20220205210809252.png)
+
+5，服务器根据Cookie识别码就可以识别出该用户，并返回该用户的个性化网页：
+
+![image-20220205210851055](computer_network_hnust.assets/image-20220205210851055.png)
+
+
+
+#### 万维网缓存与代理服务器
+
+1，基本概念：
+
+![image-20220205211234665](computer_network_hnust.assets/image-20220205211234665.png)
+
+2，举例说明；图中万维网服务器为了与万维网代理服务器的名称区分，我们简称该服务器为原始服务器，如图；校园网中的某台万维网代理服务器如图：
+
+![image-20220205211447257](computer_network_hnust.assets/image-20220205211447257.png)
+
+3，当校园网上的某台主机要访问因特网上的原始服务器时，它首先会向校园网中的代理服务器发送请求；若代理服务器中存放有所请求的对象，则代理服务器会向该主机发回包含所请求对象的响应：
+
+![image-20220205211649274](computer_network_hnust.assets/image-20220205211649274.png)
+
+
+
+4，如果代理服务器中没有所请求的对象，则代理服务器会向因特网上的原始服务器发送请求：
+
+![image-20220205212213816](computer_network_hnust.assets/image-20220205212213816.png)
+
+5，原始服务器将包含有所请求对象的相应发回给代理服务器，代理服务器将该相应存入web缓存，然后给主机发回该相应：
+
+![image-20220205212343709](computer_network_hnust.assets/image-20220205212343709.png)
+
+6，可以想想，如果WEb缓存的命中率比较高，则路由器R1和R2之间链路上的通信量将大大减少，因而可以减少校园网各主机访问因特网的时延：
+
+ ![image-20220205212505717](computer_network_hnust.assets/image-20220205212505717.png)
+
+7，有人问“假设原始服务器中的文档被修改，之后校园网中的某台主机请求该文档，它首先向代理服务器发送请求，代理服务器找到该文档的副本后将其封装在相应报文中发回给主机，这样主机收到的文档和原始服务器中的文档就不一致了”：
+
+![image-20220205212812515](computer_network_hnust.assets/image-20220205212812515.png)
+
+8，实际上，原始服务器通常会为每个相应对象设置“修改时间字段和有效日期字段”，若代理服务器中的该文档未过期，则将其封装在相应报文中发回给主机：
+
+![image-20220205212938738](computer_network_hnust.assets/image-20220205212938738.png)
+
+9，若代理服务器中的该文档已过期，则代理服务器会向因特网上的原始服务器发送请求，在请求报文中包含有一个首部字段为“if-modified-since”的首部行，该字段的取值就是该文档的修改日期；原始服务器根据该文档的修改日期，可判断出代理服务器中存储的该文档是否与自己存储的该文档一致：
+
+![image-20220205213228855](computer_network_hnust.assets/image-20220205213228855.png)
+
+10，如果一致，则给代理服务器发送不包含实体主体的相应，状态码为304；代理服务器重新更新该文档的有效日期，然后将该文档封装在响应报文中发回给主机：
+
+![image-20220205213419309](computer_network_hnust.assets/image-20220205213419309.png)
+
+11，如果不一致，则给代理服务器发送封装有该文档的相应报文，这样代理服务器就更新了该文档；然后将更新后的该文档封装在响应报文中发回给主机：
+
+![image-20220205213601706](computer_network_hnust.assets/image-20220205213601706.png)
+
+
+
+#### 小练习
+
+1，
+
+![image-20220205213731077](computer_network_hnust.assets/image-20220205213731077.png)
+
+2，
+
+![image-20220205213953210](computer_network_hnust.assets/image-20220205213953210.png)
+
+- 答案是：4。
+- 记住：建立TCP连接的三次握手的最后一次握手可以附带请求文件的功能。
+
+
+
+#### 小结
+
+![image-20220205214216919](computer_network_hnust.assets/image-20220205214216919.png)
 
