@@ -25,7 +25,7 @@ Here are my notes when learning programming
 
 看了下内容，讲的比较一般。时间不充裕的话，可以看。
 
-- 19年课程：[B站王道考研之os21h](https://www.bilibili.com/video/BV1YE411D7nH?from=search&seid=11897886848935618319&spm_id_from=333.337.0.0)，有弹幕更好学一点。
+- √19年课程：[B站王道考研之os21h](https://www.bilibili.com/video/BV1YE411D7nH?from=search&seid=11897886848935618319&spm_id_from=333.337.0.0)，有弹幕更好学一点；课程对应ppt在评论中有，我已存入百度云并下载，ppt好像做的不错。
 - 21年课程+课件：存于见百度云，[来源](https://github.com/cen6667/408)
 - 一人学习总结：[github](https://github.com/cen6667/408)
 - 直接读英文材料不适合入门，效率低；最好是中文课程先入门，然后读英文的一些经典书籍去进阶，有中文的知识基础再读英文材料就有知识储备就不会太难读。这样读英文经典书籍时有时候能恍然大悟+醍醐灌顶一些之前不太清楚的点。
@@ -58,11 +58,21 @@ Here are my notes when learning programming
 
 
 
-### JVM
-
 ### 数据结构
 
+学完后可以刷题了。
+
+### 设计模式
+
+
+
+### java多线程高并发
+
+- 比如 java cas
+
 ### 数据库
+
+### JVM
 
 ## 找工向入门技术学习路线
 
