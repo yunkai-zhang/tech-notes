@@ -1,4 +1,6 @@
-# 安装MYSQL
+## 很早之前的自学部分
+
+### 安装MYSQL
 
 1. [首先参考bilibili](https://www.bilibili.com/video/BV1EJ411p7Ty?from=search&seid=4187360526160968756)
    
@@ -50,7 +52,7 @@
 
 ---
 
-# 安装navicate
+### 安装navicate
 
 1. 先找到[b站资源](https://www.bilibili.com/video/BV17E411C7au?p=4)
 
@@ -73,7 +75,7 @@
 
 ---
 
-# navicate连接本地数据库
+### navicate连接本地数据库
 
 老版本破解20210920用的时候失败了：
 
@@ -96,7 +98,7 @@
 
 ---
 
-# mysql知识
+### mysql知识
 
 - 索引和键的区别：[链接](https://zhidao.baidu.com/question/1644206194209291020.html)
 
@@ -116,8 +118,12 @@
 
 
 
-## 学习方式
+### 学习方式
 
 1，推荐网课：面向面试的话，看MYSQL45讲
 
 2，问：”mysql怎么看啊，索引锁那些，一点不会，面试咋突击？“。答：”牛客面经直接背，javaguide“
+
+
+
+## 

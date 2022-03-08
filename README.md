@@ -62,7 +62,7 @@ Here are my notes when learning programming
 
 学完后可以刷题了。
 
-### java多线程高并发
+### JUC
 
 - 比如 java cas
 
@@ -85,6 +85,8 @@ javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远�
 刷题量目标
 
 - 在线版剑指offer全部-》hot100-》codetop前五页
+  - 一坛友说codetop前五页刷完后(猜测是只刷了codetop)，找到了字节实习。
+
 
 刷题方式：
 
