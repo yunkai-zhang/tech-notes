@@ -4,207 +4,9 @@
 
 
 
-## 线程
+## 泛型
 
-
-
-## 注解(Annotation)
-
-### 什么是注解
-
-出现：
-
-- JDK5.0引入的新技术
-
-Annotation作用：
-
-- 不是程序本身，可以对程序作出解释（这一点和注释（comment）没什么区别）
-- **可以被其他程序（比如编译器）读取**
-
-注解的格式：
-
-- 注解是以“@注释名”在代码中存在的，还可以添加一些参数值，例如:@SuppressWarnings(value="unchecked").
-
-注解可以使用的位置：
-
-- 可以附加在package，class，method，field等上面，相当于给他们添加了额外的辅助信息，也可以辅助检查所注解的东西写的规不规范（不规范，注解可能爆红）；我们可以通过反射机制编程实现对这些元数据的访问
-
-
-
-### 内置注解
-
-下面是java三个最常见的内置注解：
-
-- @Override：定义在java.lang.Override中，此注释只适用于修辞方法，表示一个方法声明打算重写超类（？父类）中的另一个方法声明。
-
-- @Deprecated:定义在java.lang.Deprecated中，此注释可以用于修辞方法，属性，类；表示不鼓励程序员使用这样的元素，通常是因为它很危险或者存在更好的选择。
-
-  - 使用被Deprecated注解的方法时，方法会出现删除线（横线），表示不推荐使用
-
-    ![image-20210704170318538](javaSE进阶.assets/image-20210704170318538.png)
-
-- @SuppressWarnings：定义在java.lang.SuppressWarnings中，用来抑制编译是的警告信息。
-
-  与前两个注释有所不同，你需要添加一个参数才能正确使用，这些参数都是已经定义好了的，我们选择性使用就好
-
-  - @SuppressWarnings("all")
-
-    ![image-20210704170455292](javaSE进阶.assets/image-20210704170455292.png)
-
-    使用注解后，灰色警告被消除
-
-    ![image-20210704170601075](javaSE进阶.assets/image-20210704170601075.png)
-
-  - @SuppressWarnings("unchecked")
-
-  - @SuppressWarnings(value={"unchecked","deprecation"})
-
-  - 等等。。
-
-
-
-### 元注解
-
-元注解的作用就是负责注解其他注解，java定义了四个标准的**meta-annotation**类型，他们被用来提供对其他annotation类型做说明
-
-这些类型和他们所支持的类在java.lang.annotation包中可以找到。（@Target,@Retention,@Documented,@Inherited）
-
-#### @Target（重点）
-
-用于描述注解的使用范围（即：被描述的注解可以用在哪些地方）
-
-**测试只允许使用于方法的注解：**
-
-编写测试类
-
-```java
-package com.zhangyk.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Target;
-
-//测试元注解
-@MyAnnotation
-public class Test02 {
-    @MyAnnotation
-    public void test(){
-
-    }
-}
-
-//定义一个注解
-@Target( value= ElementType.METHOD)
-@interface MyAnnotation{
-
-}
-```
-
-定义一个注解的使用类型为方法，那么注解在方法上不会报错，但是注解在类上就会报错（红色波浪线）
-
-![image-20210704173518993](javaSE进阶.assets/image-20210704173518993.png)
-
-**测试允许适用于方法和类的注解：**
-
-因为value是一个list，可以修改target注解的参数如下
-
-```java
-//定义一个注解
-@Target( value= {ElementType.METHOD,ElementType.TYPE})
-```
-
-现在类上也可以正常使用自定义的注解了
-
-![image-20210704173936634](javaSE进阶.assets/image-20210704173936634.png)
-
-#### @Retention（重点）
-
-表示需要在什么级别保存该注释信息，用于描述注解的生命周期
-
-- source（源代码级）<class（编译后的class级）<**runtime（运行时）**；一般自定义都定义在runtime；
-
-#### @Documented
-
-说明该注解将被包含在javadoc中
-
-#### @Inherited
-
-说明子类可以继承父类中的该注解
-
-
-
-### 自定义注解
-
-使用**@interface**自定义注解时，自动继承了java.lang.annotation.Annotation接口
-
-分析：
-
-- @interface用来声明一个注解，格式：public @ interface 注解名 {定义内容}
-
-  在类里面声明的话，要把public去掉
-
-- 其中的每一个方法实际上是声明了一个配置参数
-
-- 方法的名称就是参数的名称
-
-- 返回值类型就是参数的类型（返回值只能是 基本类型，class，string，enum）
-
-- 可以通过default来声明参数的默认值
-
-- 如果只有一个参数成员，一般参数名为value
-
-- 注解元素必须要有值，我们定义注解元素时，经常使用空字符串，0作为默认值
-
-编写实例
-
-```java
-package com.zhangyk.annotation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-//自定义注解
-public class Test03 {
-    
-    //如果注解的参数没有默认值，我们就必须给参数显式赋值,如schools
-    //如果有默认值，我们也可以自己另外指定，如name
-    @MyAnnotation2(name="张云",schools = {"北邮","港中文"})
-    public void test(){}
-
-    //因为MyAnnotation3注解只有一个参数，且名为value，填参数的时候省略了： value=
-    @MyAnnotation3("")
-    public void test2(){}
-
-}
-
-//自定义注解常规加上@Target @Retention
-@Target({ElementType.TYPE,ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@interface MyAnnotation2{
-    /*
-    注解的参数设置：参数类型+参数名+（）
-    因为是在自定义注解里，看着像一个方法，本质上这不是一个方法
-    */
-    String name() default "";
-    int age() default 0;
-    //如果默认值为-1，代表不存在；异曲同工：indexof，如果找不到就返回-1
-    int id() default -1;
-    String[] schools();
-}
-
-@Target({ElementType.TYPE,ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-@interface MyAnnotation3{
-    /*
-    如果只有一个参数，且参数名为value；在注解使用时可以不写"value="
-    但如果参数名不是value，那么即使只有一个参数，也要显式写出
-    */
-    String value();
-}
-```
-
-
+## 枚举
 
 ## 反射
 
@@ -637,7 +439,7 @@ public class Test04 {
 
       ```java
       package com.zhangyk.reflection;
-
+      
         //测试类什么时候会初始化
         public class Test06 {
        
@@ -1566,6 +1368,202 @@ class Student2{
 ![image-20210707200034568](javaSE进阶.assets/image-20210707200034568.png)
 
 
+
+## 注解(Annotation)
+
+### 什么是注解
+
+出现：
+
+- JDK5.0引入的新技术
+
+Annotation作用：
+
+- 不是程序本身，可以对程序作出解释（这一点和注释（comment）没什么区别）
+- **可以被其他程序（比如编译器）读取**
+
+注解的格式：
+
+- 注解是以“@注释名”在代码中存在的，还可以添加一些参数值，例如:@SuppressWarnings(value="unchecked").
+
+注解可以使用的位置：
+
+- 可以附加在package，class，method，field等上面，相当于给他们添加了额外的辅助信息，也可以辅助检查所注解的东西写的规不规范（不规范，注解可能爆红）；我们可以通过反射机制编程实现对这些元数据的访问
+
+
+
+### 内置注解
+
+下面是java三个最常见的内置注解：
+
+- @Override：定义在java.lang.Override中，此注释只适用于修辞方法，表示一个方法声明打算重写超类（？父类）中的另一个方法声明。
+
+- @Deprecated:定义在java.lang.Deprecated中，此注释可以用于修辞方法，属性，类；表示不鼓励程序员使用这样的元素，通常是因为它很危险或者存在更好的选择。
+
+  - 使用被Deprecated注解的方法时，方法会出现删除线（横线），表示不推荐使用
+
+    ![image-20210704170318538](javaSE进阶.assets/image-20210704170318538.png)
+
+- @SuppressWarnings：定义在java.lang.SuppressWarnings中，用来抑制编译是的警告信息。
+
+  与前两个注释有所不同，你需要添加一个参数才能正确使用，这些参数都是已经定义好了的，我们选择性使用就好
+
+  - @SuppressWarnings("all")
+
+    ![image-20210704170455292](javaSE进阶.assets/image-20210704170455292.png)
+
+    使用注解后，灰色警告被消除
+
+    ![image-20210704170601075](javaSE进阶.assets/image-20210704170601075.png)
+
+  - @SuppressWarnings("unchecked")
+
+  - @SuppressWarnings(value={"unchecked","deprecation"})
+
+  - 等等。。
+
+
+
+### 元注解
+
+元注解的作用就是负责注解其他注解，java定义了四个标准的**meta-annotation**类型，他们被用来提供对其他annotation类型做说明
+
+这些类型和他们所支持的类在java.lang.annotation包中可以找到。（@Target,@Retention,@Documented,@Inherited）
+
+#### @Target（重点）
+
+用于描述注解的使用范围（即：被描述的注解可以用在哪些地方）
+
+**测试只允许使用于方法的注解：**
+
+编写测试类
+
+```java
+package com.zhangyk.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
+//测试元注解
+@MyAnnotation
+public class Test02 {
+    @MyAnnotation
+    public void test(){
+
+    }
+}
+
+//定义一个注解
+@Target( value= ElementType.METHOD)
+@interface MyAnnotation{
+
+}
+```
+
+定义一个注解的使用类型为方法，那么注解在方法上不会报错，但是注解在类上就会报错（红色波浪线）
+
+![image-20210704173518993](javaSE进阶.assets/image-20210704173518993.png)
+
+**测试允许适用于方法和类的注解：**
+
+因为value是一个list，可以修改target注解的参数如下
+
+```java
+//定义一个注解
+@Target( value= {ElementType.METHOD,ElementType.TYPE})
+```
+
+现在类上也可以正常使用自定义的注解了
+
+![image-20210704173936634](javaSE进阶.assets/image-20210704173936634.png)
+
+#### @Retention（重点）
+
+表示需要在什么级别保存该注释信息，用于描述注解的生命周期
+
+- source（源代码级）<class（编译后的class级）<**runtime（运行时）**；一般自定义都定义在runtime；
+
+#### @Documented
+
+说明该注解将被包含在javadoc中
+
+#### @Inherited
+
+说明子类可以继承父类中的该注解
+
+
+
+### 自定义注解
+
+使用**@interface**自定义注解时，自动继承了java.lang.annotation.Annotation接口
+
+分析：
+
+- @interface用来声明一个注解，格式：public @ interface 注解名 {定义内容}
+
+  在类里面声明的话，要把public去掉
+
+- 其中的每一个方法实际上是声明了一个配置参数
+
+- 方法的名称就是参数的名称
+
+- 返回值类型就是参数的类型（返回值只能是 基本类型，class，string，enum）
+
+- 可以通过default来声明参数的默认值
+
+- 如果只有一个参数成员，一般参数名为value
+
+- 注解元素必须要有值，我们定义注解元素时，经常使用空字符串，0作为默认值
+
+编写实例
+
+```java
+package com.zhangyk.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+//自定义注解
+public class Test03 {
+    
+    //如果注解的参数没有默认值，我们就必须给参数显式赋值,如schools
+    //如果有默认值，我们也可以自己另外指定，如name
+    @MyAnnotation2(name="张云",schools = {"北邮","港中文"})
+    public void test(){}
+
+    //因为MyAnnotation3注解只有一个参数，且名为value，填参数的时候省略了： value=
+    @MyAnnotation3("")
+    public void test2(){}
+
+}
+
+//自定义注解常规加上@Target @Retention
+@Target({ElementType.TYPE,ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@interface MyAnnotation2{
+    /*
+    注解的参数设置：参数类型+参数名+（）
+    因为是在自定义注解里，看着像一个方法，本质上这不是一个方法
+    */
+    String name() default "";
+    int age() default 0;
+    //如果默认值为-1，代表不存在；异曲同工：indexof，如果找不到就返回-1
+    int id() default -1;
+    String[] schools();
+}
+
+@Target({ElementType.TYPE,ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@interface MyAnnotation3{
+    /*
+    如果只有一个参数，且参数名为value；在注解使用时可以不写"value="
+    但如果参数名不是value，那么即使只有一个参数，也要显式写出
+    */
+    String value();
+}
+```
 
 
 
