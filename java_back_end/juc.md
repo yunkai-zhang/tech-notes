@@ -3526,6 +3526,8 @@ public class JMMDemo01 {
 
 #### 保证可见性
 
+0，[参考文章volatile的原理解析](https://blog.csdn.net/maoyeqiu/article/details/93925365)
+
 1，解决JMM最后碰到的问题，用volatile修饰number：
 
 ```java
@@ -3687,6 +3689,7 @@ public class Volatile03atomic {
 
 - 可以看到这回多个线程对一个变量做加法时，没有相互覆盖。
 - 网友：原子类必须跟volatile一起用，不一起用的话你跑多几遍发现可见性没体现出来。
+- [原子类的参考文章](https://www.cnblogs.com/chyblogs/p/11312136.html)
 
 #### 禁止指令重排
 
@@ -3952,5 +3955,830 @@ public final class EnumSingle extends Enum
 
 ### 深入理解CAS
 
-https://www.bilibili.com/video/BV1B7411L7tE?p=34&spm_id_from=pageDriver
+- [内存和缓存的区别 - 简书 (jianshu.com)](https://www.jianshu.com/p/a3d0aba850b8)
 
+
+
+#### 什么是CAS
+
+大厂必须深入研究底层！！！！修内功！操作系统、计算机网络原理、组成原理、数据结构
+
+1，CAS即compareAndSwap，比较并交换，是CPU的指令。
+
+2，实战，用CAS实现的方法去操作：
+
+代码；解释见注释：
+
+```java
+package com.zhangyun.demo14cas;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class CASDemo {
+
+    public static void main(String[] args) {
+        //原子类的底层用了CAS
+        AtomicInteger atomicInteger = new AtomicInteger(2020);
+
+        /*boolean compareAndSet(int expect, int update)，本函数在java层面实现“比较并设置”的功能
+        * 参数为(期望值、更新值)
+        * 如果实际值 和 我的期望值相同，那么就更新值
+        * 如果实际值 和 我的期望值不同，那么就不更新值
+        *
+        * compareAndSet中用到了unsafe.compareAndSwapInt，这里的compareAndSwap即为CAS（比较并交换）；
+        * unsafe.compareAndSwapInt在操作系统层面实现“比较并交换”的功能
+        * CAS是CPU的并发原语，即CAS是CPU的指令
+        * */
+        System.out.println(atomicInteger.compareAndSet(2020, 2021));
+        System.out.println(atomicInteger.get());
+
+        //因为期望值是2020  实际值却变成了2021  所以会修改失败
+        atomicInteger.getAndIncrement(); //++操作
+        System.out.println(atomicInteger.compareAndSet(2020, 2222));
+        System.out.println(atomicInteger.get());
+    }
+}
+```
+
+运行main函数，测试：
+
+![image-20220319103950226](juc.assets/image-20220319103950226.png)
+
+- 可以看到，atomicInteger的初始值为2020，所以第一个set能成功；第二个set的时候，atomicInteger的值已经不是2020，所以第二个set会失败。
+
+#### Unsafe类
+
+0，[unsafe类参考文章](https://www.cnblogs.com/thomas12112406/p/6510787.html)
+
+1，compareAndSet的源码，可以看到Unsafe类：
+
+![image-20200812220347822](juc.assets/1f7d8e96f4dabb579a5e71b4a06fde1f.png)
+
+- java可以通过Unsafe类操作内存；我看了源码，Unsafe类里有一堆native方法，而java正是通过native方法用c++去操作内存；
+  - 我理解：所以Unsafe类是众多native方法的包装类
+
+2，看原子类的getAndIncrement源码：
+
+要读懂getAndIncrement源码的源码，必须先读懂getIntVolatile和compareAndSwapInt的源码。
+
+getAndIncrement中的getIntVolatile的源码如下：
+
+```java
+  /***
+   * Retrieves the value of the integer field at the specified offset in the
+   * supplied object with volatile load semantics.
+   *
+   * @param obj the object containing the field to read.
+   * @param offset the offset of the integer field within <code>obj</code>.
+   */
+  public native int getIntVolatile(Object obj, long offset);
+```
+
+- getIntVolatile方法获取对象中offset偏移地址对应的整型field的值（即整数表示的内存地址）,支持volatile load语义
+
+compareAndSwapInt源码：
+
+```java
+/**
+* Atomically update Java variable to <tt>x</tt> if it is currently
+* holding <tt>expected</tt>.
+* @return <tt>true</tt> if successful
+此方法是Java的native方法，并不由Java语言实现。
+
+方法的作用是，读取传入对象o在内存中偏移量为offset位置的值与“期望值所在地址expected”作比较。
+
+相等就把x值赋值给offset位置的值。方法返回true。
+
+不相等，就取消赋值，方法返回false。
+
+这也是CAS的思想，及比较并交换。用于保证并发时的无锁并发的安全性。
+*/
+public final native boolean compareAndSwapInt(Object o, long offset,
+                                              int expected,
+                                              int x);
+```
+
+读getAndIncrement源码，可以看到用到了Unsafe类：
+
+![img](juc.assets/3af68de48cb80b17736da32d22b67af5.png)
+
+- var1和var2共同代表了通过传入参数获得的当前对象在内存地址中的**偏移值**，var4表示1，var5是当前通过getIntVolatile方法获取到的当前对象的整数表示的内存地址偏移值；如果var1和var2表示的偏移值，与var5表示地址相同，说明对象的地址没有被改变（java中地址相等则是一个对象），那么就让var5+var4即为var5+1作为对象的值。
+  - 我问问问：既然CAS是比较当前**工作内存**中的值 和 **主内存**中的值，那么我猜测；这里用var1var2通过getintvolatile拿到的返回值，是在工作内存中；用var1var2在compareandswapint内部拿到的值，是在主内存中。
+    - 我：这么猜测是因为JMM提到过，“工作内存的内容，在解锁前，要刷新回主内存”；而程序方便并直接操作的应该是“工作内存”，getintvolatile似乎是更方便使用的。
+  - 网友：var1相当于数组a，var2相当于a中的角标i；为var5==a[i] ，var5+1就是a[i]+1，即实现了getAndIncrement()
+
+- 这里getAndIncrement用到while不断判断值，就是用到了**自旋锁**。
+
+#### CAS总结
+
+1，CAS：比较当前**工作内存**中的值 和 **主内存**中的值，如果这个值是期望的，那么则执行操作！如果不是就一直循环，使用的是自旋锁。
+
+2，缺点：
+
+- 循环会耗时；
+  - 但是这个耗时比起用java操作会好多了，
+    - 网友：因为CAS不用切换线程状态，且切换线程状态耗时比较大。[参考文章](https://blog.csdn.net/weixin_40743261/article/details/90214340)
+- 一次性只能保证一个共享变量的原子性；
+- 它会存在ABA问题
+
+### CAS的ABA问题
+
+#### ABA问题的说明
+
+1，[ABA问题的本质及其解决办法](https://www.cnblogs.com/chenxibobo/p/13356276.html)，参考文章
+
+2，ABA问题图示：
+
+![img](juc.assets/4b9db8d951df5271f214561766442910.png)
+
+线程1：期望值是1，要变成2；
+
+线程2：两个操作：
+
+1. 期望值是1，变成3
+2. 期望是3，变成1
+
+所以对于线程1来说，A的值还是1，好像值没改变过似的；但是我们不希望这种被蒙在鼓里的情形，我们希望谁动过了这个A一定要告诉我们
+
+3，ABA问题模拟实例：
+
+代码；解释见注释：
+
+```java
+package com.zhangyun.demo14cas;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ABA {
+    //CAS : compareAndSet 比较并交换
+    public static void main(String[] args) {
+        AtomicInteger atomicInteger = new AtomicInteger(2020);
+
+        //==========================模拟捣乱的线程1（事实上这只有主线程）==================================
+        //boolean compareAndSet(int expect, int update)
+        //期望值、更新值
+        //如果实际值 和 我的期望值相同，那么就更新
+        //如果实际值 和 我的期望值不同，那么就不更新
+        //CAS 是CPU的并发原语
+        System.out.println(atomicInteger.compareAndSet(2020, 2021));
+        System.out.println(atomicInteger.get());
+
+        System.out.println(atomicInteger.compareAndSet(2021, 2020));
+        System.out.println(atomicInteger.get());
+
+        //==========================模拟被蒙在鼓里的线程2（事实上这只有主线程）=============================
+        System.out.println(atomicInteger.compareAndSet(2020, 2021));
+        System.out.println(atomicInteger.get());
+    }
+}
+```
+
+运行main函数，测试：
+
+![image-20220319142739356](juc.assets/image-20220319142739356.png)
+
+- 可以看到，即使atomicInteger被操作过，模拟的线程2也成功更新。
+  - 这可能导致本节“1”中提到的，列表更新错误的问题。因为CAS比较的节点A和最新的头部节点是不是同一个节点（内存中的物理地址相同），它并没有关心节点A在步骤1和3之间是否内容发生变化。而节点的内容变化，可能会导致节点的下一节点变化，因为节点内容中存着下一节点的指针。
+  - 印证网友说的：ABA危害是，对象里面的东西被改了也不知道
+
+#### 原子引用
+
+1，解决ABA问题，需要“原子引用”，即使用了乐观锁；原子引用实现了“带版本号的 原子操作”。
+
+- 像sql一样，执行操作后把版本往上提，
+
+2，读源码：
+
+atomicStampedReference.compareAndSet的源码：
+
+```java
+    /**
+     * Atomically sets the value of both the reference and stamp
+     * to the given update values if the
+     * current reference is {@code ==} to the expected reference
+     * and the current stamp is equal to the expected stamp.
+     *
+     * @param expectedReference the expected value of the reference
+     * @param newReference the new value for the reference
+     * @param expectedStamp the expected value of the stamp
+     * @param newStamp the new value for the stamp
+     * @return {@code true} if successful
+     */
+    public boolean compareAndSet(V   expectedReference,
+                                 V   newReference,
+                                 int expectedStamp,
+                                 int newStamp) {
+        Pair<V> current = pair;
+        return
+            expectedReference == current.reference &&
+            expectedStamp == current.stamp &&
+            ((newReference == current.reference &&
+              newStamp == current.stamp) ||
+             casPair(current, Pair.of(newReference, newStamp)));
+    }
+```
+
+- 使用原子引用时，不仅会查看当前对象的值是不是期待的值，还会查看当前的时间戳是不是期待的时间戳。
+
+3，实战：
+
+代码：
+
+```java
+package com.zhangyun.demo14cas;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicStampedReference;
+
+public class ABAsolve {
+    /**AtomicStampedReference 注意，如果泛型是一个基本类型的包装类，注意对象的引用问题
+     * 正常在业务操作，这里面比较的都是一个个对象
+     *
+     * 构造函数输入（要保证原子性的对象，初始版本戳）；每次修改引用的对象，都应改变版本戳
+     */
+    static AtomicStampedReference<Integer> atomicStampedReference = new
+            AtomicStampedReference<>(2020, 1);
+
+    // CAS compareAndSet : 比较并交换！
+    public static void main(String[] args) {
+        //a线程
+        new Thread(() -> {
+            // a线程每次启动后，先获得原子引用的版本号
+            int stamp = atomicStampedReference.getStamp();
+            System.out.println("a1Stamp=>" + stamp);
+
+            //让ab线程都休眠1s，保证线程刚启动后拿到的是原子引用的同一个版本号
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // 修改操作时，版本号更新 + 1;打印CAS的结果
+            System.out.println("a2CAS=>"+atomicStampedReference.compareAndSet(2020, 2021,
+                    atomicStampedReference.getStamp(),
+                    atomicStampedReference.getStamp() + 1));
+            //修改完毕后，打印修改完毕后的原子引用的版本号
+            System.out.println("a2Stamp=>" + atomicStampedReference.getStamp());
+            System.out.println("a2Refer=>" + atomicStampedReference.getReference());
+
+            // 本线程重新把原子引用的值改回去， 版本号更新 + 1;打印CAS的结果
+            System.out.println("a3CAS=>"+atomicStampedReference.compareAndSet(2021, 2020,
+                    atomicStampedReference.getStamp(),
+                    atomicStampedReference.getStamp() + 1));
+            //修改完毕后，打印修改完毕后的原子引用的版本号
+            System.out.println("a3Stamp=>" + atomicStampedReference.getStamp());
+        }, "a").start();
+
+        // b线程；操作与乐观锁的原理相同，即a线程做完的操作，b线程得是知道的
+        new Thread(() -> {
+            // b线程每次启动后，先获得原子引用的版本号
+            int stamp = atomicStampedReference.getStamp();
+            System.out.println("b1Stamp=>" + stamp);
+
+            //让ab线程都休眠1s，保证线程刚启动后拿到的是原子引用的同一个版本号
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            //b线程再额外休眠4s，保证能等A线程先把值改为2021再改回来
+            try {
+                TimeUnit.SECONDS.sleep(4);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("b2CAS=>"+atomicStampedReference.compareAndSet(2020, 2222,
+                    stamp, stamp + 1));
+            System.out.println("b2Stamp=>" + atomicStampedReference.getStamp());
+        }, "b").start();
+    }
+}
+```
+
+- 网友：周志明的JVM实践中说：ABA问题大多时候不影响结果，如果确实要解决，我为什么不加锁解决呢？
+
+运行main测试，发现线程a更新失败：
+
+![image-20220319171802669](juc.assets/image-20220319171802669.png)
+
+- 原因：这里用的是Integer类，integer默认缓存-128->127，超过这个范围就要new对象了，就会分配新的地址，就是不同的对象；由于compareAndSet源码用==比较对象，即比较对象的内存地址，所以肯定是false
+  - 我和网友：实际用的时候遇到大数，直接字符串常量标出状态进行控制吧，别用Integer
+  - 一般不会碰到这种问题，因为企业中的引用对象一般是诸如User类的实例化对象，在<>中填User。
+
+4，“3”的解决方案：
+
+- 把整数换成字符串，（我选择）
+- 或者把整数换成-128~127之内（老师选择的，他逃避问题qaq）
+
+代码：
+
+```java
+package com.zhangyun.demo14cas;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicStampedReference;
+
+public class ABAsolve {
+    /**AtomicStampedReference 注意，如果泛型是一个基本类型的包装类，注意对象的引用问题
+     * 正常在业务操作，这里面比较的都是一个个对象
+     *
+     * 构造函数输入（要保证原子性的对象，初始版本戳）；每次修改引用的对象，都应改变版本戳
+     */
+    static AtomicStampedReference<String> atomicStampedReference = new
+            AtomicStampedReference<>("2020", 1);
+
+    // CAS compareAndSet : 比较并交换！
+    public static void main(String[] args) {
+        //a线程
+        new Thread(() -> {
+            // a线程每次启动后，先获得原子引用的版本号
+            int stamp = atomicStampedReference.getStamp();
+            System.out.println("a1Stamp=>" + stamp);
+
+            //让ab线程都休眠1s，保证线程刚启动后拿到的是原子引用的同一个版本号
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // 修改操作时，版本号更新 + 1;打印CAS的结果
+            System.out.println("a2CAS=>"+atomicStampedReference.compareAndSet("2020", "2021",
+                    atomicStampedReference.getStamp(),
+                    atomicStampedReference.getStamp() + 1));
+            //修改完毕后，打印修改完毕后的原子引用的版本号
+            System.out.println("a2Stamp=>" + atomicStampedReference.getStamp());
+            System.out.println("a2Refer=>" + atomicStampedReference.getReference());
+
+            // 本线程重新把原子引用的值改回去， 版本号更新 + 1;打印CAS的结果
+            System.out.println("a3CAS=>"+atomicStampedReference.compareAndSet("2021", "2020",
+                    atomicStampedReference.getStamp(),
+                    atomicStampedReference.getStamp() + 1));
+            //修改完毕后，打印修改完毕后的原子引用的版本号
+            System.out.println("a3Stamp=>" + atomicStampedReference.getStamp());
+        }, "a").start();
+
+        // b线程；操作与乐观锁的原理相同，即a线程做完的操作，b线程得是知道的
+        new Thread(() -> {
+            // b线程每次启动后，先获得原子引用的版本号
+            int stamp = atomicStampedReference.getStamp();
+            System.out.println("b1Stamp=>" + stamp);
+
+            //让ab线程都休眠1s，保证线程刚启动后拿到的是原子引用的同一个版本号
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            //b线程再额外休眠4s，保证能等A线程先把值改为2021再改回来
+            try {
+                TimeUnit.SECONDS.sleep(4);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("b2CAS=>"+atomicStampedReference.compareAndSet("2020", "2222",
+                    stamp, stamp + 1));
+            System.out.println("b2Stamp=>" + atomicStampedReference.getStamp());
+        }, "b").start();
+    }
+}
+```
+
+运行main，测试：
+
+![image-20220319172029390](juc.assets/image-20220319172029390.png)
+
+- 可以看到，原子引用为对象添加版本号，成功解决了ABA问题
+
+5，回顾本节基本类型的包装类带来的大坑：
+
+Integer 使用了对象缓存机制，默认范围是-128~127，推荐使用静态工厂方法valueOf获取对象实例，而不是new，因为valueOf使用缓存，而new一定会创建新的对象分配新的内存空间。
+
+阿里手册：
+
+![img](juc.assets/f0fa8dc692d7e89523bc334bebc58f15.png)
+
+### 各种锁的理解
+
+#### 公平锁 非公平锁
+
+1，公平锁：非常公平，不能插队，必须先来后到。
+
+公平锁实现ReentrantLock时调用的构造方法：
+
+```java
+/**
+ * Creates an instance of {@code ReentrantLock}.
+ * This is equivalent to using {@code ReentrantLock(false)}.
+ */
+public ReentrantLock() {
+    sync = new NonfairSync();
+}
+```
+
+2，非公平锁：非常不公平，允许插队，可以改变顺序（默认都是非公平锁，以保证效率）。
+
+不公平锁实现ReentrantLock时调用的构造方法：
+
+```java
+/**
+ * Creates an instance of {@code ReentrantLock} with the
+ * given fairness policy.
+ *
+ * @param fair {@code true} if this lock should use a fair ordering policy
+ */
+public ReentrantLock(boolean fair) {
+    sync = fair ? new FairSync() : new NonfairSync();
+}
+```
+
+#### 可重入锁
+
+1，可重入锁，又称为递归锁。
+
+- 可重入锁，指的是以线程为单位，当一个线程获取对象锁之后，这个线程可以再次获取本对象上的锁，而其他的线程是不可以的。
+- **synchronized 和  ReentrantLock 都是可重入锁。**
+- 可重入锁的意义之一在于防止死锁。
+- 实现原理实现是通过为每个锁关联一个请求计数器和一个占有它的线程。当计数为0时，认为锁是未被占有的；线程请求一个未被占有的锁时，JVM将记录锁的占有者，并且将请求计数器置为1 。如果同一个线程再次请求这个锁，计数器将递增；每次占用线程退出同步块，计数器值将递减。直到计数器为0,锁被释放。
+- 关于父类和子类的锁的重入:子类覆写了父类的synchonized方法，然后调用父类中的方法，此时如果没有可重入的锁，那么这段代码将产生死锁（很好理解吧）。
+
+2，以大门和卧室为例，图示可重入锁：
+
+![image-20220319174911816](juc.assets/image-20220319174911816.png)
+
+3，测试传统版的锁即synchronized，是可重入锁：
+
+```java
+package com.zhangyun.demo15locks;
+
+import static java.lang.Thread.sleep;
+
+public class TestSynReentrant {
+    public static void main(String[] args) {
+        //资源类的实例化对象
+        Phone phone = new Phone();
+
+        //启动线程A
+        new Thread(()->{
+            phone.sms();
+        },"A").start();
+
+        //主线程睡眠1s，保证线程A能抢到对象phone的锁，再启动线程B
+        try {
+            sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        //启动线程B
+        new Thread(()->{
+            phone.sms();
+        },"B").start();
+    }
+
+}
+
+class Phone{
+    public synchronized void sms(){
+        System.out.println(Thread.currentThread().getName()+"=> sms");
+        call();//这里也有一把锁;表示发完短信后必须打电话
+    }
+    public synchronized void call(){
+        System.out.println(Thread.currentThread().getName()+"=> call");
+    }
+}
+
+```
+
+- 网友：主线程没有sleep的话，这两个线程是随机的么？
+  - 网友：你主线程是顺序啊，怎么第一个都比第二个快那么点去抢到锁，并进入就绪状态；虽然进入就绪状态不一定被cpu调用，但是进入就绪状态时已经拿到锁了，线程B就拿不到。所以这里sleep可以不加。
+    - 我：感觉这块知识要懂JVM才行。
+
+- sms()和call()都是Phone类中的同步方法；当当前线程调用Phone类的对象的sms()同步方法，如果其他线程没有获取Phone类的对象的对象锁，那么当前线程就获得当前A类对象的锁，然后执行sms()同步方法；sms()的方法体中调用call()同步方法，当前线程能够再次获取Phone类对象的锁，而其他线程是不可以的，这就是可重入锁。
+
+运行main函数，测试：
+
+![image-20220319201050133](juc.assets/image-20220319201050133.png)
+
+- 可以看到线程在运行sms()里的call()时，还能对phone对象锁再加一次；本质上是一把对象锁，只是锁的计数+1。
+
+4，测试新版的锁即Lock，是可重入锁：
+
+代码；解释见注释：
+
+```java
+package com.zhangyun.demo15locks;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class TestLockReentrant {
+
+    public static void main(String[] args) {
+        Phone2 phone = new Phone2();
+        new Thread(()->{
+            phone.sms();
+        },"A").start();
+        
+                //主线程睡眠1s，保证线程A能抢到对象phone的锁，再启动线程B
+        try {
+            sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        
+        new Thread(()->{
+            phone.sms();
+        },"B").start();
+    }
+
+}
+class Phone2{
+
+    Lock lock=new ReentrantLock();
+
+    public void sms(){
+        //lock.lock();
+        lock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName()+"=> sms");
+            call();//这个call方法也会给对象再加一次锁，且加的是同一把锁;这就是可重入锁！
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally {
+            //lock锁必须配对，即有一个lock就得有一个对应的unlock，否则会因为少解了把锁，导致线程无法释放对象锁
+            //lock.unlock();
+            lock.unlock();
+        }
+    }
+
+    public void call(){
+        lock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "=> call");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+}
+```
+
+- 网友：这里老师视频里说有两把锁是说错了，这就是一把锁，锁的就是ReentrantLock这个对象，ReenTrantLock中有AQS，AQS可以判断两次lock方法都是同一个线程，这才是可重入锁
+- 网友：可以对一个ReentrantLock对象多次执行lock()加锁和unlock()释放锁，也就是可以对一个锁加多次，叫做可重入加锁。
+
+运行main函数，测试：
+
+![image-20220319201025857](juc.assets/image-20220319201025857.png)
+
+- 可以看到线程在运行sms()里的call()时，还能对phone对象锁再加一次；本质上是一把对象锁，只是锁的计数+1。
+
+#### 自旋锁
+
+1，自旋锁（spinlock）：是指当一个线程在获取锁的时候，如果锁已经被其它线程获取，那么该线程将循环等待，然后不断的判断锁是否能够被成功获取，直到获取到锁才会退出循环。 获取锁的线程一直处于活跃状态，但是并没有执行任何有效的任务，使用这种锁会造成busy-waiting。
+
+2，之前在看getAndAddInt的源码时，dowhile就是构成了自旋锁：
+
+```java
+public final int getAndAddInt(Object var1, long var2, int var4) {
+    int var5;
+    do {
+        var5 = this.getIntVolatile(var1, var2);
+    } while(!this.compareAndSwapInt(var1, var2, var5, var5 + var4));
+    return var5;
+}
+```
+
+3，自己实现一个自旋锁：
+
+代码：
+
+```java
+package com.zhangyun.demo15locks;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class TestSpinLock {
+    public static void main(String[] args) throws InterruptedException {
+
+        //使用CAS实现自定义自旋锁
+        SpinlockDemo spinlockDemo=new SpinlockDemo();
+
+        //线程1启动
+        new Thread(()->{
+            //加锁，休息3s，再解锁
+            spinlockDemo.myLock();
+            try {
+                /*
+                * 线程t1睡1003ms，则线程t2不能打印出“自旋中”，线程t1睡1004ms，则线程t2能打印出“自旋中”；
+                * 这个4ms表示，线程t1解锁需要的时间；
+                * 如果线程t1多休眠一会再解锁，则主线程休眠1s后启动线程t2，t2就不能直接拿到自旋锁，t2得进入自旋等待状态等待线程t1休眠完毕解锁才能拿到spinlockDemo的自旋锁
+                * */
+                TimeUnit.MILLISECONDS.sleep(1004);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                spinlockDemo.myUnlock();
+            }
+        },"t1").start();
+
+        //保证t1线程先获取到spinlockDemo的自旋锁
+        TimeUnit.SECONDS.sleep(1);
+
+        //线程2启动
+        new Thread(()->{
+            spinlockDemo.myLock();
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                spinlockDemo.myUnlock();
+            }
+        },"t2").start();
+    }
+}
+class SpinlockDemo {
+
+    /*
+    * 通过原子引用(AtomicReference)来实现CAS，进而实现自旋锁。
+    * 我想锁一个线程，就判断线程的原子引用，即在<>中填入Thread
+    *
+    * 这里new AtomicReference的构造函数中没有填入内容，表示此时atomicReference引用的Thread类型为null没有值。关于默认值，回顾javase：
+    * Integer默认值是 0
+    * Thread是一个类，叫引用类型，默认值是null
+    * */
+    AtomicReference<Thread> atomicReference=new AtomicReference<>();
+
+    //加锁
+    public void myLock(){
+        //获取当前线程的线程对象
+        Thread thread = Thread.currentThread();
+
+        /*加锁的时候，就不断判断这个东西有没有加锁就完事了，这个自旋锁
+        *
+        * 没抢到SpinlockDemo实例化对象的自旋锁，就让他一直卡在这；
+        * 用CAS比较，如果atomicReference引用的Thread类型为空，就把atomicReference引用的Thread类型的值设置本线程对象，
+        * 然后compareAndSet返回true离开while循环，相当于抢到了SpinlockDemo实例化对象的自旋锁。
+        * 如果atomicReference引用的Thread类型不为空，即值被其他线程设置为别的线程了，执行compareAndSet就会返回false，
+        * 导致一直自旋等待拿到SpinlockDemo实例化对象的自旋锁的线程释放锁。
+        * */
+        while (!atomicReference.compareAndSet(null,thread)){
+            System.out.println(Thread.currentThread().getName()+" ==> 自旋中~");
+        }
+
+        //打印，表示本线程抢到SpinlockDemo实例化对象的自旋锁
+        System.out.println(thread.getName()+"===> mylock");
+    }
+
+
+    //解锁
+    public void myUnlock(){
+        //获取当前线程的线程对象
+        Thread thread=Thread.currentThread();
+
+        //打印，表示本线程释放之前抢到的SpinlockDemo实例化对象的自旋锁；本打印一定要在真实解锁前做，否则先解锁后打印，可能会出现线程t1还没打印释放锁，线程t2就打印已加锁的现象
+        System.out.println(thread.getName()+"===> myUnlock");
+
+        /*
+        * 解锁：如果atomicReference引用的线程是本线程，即是本线程拿到了SpinlockDemo实例化对象的自旋锁，
+        * 就把atomicReference引用的线程设为空；即释放掉本线程对于SpinlockDemo实例化对象的自旋锁
+        * */
+        atomicReference.compareAndSet(thread,null);
+    }
+
+}
+```
+
+- 自己实现自旋锁的话，也需要CAS
+
+- 网友：加锁和解锁的时候都会从主内存中获取值 不需要volitail
+
+运行main函数，测试：
+
+![image-20220319215038455](juc.assets/image-20220319215038455.png)
+
+![image-20220319230618193](juc.assets/image-20220319230618193.png)
+
+- 网友：t1的mylock不是卡主了吗，咋执行完毕
+
+  - 网友：T1是不卡的，T2才卡到那个循环，因为t1利用cas置换了当前值为thread
+
+  - 网友：狂神这里说错了，应该是线程2在自旋，进来lock的时候，不是null，一直死循环
+
+- 高赞网友：这里应该是说对象自旋吧，两个线程用的是同一个Lock对象
+
+- 我：测试结果中线程t1打印“解除自旋”后，线程t2还打印了一次“自旋中”，这是因为线程t1打印“解除自旋”时还没真正解锁；但是这个打印误差是小事，只要控制台总是保证先打印t1解锁，再打印t2拿到锁，就在锁的逻辑上没问题。
+
+#### 死锁
+
+本节主要将java中的死锁。
+
+1，死锁图示：
+
+![image-20220319231505015](juc.assets/image-20220319231505015.png)
+
+2，实战构建死锁：
+
+代码；分析见注释：
+
+```java
+package com.zhangyun.demo15locks;
+
+import java.util.concurrent.TimeUnit;
+
+public class TestDeadlock {
+    public static void main(String[] args) {
+        //基本类型中String的传递方式是特殊的，往方法中传递的是引用，即可理解为传递了一个对象进去；所以下面两个String对象，可以作为线程类中同步块的锁
+        String lockA= "lockA";
+        String lockB= "lockB";
+
+        /*
+        * 线程t1占着对象lockA的锁，想拿对象lockB的锁；
+        *
+        * 之所以占着对象lockA的锁，是因为构造函数最左边的参数会作为MyThread类中的lockGotten，即嵌套同步块的外层同步块的锁;
+        * 只有先拿到外部同步块的锁，才能进入外部同步块并参与竞争内部同步块的锁
+        * */
+        new Thread(new MyThread(lockA,lockB),"t1").start();
+        //线程t2占着对象lockB的锁，想拿对象lockA的锁
+        new Thread(new MyThread(lockB,lockA),"t2").start();
+    }
+}
+
+//写一个线程类，在线程类中放两个资源；开两个线程，让线程互相争抢
+class MyThread implements Runnable{
+
+    private String lockGotten;
+    private String lockToGet;
+
+    public MyThread(String lockGotten, String lockToGet) {
+        this.lockGotten = lockGotten;
+        this.lockToGet = lockToGet;
+    }
+
+    @Override
+    public void run() {
+        //拿到对象lockGotten的锁，才可进入下面同步块
+        synchronized (lockGotten){
+            System.out.println(Thread.currentThread().getName()+" have gotten "+lockGotten+"===>want to get "+lockToGet);
+
+            //本线程睡2s，是为了让另一个线程无竞争地拿到lockToGet对象的锁
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            //线程能运行到本位置，说明已经拿到了lockGotten的锁；想进入下面这个同步块，就得拿到lockToGet的锁，但是lockToGet的锁已经被另一个线程拿到了
+            synchronized (lockToGet){
+                System.out.println(Thread.currentThread().getName()+" have gotten "+lockToGet+"===>want to get "+lockGotten);
+            }
+        }
+    }
+
+}
+
+```
+
+- 网友：懂了，他定义的名称会误导人，自己慢慢捋一下。他这个锁是锁的对象，那个睡眠就是为了两个对象都被第一个sync锁住，然后又去第二sync拿，就会死锁
+  - 我：所以我把老师的代码改良了，换了变量名，好理解多了
+
+- [java形参、实参、值传递、引用传递参考文章 ](https://www.cnblogs.com/wudiffs/p/11573314.html)，帮助理解这里String作为对象传入Thread类，并作为同步块的锁。
+- 网友：因为锁的对象是String类型的，是在常量池里面找。所以说一般不推荐使用String作为锁的对象
+
+运行main函数，测试：
+
+![image-20220319235641702](juc.assets/image-20220319235641702.png)
+
+- 可以看到本程序一直不停止，因为两个线程构成了一个死锁状态。
+
+3，实战排查死锁：
+
+死锁时，来到idea的terminal：
+
+![image-20220320000620448](juc.assets/image-20220320000620448.png)
+
+使用`jps -l`查看当前活着的java进程的进程号，定位进程：
+
+![image-20220320000817465](juc.assets/image-20220320000817465.png)
+
+使用`jstack 进程号`查看目标进程的堆栈信息；信息一般在最下面：
+
+![image-20220320001034856](juc.assets/image-20220320001034856.png)
+
+![image-20220320001148425](juc.assets/image-20220320001148425.png)
+
+4，随便聊聊：
+
+工作中，排查问题怎么排查？：
+
+- 10个人有9个人说：看日志。
+- 一个人说：看堆栈信息，这B格就上来了。
