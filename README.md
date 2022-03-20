@@ -84,7 +84,7 @@ javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远�
 
 刷题量目标
 
-- 在线版剑指offer全部-》hot100-》codetop前五页
+- 在线版剑指offer全部-》（hot100）-》codetop前五页
   - 一坛友说codetop前五页刷完后(猜测是只刷了codetop)，找到了字节实习。
 
 
@@ -99,10 +99,12 @@ javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远�
 ### 分布式
 
 - mit 6.824。完整学可能要半年，学完后课程和lab后可以跟最新的顶会论文+看开源项目。
+- go语言为主
 
-### √秒杀
+### 秒杀
 
 - 考虑用springboot+redis+rabbitmq等技术做一个秒杀项目；可以做成分布式的，但有人说没必要，看自己的时间空余度。
+- 秒杀做烂了，别做了。
 
 ## Java知识集合
 
@@ -111,3 +113,6 @@ javase->mysql->前端三件套->javaweb->ssm->git->springboot->springcloud->远�
 - cs notes>javaguide~=cyc2018
 - 看cs notes把知识面掌握，然后抓住一两个重点方向深入一下，增加长板；
   - 长板推荐书籍：周志明jvm，并发编程的艺术；深入浅出mysql；
+
+- 面经：**gogocoder**网站，整理了各种面经。
+  - 针对面经，看自己学过东西的薄弱点，记录下来。
