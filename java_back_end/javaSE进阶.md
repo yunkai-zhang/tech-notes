@@ -6,7 +6,25 @@
 
 ## 泛型
 
+1，知识：[菜鸟博客](https://www.runoob.com/java/java-generics.html)；相关名词解释：
+
+- [java 泛型的上限与下限](https://www.cnblogs.com/fanweisheng/p/11136181.html)
+
+2，泛型的意义：
+
+- 在Java的应用中，有一个非常好的东西，可以让我们在开发中避免很多不必要的数据应用错误，它就是泛型。我们都知道，泛型是一种数据类型约束机制，是一个数据应用规则，指定了泛型之后，就只能按照这个规则来使用相应的数据，比较一个List集合，默认是可以装任何东西。[参考类型](https://zhuanlan.zhihu.com/p/126494043)
+
 ## 枚举
+
+1，知识：[菜鸟博客](https://www.runoob.com/java/java-enum.html)；
+
+- 帖子最后的“枚举类成员”，“构造函数打印”可以看出用到枚举类时，哪怕只用枚举类中的一个RED实例，也会把枚举类中的其他实例GREEN BLUE都实例化。
+
+2，注意点，[参考文章](https://blog.csdn.net/weixin_42868638/article/details/88558734)：
+
+- 需要在枚举实例后面加上分号，然后再写构造函数等
+- 枚举实例必须在前面
+- 定义枚举的构造器方法带参,只能为private
 
 ## 反射
 

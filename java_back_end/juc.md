@@ -3418,7 +3418,7 @@ public class CompletableFutureTest1 {
 
 1，不要与JVM混淆，JVM是java虚拟机
 
-2，JMM：JAVA内存模型；它是不存在的东西，是一个概念，也是一个约定！
+2，JMM：JAVA内存模型；它是不存在的东西，是一个概念，也是一个约定；jmm是缓存一致性协议，用于定义数据读写的规则。
 
 3，关于JMM的一些同步的约定：
 
@@ -3748,6 +3748,8 @@ y=x*x;   //4
 - 由于内存屏障，可以保证避免指令重排的现象产生
 
 面试官：那么你知道在哪里用这个**内存屏障**用得最多呢？**单例模式**
+
+- [volatile和synchronized的区别 - kaleidoscopic - 博客园 (cnblogs.com)](https://www.cnblogs.com/kaleidoscope/p/9506018.html)
 
 
 

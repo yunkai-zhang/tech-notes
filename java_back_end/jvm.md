@@ -1,5 +1,11 @@
 # JVM
 
+强烈推荐书籍：<深入理解jvm>周志明；市面上各种博客教程讲jvm讲的很乱。
+
+
+
+[(22条消息) 狂神jvm复习笔记_byteyoung的博客-CSDN博客_狂神jvm笔记](https://blog.csdn.net/qq_40126686/article/details/108279919)
+
 ### JVM的学习方式
 
 1，先看看一些常见的面试题，自测：
@@ -42,7 +48,9 @@
 - 百度
 - 前人总结的jvm思维导图（processon版）
 
+4，好文必读：
 
+- https://zhuanlan.zhihu.com/p/25713880
 
 ### JVM的体系结构
 
@@ -225,6 +233,8 @@ public class Student {
 
 native是面试高频，得懂。
 
+[栈堆方法区好文，建议先看](https://blog.csdn.net/u013241673/article/details/78574770)
+
 #### Native
 
 1，java源码中可以看到`private native void start0();`的语句：
@@ -265,16 +275,57 @@ native是面试高频，得懂。
 
 （Method Area）
 
-1，方法区是被所有线程共享,所有字段和方法字节码，以及一些特殊方法，如构造函数，接口代码也在此定义。简单说，所有定义的方法的信息都保存在该区域，此区域属于共享区间。
+1，方法区概念；[参考文章](https://zhuanlan.zhihu.com/p/25713880)：
 
-2，“静态变量（static）、常量（final）、类信息(构造方法、类实现的接口的定义)（Class）、运行时的常量池”存在方法区中，但是实例(对象)变量存在堆内存中，和方法区无关：
+- 在JVM中，**类型信息**和**类静态变量**都保存在方法区中，类型信息是由类加载器在类加载的过程中从类文件中提取出来的信息。
+
+- 需要注意的一点是，**常量池也存放于方法区中**。
+
+- **程序中所有的线程共享一个方法区**，所以访问方法区的信息必须确保线程是安全的。如果有两个线程同时去加载一个类，那么只能有一个线程被允许去加载这个类，另一个必须等待。
+
+- 在程序运行时，方法区的大小是可以改变的，程序在运行时可以扩展。
+
+- 方法区也可以被垃圾回收，但条件非常严苛，必须在该类没有任何引用的情况下，详情可以参考另一篇文章：[Java性能优化之JVM GC（垃圾回收机制） - 知乎专栏](https://zhuanlan.zhihu.com/p/25539690)
+
+2，**类型信息包括什么？**：
+
+```
+1、类型的全名（The fully qualified name of the type）
+
+2、类型的父类型全名（除非没有父类型，或者父类型是java.lang.Object）（The fully qualified name of the typeís direct superclass）
+
+3、该类型是一个类还是接口（class or an interface）（Whether or not the type is a class ）
+
+4、类型的修饰符（public，private，protected，static，final，volatile，transient等）（The typeís modifiers）
+
+5、所有父接口全名的列表（An ordered list of the fully qualified names of any direct superinterfaces）
+
+6、类型的字段信息（Field information）
+
+7、类型的方法信息（Method information）
+
+8、所有静态类变量（非常量）信息（All class (static) variables declared in the type, except constants）
+
+9、一个指向类加载器的引用（A reference to class ClassLoader）
+
+10、一个指向Class类的引用（A reference to class Class）
+
+11、基本类型的常量池（The constant pool for the type）
+```
+
+- 所以方法信息在方法区中！
+
+3，方法列表（Method Tables）：
+
+- 为了更高效的访问所有保存在方法区中的数据，在方法区中，除了保存上边的这些类型信息之外，还有一个为了加快存取速度而设计的数据结构：方法列表。每一个被加载的非抽象类，Java虚拟机都会为他们产生一个方法列表，这个列表中保存了这个类可能调用的所有实例方法的引用，保存那些父类中调用的方法。
+
+4，狂神补充：“静态变量（static）、常量（final）、类信息(构造方法、类实现的接口的定义)（Class）、运行时的常量池”存在方法区中，但是实例(对象)变量存在堆内存中，和方法区无关：
 
 ![image-20220320195646054](jvm.assets/image-20220320195646054.png)
 
 ![image-20220320195524299](jvm.assets/image-20220320195524299.png)
 
 - 网友：1.8中字符串常量池在堆中，运行时常量池在方法区的元空间；方法区
-
 - 字符串是不可修改的，在常量池里。
 - 这里name没用`test.name="123"`赋值的话，会从常量池里拿到name的值为“qinjiang”；用`test.name="123"`赋值的话，name的值就会被存在堆中的对象信息里。
 
@@ -359,4 +410,392 @@ native是面试高频，得懂。
 
 ### HotSpot和堆
 
-https://www.bilibili.com/video/BV1iJ411d7jS?p=7&spm_id_from=pageDriver
+#### 三种JVM
+
+1，jvm三种版本：
+
+- sun公司的hotspot版；
+  - 目前主要用的；
+- Oracle公司的 JRockit版（原BEA JRockit）；
+  - 性能不错，但是不适合学习
+- IBM公司的j9vm
+
+2，java版本可以使用`java -version`查看：
+
+![image-20220321155353868](jvm.assets/image-20220321155353868.png)
+
+3，本教程讲的堆的知识都是基于hotspot版jvm的，别的版本的jvm和hotspot共祖，只是后面分化开了，所以会有些区别。
+
+
+
+#### 堆
+
+0，堆到底包括永久区吗？：
+
+- [参考文章](https://blog.csdn.net/ylyg050518/article/details/52244994)；**本文没有把永久代算在堆内存中**（老师承认自己把永久代称为永久区）。
+
+- [文章](https://blog.csdn.net/myfirstuser/article/details/98034911)，把永久代算在堆中，我看网友说“方法区即永久代，是一种特殊的堆。”
+- 狂神：永久代在jdk1.8后被称为元空间，也被称为非堆；有人看他是jvm堆的一部分，有人不认为，两种见解都行。
+
+1，一个JVM只有一个堆内存,堆内存的大小是可以调节的,
+
+- 网友：栈是线程级的，但堆只有一个
+
+2，类加载器读取类文件后,一般会把类,方法,变量,我们所有引用类型的真实对象,放入堆中，以方便执行器执行。
+
+- 我和网友：常量放在方法区的常量池中；在《深入理解jvm虚拟机》中说到：运行时常量池也是在方法区的
+  - [三种常量池](https://www.cnblogs.com/dtyy/p/15881493.html)
+  - [什么是永久代](https://www.jianshu.com/p/66e4e64ff278)
+- 我和高赞网友：堆里的是方法引用，栈中存着方法的局部变量和形参，方法区有类的方法信息；
+
+3，堆内存细分为三个区域:
+
+- 新生代
+- 老年代old
+- 永久代Perm
+
+![image-20220321173909772](jvm.assets/image-20220321173909772.png)
+
+4，OOM实战：
+
+![image-20220321175500955](jvm.assets/image-20220321175500955.png)
+
+- 不停在伊甸园区创建对象，对象会往养老区转移，最后新生区和养老区都满了，就报错OOM。
+
+#### 堆内存-新生代
+
+1，堆内存-新生区：类的诞生,成长和死亡的地方
+分为:
+
+- 伊甸园区:所有对象都在伊甸园区new出来
+- 伊甸园区满了就会轻GC。
+- 幸存0区和幸存1区:轻GC之后存下来的
+- 垃圾回收主要在“伊甸园区”和“养老区”
+  - 幸存区是伊甸园和养老区的过渡，这里垃圾清理的少。
+- 幸存区1和2是交换的，把内容从1转移到到2，再从2到1
+  - 后面GC回收会细说
+
+#### 堆内存-老年代
+
+1，老年代(养老区)：
+
+- 15次轻GC存活下来的对象放在老年代
+  - 网友：除了15次，当一批对象总内存超过survivor（幸存区）区50%就会被直接放进老年区，不需要15次
+
+- 真理:经过研究，90%的对象都是临时对象!所以大多数对象到不了老年代。
+- 网友：full GC是养老区满的情况下
+
+#### 堆内存-永久代
+
+1，永久代：
+
+- 这个区域常驻内存的。用来存放JDK自身携带的Class对象。Interface元数据，存储的是Java运行时的一些环境或类信息-，这个区域不存在垃圾回收!关闭VM虚拟就会释放这个区域的内存~
+- 一个启动类，加载了大量的第三方jar包。Tomcat部署了太多的应用，大量动态生成的反射类。不断的被加载。直到内存满，就会出现OOM;
+- jdk8及之后，永久区的功能，由元空间实现。
+  - 高赞网友补充：jdk1.7前的永久区在JVM的内存中；但是jdk1.8后的元空间不在JVM内存中，而在计算机的内存中；所以元空间不能算堆的一部分！！！
+  - [永久代和元空间和方法区的区别](https://www.cnblogs.com/paddix/p/5309550.html)
+
+2，永久区的名字变化：
+
+-  jdk1.6之前:永久代，常量池是在方法区;
+-  jdk1.7︰永久代，但是慢慢的退化了，去永久代。常量池在堆中
+-  jdk1.8之后:无永久代，常量池在元空间
+  - 网友：永久代是方法区的实现；方法区只是一种规范，而永久代或者元空间是方法区的实现，他们并不是从属关系；方法区是一个特殊的堆，jdk8以后在堆(元空间里面)
+
+3，持久代（perm）在jdk1.8改名为元空间，元空间实现了方法区这个概念；方法区又被称为非堆，因为它在堆里面，但是又被所有线程共享，所以用“非堆”特意区分出方法区。
+
+- 网友：所谓方法区，只是一种概念，永生代和元空间是对他的一种实现方式
+- 网友：永久代和元空间都是对方法区的一种实现,因为永久区的实现容易产生OOM,所以放到了实际的本地内存用永久区实现,内存那么大,就不容易OOM了；方法区是JVM规范的规定，永久代是hotspot对方法区的实现；1.8后元空间取代永久代来实现方法区
+
+#### OOM处理
+
+1，运行程序时尝试扩大堆内存，查看结果；如果还是oom，那可能是程序写错了，即不停创建对象但是不使用完毕。
+
+2，分析内存，看一下哪个地方出现了问题。
+
+### 使用JProfiler工具分析OOM原因
+
+#### 引入
+
+1，在一个项目中出现了OOM故障，想排除：
+
+- 最好是能看到代码在第几行出错；这就得使用内存快照分析工具，早期eclipse中有MAT，现在是Jprofiler
+- 比较低效的就debug，一行行分析代码。
+
+2，MAT，Jprofiler作用：
+
+- 分析Dump内存文件，快速定位内存泄露;
+- 获得堆中的数据
+- 获得大的对象~
+
+- 。。。
+
+#### idea安装Jprofiler插件
+
+1，本地搜索jprofile，搜不到就去market
+
+![image-20220321222320280](jvm.assets/image-20220321222320280.png)
+
+2，idea安装jprofile插件；安装完毕后点击“**apply**”：
+
+![image-20220321222433234](jvm.assets/image-20220321222433234.png)
+
+3，idea安装好插件后，还得电脑[安装](https://www.ej-technologies.com/download/jprofiler/files)一个程序：
+
+![image-20220321222636309](jvm.assets/image-20220321222636309.png)
+
+4，
+
+![image-20220321223204449](jvm.assets/image-20220321223204449.png)
+
+- 狂神说：安装路劲不能有空格，所以我自定义了安装路径，没有用默认的路劲。
+
+5，选择idea集成，继续安装：
+
+![image-20220322004055546](jvm.assets/image-20220322004055546.png)
+
+6，不用秘钥，选择10日试用，进入软件：
+
+![image-20220322004301094](jvm.assets/image-20220322004301094.png)
+
+- 按钮全是灰的，唯一能点的是“启动中心”
+
+7，回到idea，到settings-tools,可以看到jprofiler；选中从官网下载的jprofile.exe，如果apply可以点击就点击：
+
+![image-20220322100938039](jvm.assets/image-20220322100938039.png)
+
+8，看到idea出现了jprofile图标，如果没出现就尝试重启idea：
+
+![image-20220322101135680](jvm.assets/image-20220322101135680.png)
+
+#### 实战jprofiler
+
+1，编写代码；解释在注释中：
+
+![image-20220322102939843](jvm.assets/image-20220322102939843.png)
+
+```java
+package com.zhangyun.demo02oom;
+
+import java.util.ArrayList;
+
+public class TestJprofiler {
+    //每一个testjprofile对象都被分配了1M的堆内存，所以不停创建对象并存储的话，会oom
+    byte [] byteArray= new byte[1024*1024];//1M
+
+    public static void main(String[] args) {
+        //指定list列表存储的类型为本类TestJprofiler实例化的对象
+        ArrayList<TestJprofiler> list = new ArrayList<>();
+
+        //计数
+        int count= 0;
+
+        //利用死循环构建oom;可能会出现异常的代码块，要总是用trycatch
+        try {
+            while(true){
+                list.add(new TestJprofiler());
+                count++;
+            }
+        }
+        //Exception是捕获不到的，要用error
+        catch (Error e) {
+            /*
+            * 顶级不正常是Throwable
+            * 次一层级是Exception和Error
+            * */
+            System.out.println("count:"+count);
+            e.printStackTrace();
+        }
+
+    }
+}
+```
+
+2，运行main函数：
+
+
+
+- 因为OOM是error，catch无法捕捉exception，所以也不会打印count
+
+3，在configuration中，设置vm参数，来尝试看看哪里出错了：
+
+![image-20220322103220763](jvm.assets/image-20220322103220763.png)
+
+![image-20220322103204159](jvm.assets/image-20220322103204159.png)
+
+![image-20220322103646826](jvm.assets/image-20220322103646826.png)
+
+- 常用jvm命令：
+  - `-Xms`：设置jvm初始化被分配的内存大小，默认为物理内存的1/64；
+  - `-Xmx`：设置jvm最大被分配内存，默认是物理内存的1/4
+  - `-XX:+PrintGCDetail`：打印GC垃圾回收信息。加号表示命令。
+  - `-XX:+HeapDumpOnOutOfMemoryError`：打印栈溢出或者oom的命令
+- 默认Xms会是1个多G，可能会把电脑卡死，自测可以设置小一点，本例设置为1MB。
+- `-XX:+HeapDumpOnOutOfMemoryError`是重点：假设我爆出了OOM异常，jvm就把Dump文件导出来
+
+4，编写好configuration后再次运行程序，会提示`Dumping heap to java_pid73740.hprof ...`:
+
+![image-20220322103800311](jvm.assets/image-20220322103800311.png)
+
+5，找“java_pid73740.hprof”，打开文件夹后往上找，在src的同级目录下找到了：
+
+![image-20220322103845695](jvm.assets/image-20220322103845695.png)
+
+![image-20220322104044065](jvm.assets/image-20220322104044065.png)
+
+6，双击打开“java_pid73740.hprof”，
+
+![image-20220322105452297](jvm.assets/image-20220322105452297.png)
+
+- 一下就定位是arraylist出问题了，因为正常对象不可能一下就占89%的jvm堆内存。
+
+- 进一步看，发现Arraylist中不停放TestProfiler实例化对象导致的oom
+
+7，点”线程dump“，可以看到各个线程的情况；我们只有main线程，就可以看到main线程的细节：
+
+![image-20220322110932898](jvm.assets/image-20220322110932898.png)
+
+- 在第7行初始化，**在第19行出问题**
+
+- 网友：idea不是提示了19行出问题了嘛
+  - 网友回复：生产和测试环境是linux，没法看idea的提示。
+
+8，java的Runtime类，使用它可以做一些jvm调优：
+
+- Runtime类是什么？：每个java程序在运行时相当于启动了一个JVM进程，每个JVM进程都对应一个RunTime实例。此实例是JVM负责实例化的，所以我们不能实例化一个RunTime对象，只能通过getRuntime() 获取当前运行的Runtime对象的引用。一旦得到了一个当前的Runtime对象的引用，就可以调用Runtime对象的方法去查看Java虚拟机的状态以及控制虚拟机的行为。
+- 参考文章：[Java Runtime类 - 简书 (jianshu.com)](https://www.jianshu.com/p/a0d3e85a44f7)
+
+### GC
+
+#### 引入
+
+1，GC主要就是在堆和方法区进行；方法区是特殊的堆，由永生代或元空间实现，1.8之后，永生代改名为元空间，且从jvm内存中移出。
+
+- 方法区是jvm规范，元空间和永久代是实现
+
+2，要GC清理堆，就先回顾jvm堆的划分：
+
+- 新生代
+  - 伊甸园区
+  - 幸存区0，幸存区1：（from）（to）幸存区内容交换的时候，交换前的to会变成交换后的from。
+- 老年区
+
+- 永生代（jdk8后称为元空间并不在堆中，且不参与GC，不讨论）
+
+3，jvm在进行GC的时候，并不是对“新生代和老年代”统一回收；大部分时候，回收都是在新生代的伊甸园区：
+
+- GC有两种分类：
+  - 轻GC（普通GC）：
+    - 主要针对伊甸园区
+    - 幸存区满的时候，偶尔针对幸存区
+  - 重GC（全局GC）：
+    - 把“新生代和老年代”都清理一遍。
+
+4，GC题目：
+
+- jvm的内存模型和分区，详细到每个区做什么？
+- 堆里面的分区有哪些？：
+
+  - eden，幸存区from，幸存区to，老年代 
+- GC算法有哪些？怎么用？：
+
+  - 标记清除法
+
+  - 标记压缩
+
+  - 复制算法
+  - 引用计数法
+- 轻GC和重GC分别在什么时候发生？
+
+5，推荐阅读：
+
+- [不同GC算法的区别](https://blog.csdn.net/m0_37860933/article/details/82154989)，尤其说了引用计数法，和标记清除法的区别。
+
+#### 引用计数法
+
+1，图示：
+
+![image-20220322131123600](jvm.assets/image-20220322131123600.png)
+
+- 灰色的，计数为0的对象，说明没有被引用了，会被清理
+- 这种清理算法现在用的少
+  - 引用计数法存在[循环引用](https://blog.csdn.net/faker____/article/details/83061673)的问题。
+
+#### 复制算法
+
+0，推荐阅读文章：
+
+- [关于JVM中Eden区、Survivor from区和Survivor to区的理解](https://blog.csdn.net/qq_29631431/article/details/82344081)
+- [Appel式回收为什么使用两个Survivor](https://blog.csdn.net/Hello_mengkebao/article/details/119805735)
+- [survivor满了怎么办](https://blog.csdn.net/luoailong/article/details/111868139)
+- [(我：本文章质量不如前几个) GC详解及Minor GC和Full GC触发条件总结_Anstrue的博客-CSDN博客_fullgc minorgc](https://blog.csdn.net/beautiful_face/article/details/77722635)
+
+1，
+
+![image-20220322133449011](jvm.assets/image-20220322133449011.png)
+
+- 对于两个幸存区来说，谁是空的，谁就扮演to角色。
+  - 网友：这个逻辑跟沙漏很像啊，上下会交换
+  - 网友：有一天Eden区中的人实在是太多我就被迫去Survivor区的“To”区，自从去Survivor区，我开始漂泊Survivor的两个区总是交换名字，我总是搬家，搬到To Survivor居住，搬来搬去。
+  - 网友：对象在两个幸存区间不断**来回复制**的目的是避免产生过多的内存碎片；解决了内存碎片化问题，内存碎片不连续导致明明内存足够缺无法NEW对象
+  - 网友：from满了就会触发minorGC 然后将存货下来的移到to区
+
+- 如果对象很大，超过eden区的一半，就会去老年区申请空间
+
+- 高赞网友：TenuringThreshold 这里不对，对象头只留了4bit用于GC次数设置，TenuringThreshold 最大只能是15
+
+2，动态描述
+
+![image-20220322133922732](jvm.assets/image-20220322133922732.png)
+
+- 每一次垃圾回收后，伊甸园和from区空了，对象都到to区；同时把to该为from。
+
+幸存区满了，会做轻gc把活着的对象放到养老区；幸存区没满时，其中的对象活了15次，也会被放到养老区：
+
+![image-20220322134121265](jvm.assets/image-20220322134121265.png)
+
+3，优缺点：
+
+- 好处:新生区内存没有碎片~ 
+- 坏处:浪费了内存空间~ :
+
+4，复制算法最佳使用场景:对象存活度较低的时候;新生区时对象存货度较低，所以新生区里我们使用复制算法。
+
+#### 标记清除算法
+
+1，图示：
+
+![image-20220322161610311](jvm.assets/image-20220322161610311.png)
+
+- 图上半部分为扫描阶段后，绿色背景表示活着的对象（标记上），实现框表示扫描发现的已死去的对象
+
+- 图下半部分为清除阶段后，虚线框表示清除对象后留下的空闲内存
+
+2，优缺点：
+
+- 优点：不需要额外的空间
+- 缺点：两次扫描严重浪费时间；会产生内存碎片。
+
+#### 标记清除整理算法
+
+1，在“标记清除算法”的基础上再改进；加上”整理“，解决连续内存分配时内存碎片问题；图示：
+
+![image-20220322162711622](jvm.assets/image-20220322162711622.png)
+
+#### GC算法总结
+
+1，从内存的不同维度评价各种GC算法：
+
+- 内存效率(时间复杂度升序):复制算法>标记清除算法>标记压缩算法
+- 内存整齐度:复制算法=标记压缩算法>标记清除算法
+- 内存利用率:标记压缩算法=标记清除算法>复制算法
+
+2，思考：有没有最优的算法？
+
+- 没有最好的算法，只有最合适的算法。所以GC采用分代收集算法。
+  - 新生代：对象存活率低；使用复制算法效率高
+  - 老年代：区域大，存活率高；用标记清楚+标记压缩混合清除。
+    - jvm调优会调这个，比如标记清除多少次，就进行一次标记压缩算法。
+    - 内存碎片不是很多的时候，就使用标记清楚；内存碎片很多的时候就使用标记压缩。
+- 网友：算法的选择都是根据实际的情况而定的，看自己需要什么有点，可以接受他们的缺点吗。然后做选择？
+
