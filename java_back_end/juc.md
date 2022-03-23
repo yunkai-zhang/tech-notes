@@ -2,7 +2,7 @@ JUC并发编程
 
 [狂神JUC课程](https://www.bilibili.com/video/BV1B7411L7tE?from=search&seid=8754321952948993151&spm_id_from=333.337.0.0)
 
-[jdk8官方文档]([ReadWriteLock (Java Platform SE 8 ) (oracle.com)](https://docs.oracle.com/javase/8/docs/api/))
+[jdk8官方文档](https://docs.oracle.com/javase/8/docs/api/)
 
 ### JUC课程介绍
 

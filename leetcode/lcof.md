@@ -1,6 +1,16 @@
+## 基础知识
+
+#### 类型转换
+
+1，包装类 基本数据类型 String 的转换：
+
+- [1](https://blog.csdn.net/HY845638534/article/details/84669490)
+
+## 栈队列
+
 ### [剑指 Offer 09. 用两个栈实现队列](https://leetcode-cn.com/problems/yong-liang-ge-zhan-shi-xian-dui-lie-lcof/)
 
-1，方法一：双栈
+方法一：双栈
 
 #### 思路和算法
 
@@ -72,3 +82,109 @@ class CQueue {
   - 不记得java中stack怎么实现
   - 知道用两个栈实现队列。但是针对删除，想的是“插入队列移动到删除队列，删除元素后，要把删除队列的所有元素移动回插入队列”，但是实际上不需要把删除队列的元素移动回去；
     - 正确思路就是如题解：删除队列负责删除，插入队列负责插入，删除队列空了才能把元素从插入队列移入删除队列，如果删除队列和插入队列同时为空则返回-1.
+
+#### 再战
+
+1,20220323，调试多次后成功：
+
+```java
+class CQueue {
+
+    Stack stackIn=null;
+    Stack stackOut=null;
+
+
+    public CQueue() {
+        stackIn=new Stack<>();
+        stackOut=new Stack<>();
+    }
+    
+        public void appendTail(int value) {
+        //如果是传入integer类型，而非int的话，貌似会给integer再包裹一层，导致异常
+        stackIn.push(value);
+    }
+
+    public int deleteHead() {
+        //如果出栈不为空，直接pop一个就行。！！！包装类和基本数据类型的相互转换
+        if(!stackOut.empty()){
+            return (int) stackOut.pop();
+        }
+        //如果出栈为空，此时要删除节点,先就得把入栈的所有节点移动过来
+        else{
+            if(stackIn.empty()){
+                //入栈也为空，说明整个逻辑队列为空，直接返回-1
+                return -1;
+            }else{
+                //入栈不为空，把所有入栈元素转移到出栈；并弹出出栈的顶部。
+                while(!stackIn.empty()){
+                    stackOut.push(stackIn.pop());
+                }
+                return (int)stackOut.pop();
+            }
+
+        }
+
+    }
+}
+
+/**
+ * Your CQueue object will be instantiated and called as such:
+ * CQueue obj = new CQueue();
+ * obj.appendTail(value);
+ * int param_2 = obj.deleteHead();
+ */
+```
+
+2,20220323，改进代码：
+
+```java
+class CQueue {
+
+    Stack <Integer> stackIn=null;
+    Stack <Integer> stackOut=null;
+
+
+    public CQueue() {
+        stackIn=new Stack<>();
+        stackOut=new Stack<>();
+    }
+    
+        public void appendTail(int value) {
+        //直接把int转化为Integer存入
+        stackIn.push(Integer.valueOf(value));
+    }
+
+    public int deleteHead() {
+        //如果出栈不为空，直接pop一个就行。！！！包装类和基本数据类型的相互转换
+        if(!stackOut.empty()){
+            return stackOut.pop().intValue();
+        }
+        //如果出栈为空，此时要删除节点,先就得把入栈的所有节点移动过来
+        else{
+            if(stackIn.empty()){
+                //入栈也为空，说明整个逻辑队列为空，直接返回-1
+                return -1;
+            }else{
+                //入栈不为空，把所有入栈元素转移到出栈；并弹出出栈的顶部。
+                while(!stackIn.empty()){
+                    stackOut.push(stackIn.pop());
+                }
+                //由于存的Integer对象，返回的时候要转化为int类型。
+                return stackOut.pop().intValue();
+            }
+
+        }
+
+    }
+}
+
+/**
+ * Your CQueue object will be instantiated and called as such:
+ * CQueue obj = new CQueue();
+ * obj.appendTail(value);
+ * int param_2 = obj.deleteHead();
+ */
+```
+
+- 本代码因为主动包装int为Integer，性能更差了，但是更符合把对象存入栈的思想。
+- `Stack <Integer> stackIn=new Stack<>();`，注意是在前面限定泛型的类型，后面的尖括号可留空由编译器自己推测；不正确指定泛型类型的话，会出现一些奇怪的包装错误，比如说期待包装成integer却包装为object。
