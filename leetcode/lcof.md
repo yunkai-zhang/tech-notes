@@ -12,7 +12,7 @@
 
 方法一：双栈
 
-#### 思路和算法
+#### 官方-思路和算法
 
 维护两个栈，第一个栈支持插入操作，第二个栈支持删除操作。
 
@@ -188,3 +188,250 @@ class CQueue {
 
 - 本代码因为主动包装int为Integer，性能更差了，但是更符合把对象存入栈的思想。
 - `Stack <Integer> stackIn=new Stack<>();`，注意是在前面限定泛型的类型，后面的尖括号可留空由编译器自己推测；不正确指定泛型类型的话，会出现一些奇怪的包装错误，比如说期待包装成integer却包装为object。
+
+
+
+### [剑指 Offer 30. 包含min函数的栈](https://leetcode-cn.com/problems/bao-han-minhan-shu-de-zhan-lcof/)
+
+#### 首战告捷
+
+```java
+class MinStack {
+
+    /** initialize your data structure here. */
+    Stack<Integer> myStack=null;
+    Stack<Integer> historicalMin=null;
+    int min;
+    public MinStack() {
+        myStack=new Stack<>();
+        historicalMin=new Stack<>();
+        //不要忘记用引号结尾
+        min=Integer.MAX_VALUE;
+    }
+    
+    public void push(int x) {
+        myStack.push(x);
+        
+        if(x<=min){
+            min=x;
+            historicalMin.push(min);
+        }
+    }
+    
+    public void pop() {
+        int temp=myStack.pop();
+
+        //不要误用=判断相等
+        if(temp==min){
+            historicalMin.pop();
+            //如果两个栈都为空了，此时再直接peek会抛出异常；要判断hostoricalMin是否为空
+            if(!historicalMin.empty()){
+                min=historicalMin.peek();
+            }else{
+                min=Integer.MAX_VALUE;
+            }
+            
+        }
+
+    }
+    
+    public int top() {
+        return myStack.peek();
+    }
+    
+    public int min() {
+        return min;
+
+    }
+}
+
+/**
+ * Your MinStack object will be instantiated and called as such:
+ * MinStack obj = new MinStack();
+ * obj.push(x);
+ * obj.pop();
+ * int param_3 = obj.top();
+ * int param_4 = obj.min();
+ */
+```
+
+- 执行后，据提示处理了几个语法错误；提交一次后，处理了一个逻辑漏洞；第二次提交完成。
+- 待改进：
+  - 读了题解后，我发现不该在hostoricalMin为空时，把intgermax当做min；而应该在push时，发现historicalMin为空就直接压入当前被push的元素，这样就不存在提前一步设置min的问题。
+  - 基本数据类型min可以不设置，直接用stack.peek()就行。
+
+---
+
+#### 官方-解题思路
+普通栈的 push() 和 pop() 函数的复杂度为 O(1)O(1) ；而获取栈最小值 min() 函数需要遍历整个栈，复杂度为 O(N)O(N) 。
+
+本题难点： 将 min() 函数复杂度降为 O(1)O(1) ，可通过建立辅助栈实现；
+
+- 数据栈 AA ： 栈 AA 用于存储所有元素，保证入栈 push() 函数、出栈 pop() 函数、获取栈顶 top() 函数的正常逻辑。
+- 辅助栈 BB ： 栈 BB 中存储栈 AA 中所有 非严格降序 的元素，则栈 AA 中的最小元素始终对应栈 BB 的栈顶元素，即 min() 函数只需返回栈 BB 的栈顶元素即可。
+
+因此，只需设法维护好 栈 BB 的元素，使其保持非严格降序，即可实现 min() 函数的 O(1)O(1) 复杂度。
+
+#### 函数设计
+
+- push(x) 函数： 重点为保持栈 BB 的元素是 非严格降序 的。
+
+  - 将 xx 压入栈 AA （即 A.add(x) ）；
+
+  - 若 ① 栈 BB 为空 或 ② xx 小于等于 栈 BB 的栈顶元素，则将 xx 压入栈 BB （即 B.add(x) ）。
+
+- pop() 函数： 重点为保持栈 A, BA,B 的 元素一致性 。
+
+  - 执行栈 AA 出栈（即 A.pop() ），将出栈元素记为 yy ；
+
+  - 若 yy 等于栈 BB 的栈顶元素，则执行栈 B 出栈（即 B.pop() ）。
+
+- top() 函数： 直接返回栈 AA 的栈顶元素即可，即返回 A.peek() 。
+
+- min() 函数： 直接返回栈 BB 的栈顶元素即可，即返回 B.peek() 。
+
+#### 复杂度分析
+
+- 时间复杂度 O(1) ： push(), pop(), top(), min() 四个函数的时间复杂度均为常数级别。
+- 空间复杂度 O(N)： 当共有 N 个待入栈元素时，辅助栈 BB 最差情况下存储 N 个元素，使用 O(N) 额外空间。
+
+#### 代码
+Java 代码中，由于 Stack 中存储的是 int 的包装类 Integer ，因此需要使用 equals() 代替 == 来比较值是否相等。
+
+```java
+class MinStack {
+    Stack<Integer> A, B;
+    public MinStack() {
+        A = new Stack<>();
+        B = new Stack<>();
+    }
+    public void push(int x) {
+        A.add(x);
+        if(B.empty() || B.peek() >= x)
+            B.add(x);
+    }
+    public void pop() {
+        if(A.pop().equals(B.peek()))
+            B.pop();
+    }
+    public int top() {
+        return A.peek();
+    }
+    public int min() {
+        return B.peek();
+    }
+}
+
+```
+
+
+
+### [剑指 Offer 06. 从尾到头打印链表](https://leetcode-cn.com/problems/cong-wei-dao-tou-da-yin-lian-biao-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    //记录最大递归深度，以便各层实现逆序存入数组
+    int deepMax;
+    int[] array;//array在递归最底层被建立
+    public int[] reversePrint(ListNode head) {
+        /*
+        注意数组在java中是引用传递的：https://blog.csdn.net/qq_43555323/article/details/84783750;所以所有递归层共享数组，但是递归深度参数不同。
+        所以可以考虑递归+引用传递解决
+        */
+        return digui(head,0+1);
+    }
+    //形参deep为本层的深度，也即以本层为最后节点的话，数组的长度-1。
+    public int[] digui(ListNode head,int deep){
+        //如果传入的头节点不为空，说明可以继续往下递归；小心不能用head.next判断链表尾部,因为不知道给的head是否为空。
+        if(head!=null){
+            //先递归调用获得数组
+            array = digui(head.next,deep+1);
+            //再把当前元素加入数组对应的位置；
+            array[deepMax-deep]=head.val;
+
+            //别忘了if和else都得有return，否则走if的递归无法返回
+            return array;
+
+        }
+        //如果节点为空，则本层无节点；且制造数组，数组大小为本层深度-1
+        else{
+            deepMax=deep-1;
+            return new int[deep-1];
+        }
+
+    }
+}
+```
+
+- 我和一些网友理解：递归本质就是栈的使用，隐式使用了JVM栈
+- 我这方法比官方还好，没有占用额外空间；时间复杂度一致；最高赞非官方解用的也是递归。
+
+---
+
+#### 官方-使用栈
+
+栈的特点是后进先出，即最后压入栈的元素最先弹出。考虑到栈的这一特点，使用栈将链表元素顺序倒置。从链表的头节点开始，依次将每个节点压入栈内，然后依次弹出栈内的元素并存储到数组中。
+
+- 创建一个栈，用于存储链表的节点
+- 创建一个指针，初始时指向链表的头节点
+- 当指针指向的元素非空时，重复下列操作：
+  - 将指针指向的节点压入栈内
+  - 将指针移到当前节点的下一个节点
+- 获得栈的大小 size，创建一个数组 print，其大小为 size
+- 创建下标并初始化 index = 0
+- 重复 size 次下列操作：
+  - 从栈内弹出一个节点，将该节点的值存到 print[index]
+  - 将 index 的值加 1
+- 返回 print
+
+#### 代码
+
+```java
+
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public int[] reversePrint(ListNode head) {
+        Stack<ListNode> stack = new Stack<ListNode>();
+        ListNode temp = head;
+        while (temp != null) {
+            stack.push(temp);
+            temp = temp.next;
+        }
+        int size = stack.size();
+        int[] print = new int[size];
+        for (int i = 0; i < size; i++) {
+            print[i] = stack.pop().val;
+        }
+        return print;
+    }
+}
+
+```
+
+- 这种倒着处理的，就可以想到栈 或递归！
+
+#### 复杂性分析
+
+时间复杂度：O(n)。正向遍历一遍链表，然后从栈弹出全部节点，等于又反向遍历一遍链表。
+
+空间复杂度：O(n)。额外使用一个栈存储链表中的每个节点。
+
+
+
