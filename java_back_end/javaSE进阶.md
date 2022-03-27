@@ -75,6 +75,7 @@ public class Test02 {
         2. 一个类被加载后，类的整个结构都会被封装在Class对象中
 
         这里最好用 == 判断两个对象是否相等，因为hashcode不同，类也可能相同（很小概率）
+        我回顾纠正：这里应该是“hashcode相同，类也可能不同，因为hash冲突”
         */
         System.out.println(c2.hashCode());
         System.out.println(c3.hashCode());
@@ -1018,6 +1019,7 @@ public class Test09 {
         Class c1 = Class.forName("com.zhangyk.reflection.User");
 
         //通过反射调用普通方法
+        //我回顾纠正：这里应该是通过反射获得一个实例化对象，后面好通过实例化对象打印自己用反射设置的成员变量
         User user = (User) c1.newInstance();
         //通过反射获取一个方法
         Method setName = c1.getDeclaredMethod("setName", String.class);
@@ -1618,3 +1620,9 @@ public class Test03 {
 # Linux
 
 程序基本都是实际运行于linux环境，比如之前工行，测试环境，就得用linux，写一些shell命令，去打板
+
+
+
+# 正则表达式
+
+https://juejin.cn/post/6844903845227659271
