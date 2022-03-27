@@ -1486,10 +1486,46 @@ class Solution {
 ```
 
 - 思路有，但是把last设置为0忽略了数组元素为负数的情况，导致程序一碰到负数元素就以为碰到了断崖就退出循环并返回错误的值了；把last初始值换成最小整数就过了。
+- 我反思：既然都线性遍历了，不如干脆用later记录碰到过的最小值，甚至都不用查看断崖；我相当于相同的时间复杂度能解决的问题，用更复杂的方式解决了，减分项。
 
 #### 官方-二分查找
 
-https://leetcode-cn.com/problems/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-lcof/solution/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-by-leetcode-s/
+解题思路：
+
+![image-20220327224636236](lcof.assets/image-20220327224636236.png)
+
+算法流程：
+
+![image-20220327224718445](lcof.assets/image-20220327224718445.png)
+
+正确性证明：
+
+![image-20220327224758158](lcof.assets/image-20220327224758158.png)
+
+补充思考： 为什么本题二分法不用 nums[m]*n**u**m**s*[*m*] 和 nums[i]*n**u**m**s*[*i*] 作比较？
+
+![image-20220327224829837](lcof.assets/image-20220327224829837.png)
+
+复杂度分析：
+
+![image-20220327224853507](lcof.assets/image-20220327224853507.png)
+
+代码：
+
+```java
+class Solution {
+    public int minArray(int[] numbers) {
+        int i = 0, j = numbers.length - 1;
+        while (i < j) {
+            int m = (i + j) / 2;
+            if (numbers[m] > numbers[j]) i = m + 1;
+            else if (numbers[m] < numbers[j]) j = m;
+            else j--;
+        }
+        return numbers[i];
+    }
+}
+```
 
 - 网友：为什么官方的二分法的题解很多都是写的`low + (high - low) / 2 `而不是 `(high + low) / 2`
   - 网友答：防止溢出吧。
