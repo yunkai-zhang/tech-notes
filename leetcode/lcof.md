@@ -1460,7 +1460,7 @@ class Solution {
 
 
 
-#### [剑指 Offer 11. 旋转数组的最小数字](https://leetcode-cn.com/problems/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-lcof/)
+### [剑指 Offer 11. 旋转数组的最小数字](https://leetcode-cn.com/problems/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-lcof/)
 
 #### 首战半寄
 
@@ -1498,6 +1498,10 @@ class Solution {
 
 ![image-20220327224718445](lcof.assets/image-20220327224718445.png)
 
+- 我：j=j-1后，最小值还在ij之间，因为：
+  - 如果j是最小值，那么原本numsm==numsj，让j--后，至少m位置有最小值
+  - j--相当于是为重复元素去重。
+
 正确性证明：
 
 ![image-20220327224758158](lcof.assets/image-20220327224758158.png)
@@ -1529,3 +1533,359 @@ class Solution {
 
 - 网友：为什么官方的二分法的题解很多都是写的`low + (high - low) / 2 `而不是 `(high + low) / 2`
   - 网友答：防止溢出吧。
+
+### [剑指 Offer 50. 第一个只出现一次的字符](https://leetcode-cn.com/problems/di-yi-ge-zhi-chu-xian-yi-ci-de-zi-fu-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public char firstUniqChar(String s) {
+        /*
+        第一次重复。没有说有序，使用hashMap判断重复
+         */
+        Map<Character,Integer> map=new HashMap<>();
+        //先做一次遍历，记录下各字符出现的频度
+        for(int i=0;i<s.length();i++){
+            char tempCh=s.charAt(i);
+            if(map.containsKey(tempCh)){
+                map.put(tempCh,map.get(tempCh)+1);
+            }else{
+                //基本数据类型会自动包装拆包
+                map.put(tempCh,1);
+            }
+        }
+        //查找第一个只出现一次的字符
+        for(int i=0;i<s.length();i++){
+            char tempCh=s.charAt(i);
+            if(map.get(tempCh)==1){
+                return tempCh;
+            }
+        }
+
+        //一直没return 说明不存在字符
+        return ' ';
+    }
+}
+```
+
+#### 网友1-数组记录
+
+```java
+public char firstUniqChar(String s) {
+    if (s.equals("")) return ' ';
+    //创建‘a'-'z'的字典
+    int[] target = new int[26];
+    //第一次遍历，将字符统计到字典数组
+    for (int i = 0; i < s.length(); i++) {
+        target[s.charAt(i) - 'a']++;
+    }
+    //第二次遍历，从字典数组获取次数
+    for (int i = 0; i < s.length(); i++) {
+        if (target[s.charAt(i) - 'a'] == 1) return s.charAt(i);
+    }
+
+    return ' ';
+}
+```
+
+- 题干说`s 只包含小写字母`，我做题时认为，除了英文的26个字母可能还有别的小写字母，就用了hashMap；如果这里的小写字母只指英文26字母的话，网友1的做法确实更快更好；但是我看官方也没有使用26字母的特性，保险起见，还是别用网友1的方法。
+
+#### 官方方法1-hash表
+
+本题考察 哈希表 的使用，本文介绍 哈希表 和 有序哈希表 两种解法。其中，在字符串长度较大、重复字符很多时，“有序哈希表” 解法理论上效率更高。
+
+1. 遍历字符串 `s` ，使用哈希表统计 “各字符数量是否 > 1>1 ”。
+2. 再遍历字符串 `s` ，在哈希表中找到首个 “数量为 11 的字符”，并返回。
+
+![Picture1.png](lcof.assets/ed093aabc9195caff6d088454eaebe3cad875e8ca4a643c004ef25e4e5e9e174-Picture1.png)
+
+算法流程：
+
+- 初始化： 字典 (Python)、HashMap(Java)、map(C++)，记为 dic ；
+- 字符统计： 遍历字符串 s 中的每个字符 c ；
+  - 若 dic 中 不包含 键(key) c ：则向 dic 中添加键值对 (c, True) ，代表字符 c 的数量为 11 ；
+  - 若 dic 中 包含 键(key) c ：则修改键 c 的键值对为 (c, False) ，代表字符 c 的数量 > 1>1 。
+- 查找数量为 11 的字符： 遍历字符串 s 中的每个字符 c ；
+  - 若 dic中键 c 对应的值为 True ：，则返回 c 。
+- 返回 ' ' ，代表字符串无数量为 11 的字符。
+
+复杂度分析：
+
+- 时间复杂度 O(N)： N为字符串 s 的长度；需遍历 s 两轮，使用 O(N)；HashMap 查找操作的复杂度为 O(1) ；
+- 空间复杂度 O(1) ： 由于题目指出 s 只包含小写字母，因此最多有 26 个不同字符，HashMap 存储需占用 O(26) = O(1)的额外空间。
+
+代码：
+
+```java
+class Solution {
+    public char firstUniqChar(String s) {
+        HashMap<Character, Boolean> dic = new HashMap<>();
+        char[] sc = s.toCharArray();
+        for(char c : sc)
+            dic.put(c, !dic.containsKey(c));
+        for(char c : sc)
+            if(dic.get(c)) return c;
+        return ' ';
+    }
+}
+```
+
+- 我：这个解法和我的很像，只是它没有存储s中字符出现的具体数目，而是存储是否超过1个（布尔值）
+  - 网友针对我的写法的评价：我觉得 Map 结构的 Value 使用 Boolean 类型是一个更好的选择，原因如下：
+    1. 一个字母出现的次数大于 1 次就不符合要求了，这个时候使用 Fasle 标记状态相对于 Integer 的不断递增更合理，也更省空间。
+    2. 布尔值可以用来判断，可以简化代码逻辑。
+
+#### 官方方法2-有序hash表法
+
+在哈希表的基础上，有序哈希表中的键值对是 **按照插入顺序排序** 的。基于此，可通过遍历有序哈希表，实现搜索首个 “数量为 11 的字符”。
+
+哈希表是 **去重** 的，即哈希表中键值对数量 ≤ 字符串 s 的长度。因此，相比于方法一，方法二减少了第二轮遍历的循环次数。当字符串很长（重复字符很多）时，方法二则效率更高。
+
+复杂度分析：
+
+- 时间和空间复杂度均与 “方法一” 相同，而具体分析：方法一 需遍历 s 两轮；方法二 遍历 s 一轮，遍历 dic 一轮（ dic 的长度不大于 26 ）。
+
+代码：
+
+```java
+class Solution {
+    public char firstUniqChar(String s) {
+        Map<Character, Boolean> dic = new LinkedHashMap<>();
+        char[] sc = s.toCharArray();
+        for(char c : sc)
+            dic.put(c, !dic.containsKey(c));
+        for(Map.Entry<Character, Boolean> d : dic.entrySet()){
+           if(d.getValue()) return d.getKey();
+        }
+        return ' ';
+    }
+}
+```
+
+- Java 使用 LinkedHashMap 实现有序哈希表。
+
+- 字符串转换为字符数组：`s.toCharArray();`
+
+- [为什么要使用Map.Entry](https://www.cnblogs.com/a198720/articles/4212034.html)
+
+
+
+## 搜索与回溯算法（简单）
+
+### [剑指 Offer 32 - I. 从上到下打印二叉树](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-lcof/)
+
+#### 首战半寄
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public int[] levelOrder(TreeNode root) {
+        /*
+        从上往下，从左往右，这是bfs的特点。使用队列实现bfs：https://www.runoob.com/java/data-queue.html
+        Queue接口要用linkedlist实现。
+         */
+        //处理特殊情况
+        if(root==null)return new int[0];
+
+         //存储结果
+         ArrayList<Integer> arrayList=new ArrayList<>();
+         //初始化队列
+         Queue <TreeNode> queue=new LinkedList<>();
+         queue.offer(root);
+
+        //把头节点加入结果数组列表，并把左右子节点加入队列
+         while(!queue.isEmpty()){
+             TreeNode temp=queue.poll();
+             arrayList.add(temp.val);
+            if(temp.left!=null)
+                queue.offer(temp.left);
+            if(temp.right!=null)
+                queue.offer(temp.right);
+         }
+
+         //把integer数组列表转换成int数组，这里只能for循环。https://blog.csdn.net/huanghanqian/article/details/73920439
+         int[] result=new int[arrayList.size()];
+         for(int i=0;i<arrayList.size();i++){
+             //arraylist不能数组式访问，要用get，不能用arraylist[i]形式访问
+             result[i]=arrayList.get(i).intValue();
+         }
+         return result;
+
+    }
+}
+```
+
+- 思路有，但是queue的使用，arraylist转array都是借助网络了，中间运行了几次。
+
+- 我推测：单个int Integer互相转换可以自动装箱拆箱；但是int[]和Integer[]互相转换就不能直接装箱拆箱，而要对一个个元素手动/自动装箱拆箱；
+  - 如本题目所示`result[i]=arrayList.get(i).intValue();`是手动拆箱，`result[i]=arrayList.get(i);`是自动拆箱，亲测都可以提交成功。
+
+#### 官方-bfs
+
+解题思路：
+
+- 题目要求的二叉树的 **从上至下** 打印（即按层打印），又称为二叉树的 **广度优先搜索**（BFS）。
+- BFS 通常借助 **队列** 的先入先出特性来实现。
+
+![Picture0.png](lcof.assets/f824fdd8052ae4ee657365c98633480caf03c60e42e4661797618e318baf8664-Picture0.png)
+
+算法流程：
+
+1. 特例处理： 当树的根节点为空，则直接返回空列表 [] ；
+2. 初始化： 打印结果列表 res = [] ，包含根节点的队列 queue = [root] ；
+3. BFS 循环： 当队列 queue 为空时跳出；
+   1. 出队： 队首元素出队，记为 node；
+   2. 打印： 将 node.val 添加至列表 tmp 尾部；
+   3. 添加子节点： 若 node 的左（右）子节点不为空，则将左（右）子节点加入队列 queue ；
+4. 返回值： 返回打印结果列表 res 即可。
+
+复杂度分析：
+
+- 时间复杂度 O(N)O(N) ： NN 为二叉树的节点数量，即 BFS 需循环 NN 次。
+- 空间复杂度 O(N)O(N) ： 最差情况下，即当树为平衡二叉树时，最多有 N/2N/2 个树节点同时在 queue 中，使用 O(N)O(N) 大小的额外空间。
+
+代码：
+
+```java
+class Solution {
+    public int[] levelOrder(TreeNode root) {
+        if(root == null) return new int[0];
+        Queue<TreeNode> queue = new LinkedList<>(){{ add(root); }};
+        ArrayList<Integer> ans = new ArrayList<>();
+        while(!queue.isEmpty()) {
+            TreeNode node = queue.poll();
+            ans.add(node.val);
+            if(node.left != null) queue.add(node.left);
+            if(node.right != null) queue.add(node.right);
+        }
+        int[] res = new int[ans.size()];
+        for(int i = 0; i < ans.size(); i++)
+            res[i] = ans.get(i);
+        return res;
+    }
+}
+```
+
+- 我：和我的代码基本一样。
+
+### [剑指 Offer 32 - II. 从上到下打印二叉树 II](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-ii-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        /*
+        "I. 从上到下打印二叉树 类似，关键是怎么判断一层的范围
+        打算使用两个队列，cur和next
+         */
+         //处理特殊情况
+         if(root==null) return new ArrayList<>();
+
+        Queue<TreeNode> cur =new LinkedList<>();
+        Queue<TreeNode> next =new LinkedList<>();
+        List<List<Integer>> result=new ArrayList<>();//ArrayList底层是数组，查询快、增删慢；LinkedList底层是链表，查询慢、增删快。
+
+        cur.offer(root);
+        do{
+            //用于存储接下来的链表中的节点值
+            List<Integer> tempList=new ArrayList<>();
+            while(!cur.isEmpty()){
+            //处理当前队列中的每个节点
+            TreeNode temp=cur.poll();
+            tempList.add(temp.val);
+            if(temp.left!=null) next.offer(temp.left);
+            if(temp.right!=null) next.offer(temp.right);
+            }
+            //把一个队列处理完后得到的列表，存入结果列表
+            result.add(tempList);
+
+            //cur处理完了，交换cur和next；让cur变成存了节点的队列，next变成空队列
+            Queue<TreeNode> tempQueue=cur;
+            cur=next;
+            next=tempQueue;
+
+        }while(!cur.isEmpty());//这里判断当前队列为空，实际上就是判断上一轮队列处理后，还有没有节点要处理
+
+        return result;
+
+    }
+}
+```
+
+- 思路和知识点都知道，有些小语法错误，借助“执行代码”改了下，就成功了。
+
+#### 官方-BFS
+
+解题思路：
+
+> 建议先做 面试题32 - I. 从上到下打印二叉树 再做此题，两题仅有微小区别，即本题需将 **每一层打印到一行** 。
+
+I. 按层打印： 题目要求的二叉树的 从上至下 打印（即按层打印），又称为二叉树的 广度优先搜索（BFS）。BFS 通常借助 队列 的先入先出特性来实现。
+
+II. 每层打印到一行： 将本层全部节点打印到一行，并将下一层全部节点加入队列，以此类推，即可分为多行打印。
+
+![Picture1.png](lcof.assets/59e0600588ffdc2f34b4b563193b56c1f678743637e2754e2a9be0e7facc5d48-Picture1.png)
+
+算法流程：
+
+1. 特例处理： 当根节点为空，则返回空列表 [] ；
+2. 初始化： 打印结果列表 res = [] ，包含根节点的队列 queue = [root] ；
+3. BFS 循环： 当队列 queue 为空时跳出；
+   1. 新建一个临时列表 tmp ，用于存储当前层打印结果；
+   2. 当前层打印循环： 循环次数为当前层节点数（即队列 queue 长度）；
+      1. 出队： 队首元素出队，记为 node；
+      2. 打印： 将 node.val 添加至 tmp 尾部；
+      3. 添加子节点： 若 node 的左（右）子节点不为空，则将左（右）子节点加入队列 queue ；
+   3. 将当前层结果 tmp 添加入 res 。
+4. 返回值： 返回打印结果列表 res 即可。
+
+复杂度分析：
+
+- 时间复杂度 O(N) ： N为二叉树的节点数量，即 BFS 需循环 N 次。
+- 空间复杂度 O(N) ： 最差情况下，即当树为平衡二叉树时，最多有 N/2 个树节点同时在 queue 中，使用 O(N)大小的额外空间。
+
+代码：
+
+```java
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        Queue<TreeNode> queue = new LinkedList<>();
+        List<List<Integer>> res = new ArrayList<>();
+        if(root != null) queue.add(root);
+        while(!queue.isEmpty()) {
+            List<Integer> tmp = new ArrayList<>();
+            for(int i = queue.size(); i > 0; i--) {
+                TreeNode node = queue.poll();
+                tmp.add(node.val);
+                if(node.left != null) queue.add(node.left);
+                if(node.right != null) queue.add(node.right);
+            }
+            res.add(tmp);
+        }
+        return res;
+    }
+}
+
+```
+
+- 网友：还在思考怎么分层打印，博主这个len(queue)的操作太6了
+  - 我理解：这说的len(queue)就是i = queue.size()
