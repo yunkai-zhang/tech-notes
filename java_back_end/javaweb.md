@@ -1770,7 +1770,7 @@ int SC_HTTP_VERSION_NOT_SUPPORTED = 505;
 
 具体步骤如下
 
-1. 编写生成验证码的servlet类
+1. 编写生成验证码的servlet类：
 
    ```java
    public class ImageServlet extends HttpServlet {
@@ -2053,6 +2053,8 @@ HttpServletRequest代表客户端的请求，用户通过http协议访问服务�
 - 要用System.out.println() 打印username，可以：username.sout 然后idea弹出框，然后回车，就写成了：System.out.println(username);
 - 要打出public static void main(String[] args) { }，可以打出psvm，回车，idea会自动生成main函数
 - **用HttpServletResponse 重定向 需要加上项目名（如/r）,用HttpServletRequest 请求转发 不需要。**
+  - [参考javaweb之请求的转发和重定向 - 考拉熊_12 - 博客园 (cnblogs.com)](https://www.cnblogs.com/naihuangbao/p/9795099.html)
+
 
 实现方法如下：
 
@@ -2829,7 +2831,13 @@ demo1中，没办法从f12从浏览器中看到session存储的信息，所以de
 
 
 
+### 7.5 cookie和session的联系
 
+[cookie和session的区别与联系 - 小狒 - 博客园 (cnblogs.com)](https://www.cnblogs.com/s1nker/p/4876284.html)
+
+### 7.6 token
+
+[彻底理解cookie，session，token - 墨颜丶 - 博客园 (cnblogs.com)](https://www.cnblogs.com/moyand/p/9047978.html)
 
 ## 8，JSP
 
@@ -3241,7 +3249,7 @@ jsp声明：会被编译到jsp生成的java的类中！其他的会被生成到_
         **不同页面有同名变量会报500错误**
         
       - JSP标签,都是标签，看的比jsp指令舒服
-      jsp:include：拼接页面，在jsp转化成的servlet中，使用资源引用得到header和footer，本质还是三个页面。
+        jsp:include：拼接页面，在jsp转化成的servlet中，使用资源引用得到header和footer，本质还是三个页面。
         **不同页面有同名变量不相互影响**
 
 
@@ -4543,7 +4551,7 @@ https://www.bilibili.com/video/BV12J411M7Sj?p=28&spm_id_from=pageDriver
    
        }
    }
-
+   
    ```
 
    **JDBC非预编译版固定步骤：**
