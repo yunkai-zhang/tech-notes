@@ -733,6 +733,8 @@ move k baseName
 EXPIRE k timeInSecond
 ```
 
+- 网友：expire是对于已经存在的键值
+
 ![image-20211113154034044](redis.assets/image-20211113154034044.png)
 
 查看键值对剩余生命，单位是秒

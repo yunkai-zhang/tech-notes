@@ -1889,3 +1889,260 @@ class Solution {
 
 - 网友：还在思考怎么分层打印，博主这个len(queue)的操作太6了
   - 我理解：这说的len(queue)就是i = queue.size()
+
+
+
+### [剑指 Offer 32 - III. 从上到下打印二叉树 III](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-iii-lcof/)
+
+#### 首战半寄
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        /*
+        总是使用deque不会错，它也代替了Stack：https://blog.csdn.net/devnn/article/details/82716447
+         */
+
+         //创建双端队列;默认节点last进first出;注意用LinkedList实现Deque！！！
+         Deque <TreeNode> deque=new LinkedList<>();
+         Deque <TreeNode> deque2=new LinkedList<>();
+         if(root!=null) deque.offerLast(root);
+
+         List<List<Integer>> resultList=new ArrayList<>();
+
+         //决定是否从左(first)往右（last）打印节点;第一行从左往右，所以初始true
+         boolean left2right=true;
+
+         while(!deque.isEmpty()){
+             List<Integer> tempList=new ArrayList();
+             //不能在for中判断size，因为加了子节点size就变了
+             int dequeSize=deque.size();
+             for(int i=0;i<dequeSize;i++){
+                 //从左往右打印节点，就先放左子节点进队列(默认都从尾部入)
+                if(left2right){
+                    TreeNode temp=deque.pollLast();
+                    tempList.add(temp.val);
+                    //!!!千万不要把null存入队列，它会占用队列的一个位置，且null.val null.left都会导致错误
+                    if(temp.left!=null)deque2.offerLast(temp.left);
+                    if(temp.right!=null)deque2.offerLast(temp.right);
+
+                }else{//从右往左打印节点，就先放右子节点进队列(默认都从尾部入)
+                    TreeNode temp=deque.pollLast();
+                    tempList.add(temp.val);
+                    if(temp.right!=null)deque2.offerLast(temp.right);
+                    if(temp.left!=null)deque2.offerLast(temp.left);
+
+                }
+             }
+             //更改走向标志，换一个方向的子节点先入队列
+             left2right=!left2right;
+             resultList.add(tempList);
+
+             Deque <TreeNode> tempDeque=deque;
+             deque=deque2;
+             deque2=tempDeque;
+         }
+
+         return resultList;
+    }
+}
+```
+
+- 做的时候各种bug，和逻辑小错误，最后用idea一下下debug弄出来了
+- 应该是用来官方方法2，但是确实绕。
+
+#### 官方1-层序遍历 + 双端队列
+
+思想：
+
+- 利用双端队列的两端皆可添加元素的特性，设打印列表（双端队列） tmp ，并规定：
+  - 奇数层 则添加至 tmp 尾部 ，
+  - 偶数层 则添加至 tmp 头部 。
+
+算法流程：
+
+1. 特例处理： 当树的根节点为空，则直接返回空列表 [] ；
+2. 初始化： 打印结果空列表 res ，包含根节点的双端队列 deque ；
+3. BFS 循环： 当 deque 为空时跳出；
+   1. 新建列表 tmp ，用于临时存储当前层打印结果；
+   2. 当前层打印循环： 循环次数为当前层节点数（即 deque 长度）；
+      1. 出队： 队首元素出队，记为 node；
+      2. 打印： 若为奇数层，将 node.val 添加至 tmp 尾部；否则，添加至 tmp 头部；
+      3. 添加子节点： 若 node 的左（右）子节点不为空，则加入 deque ；
+   3. 将当前层结果 tmp 转化为 list 并添加入 res ；
+4. 返回值： 返回打印结果列表 res 即可；
+
+复杂度分析：
+
+- 时间复杂度 O(N) ： N为二叉树的节点数量，即 BFS 需循环 N次，占用 O(N) ；双端队列的队首和队尾的添加和删除操作的时间复杂度均为 O(1) 。
+- 空间复杂度 O(N) ： 最差情况下，即当树为满二叉树时，最多有 N/2 个树节点 同时 在 deque 中，使用 O(N)大小的额外空间。
+
+代码：
+
+```java
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        Queue<TreeNode> queue = new LinkedList<>();
+        List<List<Integer>> res = new ArrayList<>();
+        if(root != null) queue.add(root);
+        while(!queue.isEmpty()) {
+            LinkedList<Integer> tmp = new LinkedList<>();
+            for(int i = queue.size(); i > 0; i--) {
+                TreeNode node = queue.poll();
+                if(res.size() % 2 == 0) tmp.addLast(node.val); // 偶数层 -> 队列头部
+                else tmp.addFirst(node.val); // 奇数层 -> 队列尾部
+                if(node.left != null) queue.add(node.left);
+                if(node.right != null) queue.add(node.right);
+            }
+            res.add(tmp);
+        }
+        return res;
+    }
+}
+```
+
+- Java 中将链表 LinkedList 作为双端队列使用，LinkedList 可以用addLast和addFirst从链状列表的两端插入。
+- 注意：我` for(int i = 0; i <queue.size(); i++) `，会导致往队列加元素后队列长度变化，导致的无法按层输出。但是题解中` for(int i = queue.size(); i > 0; i--)`的写法，就保证一层级的节点数不会被后续加入队列的节点所影响。
+
+#### 官方2-层序遍历 + 双端队列（奇偶层逻辑分离）
+- 方法一代码简短、容易实现；但需要判断每个节点的所在层奇偶性，即冗余了 NN 次判断。
+- 通过将奇偶层逻辑拆分，可以消除冗余的判断。
+
+算法流程：
+
+![image-20220329165225545](lcof.assets/image-20220329165225545.png)
+
+- 与方法一对比，仅 BFS 循环不同。
+
+- BFS 循环： 循环打印奇 / 偶数层，当 deque 为空时跳出；
+  1. 打印奇数层： 从左向右 打印，先左后右 加入下层节点；
+  2. 若 deque 为空，说明向下无偶数层，则跳出；
+  3. 打印偶数层： 从右向左 打印，先右后左 加入下层节点；
+
+复杂度分析：
+
+- 时间复杂度 O(N) ： 同方法一。
+- 空间复杂度 O(N)： 同方法一。
+
+代码：
+
+```java
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        Deque<TreeNode> deque = new LinkedList<>();
+        List<List<Integer>> res = new ArrayList<>();
+        if(root != null) deque.add(root);
+        while(!deque.isEmpty()) {
+            // 打印奇数层
+            List<Integer> tmp = new ArrayList<>();
+            for(int i = deque.size(); i > 0; i--) {
+                // 从左向右打印
+                TreeNode node = deque.removeFirst();
+                tmp.add(node.val);
+                // 先左后右加入下层节点
+                if(node.left != null) deque.addLast(node.left);
+                if(node.right != null) deque.addLast(node.right);
+            }
+            res.add(tmp);
+            if(deque.isEmpty()) break; // 若为空则提前跳出
+            // 打印偶数层
+            tmp = new ArrayList<>();
+            for(int i = deque.size(); i > 0; i--) {
+                // 从右向左打印
+                TreeNode node = deque.removeLast();
+                tmp.add(node.val);
+                // 先右后左加入下层节点
+                if(node.right != null) deque.addFirst(node.right);
+                if(node.left != null) deque.addFirst(node.left);
+            }
+            res.add(tmp);
+        }
+        return res;
+    }
+}
+
+```
+
+- 因为奇数层时从first拿，从last加；偶数层是从last拿，从first加；两者分别从两端拿。所以可以处理完奇数层后紧接着就处理偶数层。
+- 本题，奇数层从双端队列的左边拿数，偶数层从双端队列的右边拿数。
+
+
+
+## 搜索与回溯算法(简单)
+
+### [剑指 Offer 26. 树的子结构](https://leetcode-cn.com/problems/shu-de-zi-jie-gou-lcof/)
+
+#### 首战寄
+
+- 思路比较混乱，担心自己的算法会造成节点的反复判断，就放弃了
+
+#### 官方-递归
+
+解题思路：
+
+![image-20220329184634598](lcof.assets/image-20220329184634598.png)
+
+算法流程：
+
+![image-20220329184701480](lcof.assets/image-20220329184701480.png)
+
+复杂度分析：
+
+![image-20220329185817677](lcof.assets/image-20220329185817677.png)
+
+代码：
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isSubStructure(TreeNode A, TreeNode B) {
+        //如果左右节点有空的，则说明传了空树进来，按照题目说明，空树不参与字数判断，直接返回false。
+        if (A == null||B == null ) {
+            return false;
+        }
+
+        //左右节点都不为空，如果当前节点相等，就继续判断当前两个节点的左右子树是否还符合子结构
+        if (A.val == B.val && (helper(A.left, B.left) && helper(A.right, B.right))) {
+            return true;
+        }
+
+        //如果以当前节点为根的树不符合，就判断A的左子树是否包含B，或A的右子树是否包含B
+        return isSubStructure(A.left, B) || isSubStructure(A.right, B);
+    }
+
+    private boolean helper(TreeNode root1, TreeNode root2) {
+        //必须要先判断root2，再判断root1；这样如题干中B树的4号节点的右子树为空，但是A树的4号节点的右子树不为空，先判断B树为空才能返回true。
+        if (root2 == null) {
+            return true;
+        }
+        if (root1 == null) {
+            return false;
+        }
+        //如果树的路径上的节点相同，继续往下判断
+        if (root1.val == root2.val) {
+            return helper(root1.left, root2.left) && helper(root1.right, root2.right);
+        } else {
+            return false;
+        }
+    }
+}
+```
+
+- helper专门用来判断左右子树。
