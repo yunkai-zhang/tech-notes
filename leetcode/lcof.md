@@ -2146,3 +2146,442 @@ class Solution {
 ```
 
 - helper专门用来判断左右子树。
+
+
+
+### [剑指 Offer 27. 二叉树的镜像](https://leetcode-cn.com/problems/er-cha-shu-de-jing-xiang-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public TreeNode mirrorTree(TreeNode root) {
+        /*
+        交换每个节点的左右子节点，即得到镜像
+         */
+         
+         //如果原树为空，返回null
+         if(root==null)return null;
+        //如果原树不为空，创造新树的根节点，并递归构建新树的左右子节点。
+         TreeNode result=new TreeNode(root.val);
+         result.left=recur(root.right);
+         result.right=recur(root.left);
+
+        //返回新树
+         return result;
+    }
+    public TreeNode recur(TreeNode root){
+        if(root==null) return null;
+        
+        //设置好当前节点和左右子节点
+        TreeNode curNode=new TreeNode(root.val);
+        curNode.left=recur(root.right);
+        curNode.right=recur(root.left);
+
+        //把当前节点返回给上一层递归
+        return curNode;
+    }
+}
+```
+
+#### 官方-递归
+
+思路与算法:
+
+- 这是一道很经典的二叉树问题。显然，我们从根节点开始，递归地对树进行遍历，并从叶子节点先开始翻转得到镜像。如果当前遍历到的节点root 的左右两棵子树都已经翻转得到镜像，那么我们只需要交换两棵子树的位置，即可得到以root 为根节点的整棵子树的镜像。
+
+代码：
+
+```java
+class Solution {
+    public TreeNode mirrorTree(TreeNode root) {
+        if (root == null) {
+            return null;
+        }
+        TreeNode left = mirrorTree(root.left);
+        TreeNode right = mirrorTree(root.right);
+        root.left = right;
+        root.right = left;
+        return root;
+    }
+}
+```
+
+- 官方思路和我一样，不过我自建了一个recur函数，让recur专门负责子节点的处理，让逻辑更清晰。
+
+复杂度分析:
+
+- 时间复杂度：O(N)，其中 N  为二叉树节点的数目。我们会遍历二叉树中的每一个节点，对每个节点而言，我们在常数时间内交换其两棵子树。
+
+- 空间复杂度：O(N) 。使用的空间由递归栈的深度决定，它等于当前节点在二叉树中的高度。在平均情况下，二叉树的高度与节点个数为对数关系，即 O(logN)。而在最坏情况下，树形成链状，空间复杂度为 O(N)。
+
+### [剑指 Offer 28. 对称的二叉树](https://leetcode-cn.com/problems/dui-cheng-de-er-cha-shu-lcof/)
+
+#### 首战寄
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        /*
+        deque和queue用linkedlist实现是可以存储null的（官方不建议），这样可以用bfs构建队列，从两端拿节点，只要不同就返回false
+         */
+        if(root==null)return true;
+
+        Deque<Integer> deque=new LinkedList<>();
+        deque.addLast(root.val);
+        while(!deque.isEmpty()){
+            
+            for
+        }
+
+    }
+}
+```
+
+- 没有好方法，本来想着用deque从两端往中间拿数来判断对称，但是同时从两端同时拿数的话又无法正常形成下一层队列。
+
+#### 官方-递归
+
+解题思路：
+
+![image-20220330162905068](lcof.assets/image-20220330162905068.png)
+
+算法流程：
+
+![image-20220330162925469](lcof.assets/image-20220330162925469.png)
+
+复杂度分析：
+
+![image-20220330162944480](lcof.assets/image-20220330162944480.png)
+
+<img src="https://pic.leetcode-cn.com/88916808515487aac3ca24f9c55cbbdf6514f012eea04ec46cc2cc26acf9c4eb-Picture12.png" alt="Picture12.png" style="zoom:25%;" />
+
+代码：
+
+细节版：
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        if (root == null) return true;
+        return check(root.left, root.right); // 检查root的左右子树
+    }
+
+    private boolean check(TreeNode a, TreeNode b) { 
+        if (a == null && b == null) return true; // 都为空, 对称
+        if (a != null && b == null) return false;
+        if (a == null && b != null) return false; // 只有一边为空, 不对称
+        if (a.val != b.val) return false; // 都不为空, 但值不相等
+
+        boolean outside = check(a.left, b.right); // 比较a, b两棵树的外侧
+        boolean inside = check(a.right, b.left); // 比较a, b两颗树的内测
+        return outside && inside; // a, b内外侧都相等才对称
+    }
+}
+
+```
+
+简写版：
+
+```java
+class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        return root == null ? true : recur(root.left, root.right);
+    }
+    boolean recur(TreeNode L, TreeNode R) {
+        if(L == null && R == null) return true;
+        if(L == null || R == null || L.val != R.val) return false;
+        return recur(L.left, R.right) && recur(L.right, R.left);
+    }
+}
+
+```
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isSymmetric(TreeNode root) {
+        /*对称比较，抓住树的外侧和内侧 */
+        if(root==null)return true;
+
+        //原树根节点不为空的话，比较左右子树是否对称
+        return recur(root.left,root.right);
+    }
+    public boolean recur(TreeNode leftTree,TreeNode rightTree){
+        //如果传入的两个节点都为null，说明遍历到本路劲的末尾都没false，返回代表本路劲的true
+        if(leftTree==null&&rightTree==null) return true;
+        //如果传入的两个树根节点的值不相同，或左右根节点有一个为空另一个不是，则说明传入的两个树不对称；注意判断null在取val之前做，否则可能空指针异常,这就要利用||的“得到true就停止判断的特性”
+        if((leftTree==null&&rightTree!=null)||(leftTree!=null&&rightTree==null)||(leftTree.val!=rightTree.val))return false;
+
+        //如果上面情况都没发生，说明传入的两个树的根节点相同，递归判断这链各个树是否为对称的。
+        return recur(leftTree.left,rightTree.right)&&recur(leftTree.right,rightTree.left);
+    }
+
+}
+```
+
+## 动态规划(简单)
+
+### [剑指 Offer 10- I. 斐波那契数列](https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/)
+
+#### 首战寄
+
+先尝试直接递归，n==43时会超时，因为执行每一个fib都会一直递归到0或1，但是比如`return (fib(n-1)+fib(n-2))%1000000007;`计算了左边的fib(49)后，计算右边的fib(48)时还递归到底，所以最好把计算过的结果保存！保存计算结果应该是动态规划区别于递归的一个特征。
+
+```java
+class Solution {
+    public int fib(int n) {
+        //设定返回条件
+        if(n==0) {
+            return 0;
+        }else if(n==1) {
+            return 1;
+        }
+
+        return (fib(n-1)+fib(n-2))%1000000007;
+    }
+}
+```
+
+- 但是想不起来怎么保存结果了
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330174419199](lcof.assets/image-20220330174419199.png)
+
+![image-20220330174432153](lcof.assets/image-20220330174432153.png)
+
+动态规划解析：
+
+![image-20220330174451619](lcof.assets/image-20220330174451619.png)
+
+空间复杂度优化：
+
+![image-20220330174517988](lcof.assets/image-20220330174517988.png)
+
+循环求余法 处理大数：
+
+![image-20220330174550027](lcof.assets/image-20220330174550027.png)
+
+复杂度分析：
+
+![image-20220330174615495](lcof.assets/image-20220330174615495.png)
+
+代码：
+
+```java
+class Solution {
+    public int fib(int n) {
+        int a = 0, b = 1, sum;
+        for(int i = 0; i < n; i++){
+            sum = (a + b) % 1000000007;
+            a = b;
+            b = sum;
+        }
+        return a;
+    }
+}
+```
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public int fib(int n) {
+        /*
+        动态规划，当前值只与前两个值有关；让值从小往大加即可
+         */
+
+        //先返回特殊值；这样下面的for循环才能安全地只接收n>=2的情况
+        if(n==0||n==1)return n;
+
+        int pre2=0,pre1=1;
+
+        //循环当前的i为谁，执行完当前循环，得到的sum即为fib(i)
+        for(int i=2;i<=n;i++){
+
+            int tempSum=(pre2%1000000007+pre1%1000000007)%1000000007;
+            pre2=pre1;
+            pre1=tempSum;
+        }
+
+        //最后一次循环得到的sum即为fib(n)，这个sum被复制给pre1了
+        return pre1;
+
+    }
+}
+```
+
+- 第一次提交的时候，忽略了处理n==1和0的情况；for循环无法处理n<2的情况，所以要做面对n==1和0的情况时的特殊处理。如上处理后就提交成功了。
+
+
+
+### [剑指 Offer 10- II. 青蛙跳台阶问题](https://leetcode-cn.com/problems/qing-wa-tiao-tai-jie-wen-ti-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int numWays(int n) {
+        /*
+        跳上台阶的跳法，至只与前两步有关系:跳到当前台阶的方法数==跳到prev1（前一个台阶）的方法数+跳到prev2的方法数。
+        因为跳到当前台阶只有两种可能：从prev1跳1个台阶上来，或从prev2一跃跳两个台阶上来
+         */
+
+         if(n==0||n==1)return 1;
+         if(n==2)return 2;
+
+        //从第三级台阶开始动态规划
+         int prev1=2,prev2=1;
+         //当前循环为i，则执行完当前循环时的sum为跳到第i级台阶的跳法数
+         for(int i=3;i<=n;i++){
+             int tempSum=(prev1%1000000007+prev2%1000000007)%1000000007;
+             prev2=prev1;
+             prev1=tempSum;
+         }
+
+         return prev1;
+
+    }
+}
+```
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330180140749](lcof.assets/image-20220330180140749.png)
+
+- 本题和斐波那契数列问题基本一模一样。
+- 注意大佬评语：此类求 ***多少种可能性*** 的题目一般都有 **递推性质** ，即 f(n)*f*(*n*) 和 f(n-1)*f*(*n*−1)…f(1)*f*(1) 之间是有联系的。
+
+复杂度分析：
+
+![image-20220330180256791](lcof.assets/image-20220330180256791.png)
+
+代码：
+
+```java
+class Solution {
+    public int numWays(int n) {
+        int a = 1, b = 1, sum;
+        for(int i = 0; i < n; i++){
+            sum = (a + b) % 1000000007;
+            a = b;
+            b = sum;
+        }
+        return a;
+    }
+}
+```
+
+
+
+### [剑指 Offer 63. 股票的最大利润](https://leetcode-cn.com/problems/gu-piao-de-zui-da-li-run-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        /*记录历史最大利润，和最低价格的股票 */
+        
+        //处理特殊情况
+        if(prices.length==0)return 0;
+        
+        int lowP=prices[0];
+        int benefit=0;
+        for(int i=0;i<prices.length;i++){
+            //时刻更新最大收益
+            if((prices[i]-lowP)>benefit){
+                benefit=prices[i]-lowP;
+            }
+            //只要碰见更小的price就保存，因为未来碰见相同的高值时，记录下更小的lowP可以带来更大的收入。
+            if(prices[i]<lowP){
+                lowP=prices[i];
+            }
+        }
+        
+        return benefit;
+
+    }
+}
+```
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330192323464](lcof.assets/image-20220330192323464.png)
+
+动态规划解析：
+
+![image-20220330192357464](lcof.assets/image-20220330192357464.png)
+
+效率优化：
+
+![image-20220330192427858](lcof.assets/image-20220330192427858.png)
+
+复杂度分析：
+
+![image-20220330192446488](lcof.assets/image-20220330192446488.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        int cost = Integer.MAX_VALUE, profit = 0;
+        for(int price : prices) {
+            cost = Math.min(cost, price);
+            profit =Math.min(profit, price - cost);
+        }
+        return profit;
+    }
+}
+```
+
+- 注意这里java工具类方法`Math.min`和`Math.min`的用法。
+
+
+
+## 动态规划(中等)
