@@ -2585,3 +2585,108 @@ class Solution {
 
 
 ## 动态规划(中等)
+
+### [剑指 Offer 42. 连续子数组的最大和](https://leetcode-cn.com/problems/lian-xu-zi-shu-zu-de-zui-da-he-lcof/)
+
+#### 首战寄
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220331195848158](lcof.assets/image-20220331195848158.png)
+
+动态规划解析：
+
+![image-20220331195938823](lcof.assets/image-20220331195938823.png)
+
+空间复杂度降低：
+
+![image-20220331200048428](lcof.assets/image-20220331200048428.png)
+
+复杂度分析：
+
+![image-20220331200117017](lcof.assets/image-20220331200117017.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        int res = nums[0];
+        for(int i = 1; i < nums.length; i++) {
+            nums[i] += Math.max(nums[i - 1], 0);
+            res = Math.max(res, nums[i]);
+        }
+        return res;
+    }
+}
+```
+
+网友补充：感谢分享，思路很清晰，只是有一点建议。 因为有的时候，题目要求可能不能修改原有数组，考虑到在dp列表中，dp[i]只和dp[i-1]有关,所以用两个参数存储循环过程中的dp[i]和dp[i-1]的值即可，空间复杂度也为O(1)。 代码如下：
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        int max = nums[0];
+        int former = 0;//用于记录dp[i-1]的值，对于dp[0]而言，其前面的dp[-1]=0
+        int cur = nums[0];//用于记录dp[i]的值
+        for(int num:nums){
+            cur = num;
+            if(former>0) cur +=former;
+            if(cur>max) max = cur;
+            former=cur;
+        }
+        return max;
+    }
+}
+```
+
+
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        /* 
+        dpi表示已i号元素结尾的最大子数组，那么dpi=Max(dp[i-1]+numsi,numsi),所以dp[i-1]<0的话只能拖后腿就截掉
+        因为最长子数组是连续的，所以要以i为结尾的数组做dp数组
+        */
+        //处理特殊情况
+        if(nums.length==0)return 0;
+        if(nums.length==1)return nums[0];
+
+        //从数组第二个元素开始就dpi
+        int curMaxSum=nums[0],historyMaxSum=curMaxSum;
+        for(int i=1;i<nums.length;i++){
+            if(curMaxSum<0){
+                curMaxSum=nums[i];
+            }else{
+                curMaxSum+=nums[i];
+            }
+
+            //判断当前的最大值是否比之前所有记载过的最大值都大，都大的话更新历史最大值
+            if(curMaxSum>historyMaxSum){
+                historyMaxSum=curMaxSum;
+            }
+        }
+
+        return historyMaxSum;
+
+    }
+}
+```
+
+
+
+### [剑指 Offer 47. 礼物的最大价值](https://leetcode-cn.com/problems/li-wu-de-zui-da-jie-zhi-lcof/)
+
+#### 首战
+
+```java
+        /*
+        覆写二维数组，在相应位置写上“以左上角出发到当前位置能拿到的最大礼物”，这个礼物值只与上一节点和左一节点有关。
+         */
+```
+
