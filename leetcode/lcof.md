@@ -2784,3 +2784,227 @@ class Solution {
 
 #### 首战寄
 
+#### 大佬-适合新手理解
+
+思路：
+
+此题总结规律和青蛙跳台阶有点相似（没刷到的可以先刷青蛙跳台阶），青蛙跳台阶是只能跳一步或者两步，所以最后只有两种情况：
+
+
+    1. 跳到n-1阶，然后再跳1
+    2. 跳到n-2阶,然后再跳2
+    所以f(n) = f(n-1)+f(n-2)
+此题关注的是最大能翻译的数字为25，说明情况为要不一次性翻译一个数字，要不一次性翻译两个数字（不可能三个数字，三个数字肯定大于25了），和青蛙跳只能跳一步或两步类似
+
+
+    假设dp(i)为长度为i的数字的翻译总数
+        a.如果最后两位数字大于10且小于25，他才能翻译两个数字，他就和青蛙跳类似有两种情况：
+             1.dp(i-1),然后最后一个数字单独翻译
+             2.dp(i-2),然后最后两个数字一起翻译
+             所以dp(i) = dp(i-1) + dp(i-2);
+        b.如果最后两位数字比10小，比25大，那么他最后一个数字只能单独翻译，所以只有一种情况：
+             1.dp(i-1),然后最后一个数字单独翻译,所以dp(i) = dp(i-1);
+代码(最好理解的写法)
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        //dp[i-2]
+        int a = 1;
+        //dp[i-1]
+        int b = 1;
+        //dp[i]
+        int c = 1;
+        String s = String.valueOf(num);
+        for (int i = 1; i < s.length(); i++) {
+            //最后两个数字大于10小于25
+            if ((s.charAt(i-1) == '1') || ( s.charAt(i-1) == '2' && s.charAt(i) <= '5')) {
+                c = b + a;
+                //更新新的dp[i-2]
+                a = b;
+                //更新新的dp[i-1]
+                b = c;
+            }else {
+                c = b;
+                //由于新的dp[i-1]值没变，所以只更新新的dp[i-2]
+                a = b;
+            }
+        }
+        return c;
+
+    }
+}
+```
+
+- 注意：字符‘1’ ‘2’ ‘3’ ‘4’ ‘5’，，也是ascii递增的，他们可以用符号比大小。
+
+#### 官方1-动态规划+字符串遍历
+
+解题思路：
+
+根据题意，可按照下图的思路，总结出 “递推公式” （即转移方程）。
+因此，此题可用动态规划解决，以下按照流程解题。
+
+![Picture1.png](lcof.assets/e231fde16304948251633cfc65d04396f117239ea2d13896b1d2678de9067b42-Picture1.png)
+
+动态规划解析：
+
+![image-20220401172718039](lcof.assets/image-20220401172718039.png)
+
+字符串遍历做法：
+
+![image-20220401172829205](lcof.assets/image-20220401172829205.png)
+
+复杂度分析：
+
+![image-20220401172857171](lcof.assets/image-20220401172857171.png)
+
+代码：
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int a = 1, b = 1;
+        for(int i = 2; i <= s.length(); i++) {
+            String tmp = s.substring(i - 2, i);
+            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
+            b = a;
+            a = c;
+        }
+        return a;
+    }
+}
+```
+
+高赞网友补充：动态规划思想，按照大佬的思路，使用的数组（感觉使用a和b不太直观）
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int[] dp = new int[s.length()+1];
+        dp[0] = 1;
+        dp[1] = 1;
+        for(int i = 2; i <= s.length(); i ++){
+            String temp = s.substring(i-2, i);
+            if(temp.compareTo("10") >= 0 && temp.compareTo("25") <= 0)
+                dp[i] = dp[i-1] + dp[i-2];
+            else
+                dp[i] = dp[i-1];
+        }
+        return dp[s.length()];
+    }
+}
+```
+
+![image-20220401173035518](lcof.assets/image-20220401173035518.png)
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int a = 1, b = 1;
+        for(int i = s.length() - 2; i > -1; i--) {
+            String tmp = s.substring(i, i + 2);
+            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
+            b = a;
+            a = c;
+        }
+        return a;
+    }
+}
+```
+
+#### 官方2-动态规划+数字求余
+
+上述方法1虽然已经节省了 dp列表的空间占用，但字符串 s 仍使用了 O(N)大小的额外空间。
+
+空间复杂度优化：
+
+![image-20220401173303141](lcof.assets/image-20220401173303141.png)
+
+复杂度分析：
+
+![image-20220401173327733](lcof.assets/image-20220401173327733.png)
+
+代码：
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        int a = 1, b = 1, x, y = num % 10;
+        while(num != 0) {
+            num /= 10;
+            x = num % 10;
+            int tmp = 10 * x + y;
+            int c = (tmp >= 10 && tmp <= 25) ? a + b : a;
+            b = a;
+            a = c;
+            y = x;
+        }
+        return a;
+    }
+}
+```
+
+高赞网友补充：大佬，直接对100取余可以简化代码:
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        int m = 1, n = 1;
+        // 至少是一个两位数才需要考虑能不能组合
+        while (num > 9) { 
+            int t = (num % 100 < 26 && num % 100 > 9) ? m + n : n;
+            m = n;
+            n = t;
+            num /= 10;
+        }
+        return n;
+    }
+}
+```
+
+#### 及时再战成功
+
+```java
+class Solution {
+    public int translateNum(int num) {
+
+        /**
+        数字翻译成字符串是对称的，所以从右往左看；以nums[i-1]为首位的数字，可能收到nums[i]和nums[i+1]的影响
+         */
+        //初始化，把num看做nums数组的话，表示以nums[len-1]和nums[len]为终点的的翻译有几种情况，虽然初始情况下dpLater2对应的nums[len]不存在，但是可以通过dp[len-2]和dp[len-1]推出dp[len].
+        int dpLater1=1,dpLater2=1;
+
+        //使用对100求余数，得到最接近左遍历终点的两个数字构成的数
+        while(num>9){
+            int tempFocus=num%100;
+            int dpCur;
+            //数字在[10,25]有两种翻译方法
+            if(tempFocus>=10&&tempFocus<=25){
+                dpCur=dpLater1+dpLater2;
+            }else{
+                dpCur=dpLater1;
+            }
+
+            //往左继续处理
+            dpLater2=dpLater1;
+            dpLater1=dpCur;
+            num/=10;
+        }
+
+        //最后的dpCur给了dpLater1
+        return dpLater1;
+
+    }
+}
+```
+
+自画思路图：
+
+![image-20220401181306013](lcof.assets/image-20220401181306013.png)
+
+- 即最后的12，如果整体翻译，就是以4为左结尾的翻译可能数（12    4，共一种情况）；如果拆开翻译，即是以2为结尾的返回数（1   2   4，1    24，  共两种情况）；又因为既能翻译为1又能翻译为12，所以是两种翻译情况的种数的和。
+  - 比如324，最后分析32，不能作为翻译单元，所以只能拆开3和2；有3   24，3    2    4两种情况，即相当于以2结尾的翻译可能数。
