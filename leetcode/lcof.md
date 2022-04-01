@@ -1671,7 +1671,7 @@ class Solution {
 
 
 
-## 搜索与回溯算法（简单）
+## 搜索与回溯算法(简单)
 
 ### [剑指 Offer 32 - I. 从上到下打印二叉树](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-lcof/)
 
@@ -2077,7 +2077,7 @@ class Solution {
 
 
 
-## 搜索与回溯算法(简单)
+
 
 ### [剑指 Offer 26. 树的子结构](https://leetcode-cn.com/problems/shu-de-zi-jie-gou-lcof/)
 
@@ -2682,11 +2682,105 @@ class Solution {
 
 ### [剑指 Offer 47. 礼物的最大价值](https://leetcode-cn.com/problems/li-wu-de-zui-da-jie-zhi-lcof/)
 
-#### 首战
+#### 首战告捷
 
 ```java
+class Solution {
+    public int maxValue(int[][] grid) {
         /*
         覆写二维数组，在相应位置写上“以左上角出发到当前位置能拿到的最大礼物”，这个礼物值只与上一节点和左一节点有关。
+
+        为了空间复杂度，直接在二维数组上记录
          */
+         //处理特殊情况;注意要先判断行不为0，否则先判断列不为0的话可能出现空指针异常
+         if(grid.length==0||grid[0].length==0)return 0;
+
+         //先处理二维数组的行
+         for(int i=0;i<grid.length;i++){
+             //再在二维数组的某个行中依次处理各个列元素
+             for(int j=0;j<grid[0].length;j++){
+                 //获得数组当前元素，从左or从上来，哪个拿更多礼物
+                 int tempLeft=0,tempUp=0;
+                if(i>0){//如果i大于0，说明不在第一行，那么可以获得grid[i-1][j]位置存放的最大礼物
+                    tempUp=grid[i-1][j];
+                }
+                if(j>0){//如果j大于0，说明不在第一列，那么可以获得grid[i][j-1]位置存放的最大礼物
+                    tempLeft=grid[i][j-1];
+                }
+
+                //把grid[i][j]覆盖写为走当当前位置能拿到得最多礼物。
+                grid[i][j]=Math.max(tempLeft,tempUp)+grid[i][j];
+             }
+
+         }
+
+         return grid[grid.length-1][grid[0].length-1];
+
+    }
+}
 ```
+
+- 看了官方解析，我得解法就是官方的待优化版，可以先初始化“第一行 第一列”，这样就避免每次判断当前元素是不是在二维数组的边缘。
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220401152228155](lcof.assets/image-20220401152228155.png)
+
+动态规划解析：
+
+![image-20220401152255940](lcof.assets/image-20220401152255940.png)
+
+空间复杂度优化：
+
+![image-20220401152320811](lcof.assets/image-20220401152320811.png)
+
+复杂度分析：
+
+![image-20220401152346735](lcof.assets/image-20220401152346735.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxValue(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        for(int i = 0; i < m; i++) {
+            for(int j = 0; j < n; j++) {
+                if(i == 0 && j == 0) continue;
+                if(i == 0) grid[i][j] += grid[i][j - 1] ;
+                else if(j == 0) grid[i][j] += grid[i - 1][j];
+                else grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
+            }
+        }
+        return grid[m - 1][n - 1];
+    }
+}
+```
+
+以上代码逻辑清晰，和转移方程直接对应，但仍可提升效率：当 gridgrid 矩阵很大时， i = 0i=0 或 j = 0j=0 的情况仅占极少数，相当循环每轮都冗余了一次判断。因此，可先初始化矩阵第一行和第一列，再开始遍历递推:
+
+```java
+class Solution {
+    public int maxValue(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        for(int j = 1; j < n; j++) // 初始化第一行
+            grid[0][j] += grid[0][j - 1];
+        for(int i = 1; i < m; i++) // 初始化第一列
+            grid[i][0] += grid[i - 1][0];
+        for(int i = 1; i < m; i++)
+            for(int j = 1; j < n; j++) 
+                grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
+        return grid[m - 1][n - 1];
+    }
+}
+
+```
+
+
+
+### [剑指 Offer 46. 把数字翻译成字符串](https://leetcode-cn.com/problems/ba-shu-zi-fan-yi-cheng-zi-fu-chuan-lcof/)
+
+#### 首战寄
 
