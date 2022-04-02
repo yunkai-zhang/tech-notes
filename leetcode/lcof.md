@@ -3010,3 +3010,153 @@ class Solution {
   - 比如324，最后分析32，不能作为翻译单元，所以只能拆开3和2；有3   24，3    2    4两种情况，即相当于以2结尾的翻译可能数。
 
 - 其实核心思想就是，从右往左处理时，最后的翻译单元是1 还是12；最后的翻译单元是1则对应一个1xxxx翻译，最后的翻译单元是12则对应一个12xxxx翻译，xxxx区域相当于就是动态规划的子问题，共两种情况。如果数字更长的话，也是同理。
+
+### [剑指 Offer 48. 最长不含重复字符的子字符串](https://leetcode-cn.com/problems/zui-chang-bu-han-zhong-fu-zi-fu-de-zi-zi-fu-chuan-lcof/)
+
+#### 首战寄
+
+#### 官方-解题思路
+
+解题思路：
+
+![image-20220402102952931](lcof.assets/image-20220402102952931.png)
+
+动态规划解析：
+
+![image-20220402103030643](lcof.assets/image-20220402103030643.png)
+
+空间复杂度优化：
+
+![image-20220402103106620](lcof.assets/image-20220402103106620.png)
+
+#### 官方方法1-动态规划 + 哈希表
+
+![image-20220402103323735](lcof.assets/image-20220402103323735.png)
+
+复杂度分析：
+
+![image-20220402103346795](lcof.assets/image-20220402103346795.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int res = 0, tmp = 0;
+        for(int j = 0; j < s.length(); j++) {
+            int i = dic.getOrDefault(s.charAt(j), -1); // 获取索引 i
+            dic.put(s.charAt(j), j); // 更新哈希表
+            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
+            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
+        }
+        return res;
+    }
+}
+```
+
+- Java 的  getOrDefault(key, default)， 代表当哈希表包含键 key时返回对应 value ，不包含时返回默认值 default 。
+
+- 我：dpj的值由dpj-1和i共同决定；如果i在dpj-1所代表的字符串中，则dpj的长度为j-i；如果i不在dpj-1所代表的字符串中，则dpj的长度为(dpj-1)+1。
+
+#### 官方方法2-动态规划 + 线性遍历
+
+思路：
+
+![image-20220402104704664](lcof.assets/image-20220402104704664.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int res = 0, tmp = 0;
+        for(int j = 0; j < s.length(); j++) {
+            int i = j - 1;
+            while(i >= 0 && s.charAt(i) != s.charAt(j)) i--; // 线性查找 i
+            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
+            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
+        }
+        return res;
+    }
+}
+
+```
+
+- 这种往左遍历增大了时间复杂度为on2，不可取，不建议
+
+#### 官方方法3-双指针 + 哈希表
+
+思路：
+
+![image-20220402104914233](lcof.assets/image-20220402104914233.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int i = -1, res = 0;
+        for(int j = 0; j < s.length(); j++) {
+            if(dic.containsKey(s.charAt(j)))
+                i = Math.max(i, dic.get(s.charAt(j))); // 更新左指针 i
+            dic.put(s.charAt(j), j); // 哈希表记录
+            res = Math.max(res, j - i); // 更新结果；j - i即为以i为右指针的最长字符串的长度，其要与历史最大值比较来更新历史最大值。
+        }
+        return res;
+    }
+}
+
+```
+
+- 网友问：left = Math.max(left, hashMap.get(ch) + 1);为什么取最大值
+
+  - 网友答：
+
+  - 因为需要保证的是`[left,right]`没有重复值。而你的left如果不取最大值的话，是有可能往前退，就无法保证这个条件了。
+
+    比如`abba` , 到第二个`a`的时候，这时候上一轮的第二个b完成，此时`left=2` ，而`a`上一次出现的地方是0。
+
+    如果你直接`left = hashMap.get(ch) + 1` ,此时 left = 1 ,范围为`[left,right] = [1,3]` 而此时`[1,2] = bb` ，b已经重复了。本质就是你这个字母上次出现的地方到当前再次出现的位置，这两者间可能存在重复的值
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        /**
+        从左往右遍历，ij分别为左右重复元素，dpj由dpj-1和i共同决定
+         */
+
+        //存储字符元素-位置
+        Map<Character,Integer> map=new HashMap<>();
+        //j位置为当前元素，i为当前元素之前的重复元素的位置
+        int i=-1,dpPre=0,result=0;
+        for(int j=0;j<s.length();j++){
+            //先获取当前元素的上一个重复元素的index，如果没出现过则返回-1；
+            i=map.getOrDefault(s.charAt(j),-1);
+
+            //当前元素为右尾的子串的长度，由dpPre和ij关系共同决定。注意dpPre==j-i时j的上一个重复元素在dpPre对应的子串的首位，所以在dpPre对应的子串内，所以不能用dpPre+1作为新值。
+            int dpCur=(dpPre>=j-i?j-i:dpPre+1);
+            //比较以当前元素为结尾的子串的最大长度和历史上记录的最大长度，更新历史最大长度
+            result=Math.max(result,dpCur);
+
+            //更新s.charAt(j)字符的位置为当前位置
+            map.put(s.charAt(j),j);
+            //不要忘记更新dpPre，否则dpPre永远是0
+            dpPre=dpCur;
+        }
+
+        return result;
+
+    }
+}
+```
+
+- 能理顺动态规划的思路，但是写代码的时候忘记更新dpPre，且一直没排查出来；最后用idea debug才发现。**涉及到pre的一定要注意pre是否需要被更新**！
+
+## 双指针(简单)
+
+### [剑指 Offer 18. 删除链表的节点](https://leetcode-cn.com/problems/shan-chu-lian-biao-de-jie-dian-lcof/)
