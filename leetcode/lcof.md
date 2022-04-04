@@ -3160,3 +3160,662 @@ class Solution {
 ## 双指针(简单)
 
 ### [剑指 Offer 18. 删除链表的节点](https://leetcode-cn.com/problems/shan-chu-lian-biao-de-jie-dian-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public ListNode deleteNode(ListNode head, int val) {
+        //处理特殊情况。习惯性的做一下null处理，避免恶心人的案例。
+        if(head==null)return null;
+        
+        //创建引用当前节点的引用
+        ListNode cur=head;
+        
+        //由于总是删除下一节点，所以先处理头节点;因为头节点不能被通过前节点删除。
+        if(head.val==val){
+            head=head.next;
+            return head;
+        }
+
+        //由于总是判断删除下一个节点，所以判断的是next不为空；本while循环不会循环完退出，只会在循环中找到了要删除的节点并退出
+        while(cur.next!=null){
+            //判断当前节点的下一个节点要不要被删掉；由于程序最迟在cur为倒数第二个节点时能判断到倒数第一个节点要被删掉，并且while的条件保证了下一节点不为空，所以其实不用担心cur.next==null即cur为结尾指针造成的空指针异常。
+            if(cur.next.val==val){
+                //即使是删掉最后一个节点，cur为倒数第二个节点，cur.next.next也为null不会空指针异常
+                cur.next=cur.next.next;
+                return head;
+            }
+            //while不要忘记移动cur
+            cur=cur.next;
+        }
+        //正常来说，这个return是永远不会使用的。
+        return null;
+    }
+}
+```
+
+- 没用到双指针，就时间复杂度on解决了
+
+#### 官方-双指针
+
+其实官方的双指针就是我的做法吗，只不过多此一举用了两个指针。
+
+解题思路：
+
+![image-20220403171506936](lcof.assets/image-20220403171506936.png)
+
+算法流程：
+
+![image-20220403171539038](lcof.assets/image-20220403171539038.png)
+
+复杂度分析：
+
+![image-20220403171557465](lcof.assets/image-20220403171557465.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode deleteNode(ListNode head, int val) {
+        if(head.val == val) return head.next;
+        ListNode pre = head, cur = head.next;
+        while(cur != null && cur.val != val) {
+            pre = cur;
+            cur = cur.next;
+        }
+        if(cur != null) pre.next = cur.next;
+        return head;
+    }
+}
+```
+
+- 我：有个网友评价“单指针”就够了，做法就是我的做法。
+
+
+
+### [剑指 Offer 22. 链表中倒数第k个节点](https://leetcode-cn.com/problems/lian-biao-zhong-dao-shu-di-kge-jie-dian-lcof/)
+
+#### 首战告捷--递归法
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    //定义全局变量
+    ListNode result;
+    public ListNode getKthFromEnd(ListNode head, int k) {
+        /*
+        倒数，想到栈：先把节点全部入栈，出栈的时候计数，到指定节点都出栈的时候，返回那个节点。
+        栈可以通过递归实现，计数可以通过全局变量
+         */
+
+        //执行递归，以保存目标节点
+        recur(head,k);
+
+        return result;
+
+    }
+    public int recur(ListNode head,int k){
+        //设定递归触底条件，哪个递归层拿到的return与k相同，则说明应返回当前节点
+        if(head==null) return 1;
+
+        //如果下一层递归返回的当前层的倒数层数为k，说明当前节点就是目标节点；
+        int kthFromEnd=recur(head.next,k);
+        if(kthFromEnd==k){
+            result=head;
+        }
+
+        //给退栈时的各层返回他们的倒数的层数
+        return kthFromEnd+1;
+    }
+}
+```
+
+- 问问问：我n层递归，空间复杂度是不是就是on了，那性能就不如官方的了。
+
+#### 官方--双指针
+
+解题思路：
+
+![image-20220403175326006](lcof.assets/image-20220403175326006.png)
+
+算法流程：
+
+![image-20220403175352955](lcof.assets/image-20220403175352955.png)
+
+复杂度分析：
+
+![image-20220403175419032](lcof.assets/image-20220403175419032.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode getKthFromEnd(ListNode head, int k) {
+        ListNode former = head, latter = head;
+        for(int i = 0; i < k; i++)
+            former = former.next;
+        while(former != null) {
+            former = former.next;
+            latter = latter.next;
+        }
+        return latter;
+    }
+}
+```
+
+- 本题没有 k*k* 大于链表长度的 case ，因此不用考虑越界问题。
+
+- 我：看来双指针可以这样控制距离，牛逼！
+
+
+
+### [剑指 Offer 25. 合并两个排序的链表](https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        //处理特殊情况
+        if(l1==null)return l2;
+        if(l2==null)return l1;
+        //能走到这一步说明两个链表的头结点都不为空，不会空指针；保存初始头结点为两个链表头结点里小的那个；必须保存了头结点，后面while中才能有head.next的方式赋值，才能连接起链表。
+        ListNode head;
+        if(l1.val<=l2.val){
+            head=l1;
+            //l1的头结点已经被加入结果链表了，所以往下移动一位看下一个节点
+            l1=l1.next;
+        }else{
+            head=l2;
+            l2=l2.next;
+        }
+        ListNode headCur=head;
+
+        //建立双指针分别指向两个链表，合并
+        ListNode pl1=l1;
+        ListNode pl2=l2;
+        //把两个节点中较小的节点加入结果列表head
+        while(pl1!=null&&pl2!=null){   
+            if(pl1.val<=pl2.val){
+                headCur.next=pl1;
+                headCur=headCur.next;
+                pl1=pl1.next;
+            }else{
+                headCur.next=pl2;
+                headCur=headCur.next;
+                pl2=pl2.next;
+            }
+        }
+
+        //一个队列遍历完毕后，把另一个队列的剩余部分直接加入结果链表
+        if(pl1!=null){
+            headCur.next=pl1;
+        }else{
+            headCur.next=pl2;
+        }
+
+
+        return head;
+    }
+}
+```
+
+- 为了结果链表的第一个节点，我的操作比较复杂，实际上可以像官方答案一样，使用一个伪头节点即可。
+
+#### 官方-双指针+伪头结点
+
+解题思路：
+
+![image-20220403192034915](lcof.assets/image-20220403192034915.png)
+
+算法流程：
+
+![image-20220403192122384](lcof.assets/image-20220403192122384.png)
+
+复杂度分析：
+
+![image-20220403192147988](lcof.assets/image-20220403192147988.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        ListNode dum = new ListNode(0), cur = dum;
+        while(l1 != null && l2 != null) {
+            if(l1.val < l2.val) {
+                cur.next = l1;
+                l1 = l1.next;
+            }
+            else {
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        cur.next = l1 != null ? l1 : l2;
+        return dum.next;
+    }
+}
+
+```
+
+- 这个伪头结点的思路确实不错！
+
+
+
+### [剑指 Offer 52. 两个链表的第一个公共节点](https://leetcode-cn.com/problems/liang-ge-lian-biao-de-di-yi-ge-gong-gong-jie-dian-lcof/)
+
+#### 首战寄
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        /**
+         链表判断环，判断相交，就考虑双指针
+         */
+        ListNode la=headA;
+        ListNode lb=headB;
+
+        //使用两个指针分别遍历两个链表，当发现指向同一节点时返回该节点；以节点的地址为判断节点相等的标准，因为节点的值可重复见（示例）
+        while((la!=null)&&(lb!=null)){
+            System.out.println("la:"+la);
+            System.out.println("lb:"+lb);
+            if(la==lb){
+                return la;
+            }
+            //while始终记住要移动指针
+            la=la.next;
+            lb=lb.next;
+        }
+
+        //经过遍历都没找到公共节点，说明无公共节点
+        return null;
+    }
+}
+```
+
+- 忽略了公共节点前，两个链表的前部长度不一致的问题；比如公共部分有c1 c2的话，头部长的链表的指针走到c1，头部短的链表的指针走到c2，两个指针总是有前后差距错开了。
+
+
+
+#### 官方-双指针+浪漫相遇
+
+解题思路：
+
+我们使用两个指针 node1，node2 分别指向两个链表 headA，headB 的头结点，然后同时分别逐结点遍历，当 node1 到达链表 headA 的末尾时，重新定位到链表 headB 的头结点；当 node2 到达链表 headB 的末尾时，重新定位到链表 headA 的头结点。
+
+这样，当它们相遇时，所指向的结点就是第一个公共结点。
+
+复杂度分析：
+
+![image-20220404150150252](lcof.assets/image-20220404150150252.png)
+
+代码：
+
+```java
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        ListNode PA = headA;
+        ListNode PB = headB;
+        while (PA != PB) {
+            PA = PA == null ? headB : PA.next;
+            PB = PB == null ? headA : PB.next;
+        }
+        return PA;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+
+        /**
+        小心两个链表的头部的长度是不一致的，需要让两个指针都走一遍两个列表；这样要不走完都没相遇，要不在走对方列表的时候相遇
+         */
+
+        ListNode ha=headA;
+        ListNode hb=headB;
+
+        /**
+        遍历情况分类讨论：
+        1，如果两条链表一样长：如果有公共节点说明头部也一样长，那么指针在遍历各自的第一条链表时就能找到交点；如果没有公共节点，则两个指针会同时走到链表末尾都为null，触发while的退出，即可返回null即无交点。
+        2，如果两条链表不一样长：那么要处理节点前后距离差的问题，如果有交点，那么指针会把两个链表都走一遍，走到第二个链表的时候会在交点出相交；如果两个链表没有交点的话，指针也会把两个链表都走一遍，两个指针也会同时从两个链表的尾部退出
+
+        注意由于列表长度可能不等，所以要两个指针都为null即都到了链表结尾（要不数组长度相等一遍过无交点，要不数组长度不等两遍过无交点），才允许退出；只一个指针为null的话，可能另一个指针还在遍历第一个链表，不能允许退出。
+         */
+        while(ha!=hb){
+            //如果当前节点遍历到第一条链表的末尾，另一个节点还在遍历链表时，让他遍历第二条链表；没有交点的话第二条链表的结尾两个指针都会指向null，退出while
+            ha=(ha==null?headB:ha.next);
+            hb=(hb==null?headA:hb.next);
+        }
+
+        //ha==hb且ha!=null退出的话，ha==hb==交点；ha==hb==null退出的话，也返回null
+        return ha;
+        
+    }
+}
+```
+
+
+
+### [剑指 Offer 21. 调整数组顺序使奇数位于偶数前面](https://leetcode-cn.com/problems/diao-zheng-shu-zu-shun-xu-shi-qi-shu-wei-yu-ou-shu-qian-mian-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] exchange(int[] nums) {
+        /**
+        双指针，l指向奇数段的右部右一位，r指向偶数段左部左一位
+        只移动一个指针，本例移动奇指针，发现偶数就给偶指针交换，偶指针再左移动一位，奇指针重新判断；发现奇数则寄指针右移一位；两指针重合时退出，重合位置的奇偶性无所谓，毕竟位于奇数段偶数段的交点，是谁都可以。
+         */
+
+        //处理特殊情况，测试案例[]纯纯乌鱼子
+        if(nums.length==0)
+        return nums;
+
+         int l=0,r=nums.length-1;
+         while(l!=r){
+             //左指针发现偶数
+             if(nums[l]%2==0){
+                 //交换左右指针指向的数组元素
+                 int temp=nums[r];
+                 nums[r]=nums[l];
+                 nums[l]=temp;
+                //移动右指针
+                r--;
+             }else{//左指针发现奇数，左指针右移一位
+                l++;
+             }
+             //如果左指针发现偶数，左右指针指向的数组元素交换后，左指针会再次检查被换来的元素是否为奇数
+         }
+        return nums;
+    }
+}
+```
+
+- 有完整思路和代码框架，但是漏了“左指针移动”，和”空数组处理“；不过自行修改完毕了。
+
+#### 官方-双指针+同时移动
+
+解题思路：
+
+考虑定义双指针 ii , jj 分列数组左右两端，循环执行：
+
+1. 指针 ii 从左向右寻找偶数；
+2. 指针 jj 从右向左寻找奇数；
+3. 将 偶数 nums[i]nums[i] 和 奇数 nums[j]nums[j] 交换。
+
+可始终保证： 指针 ii 左边都是奇数，指针 jj 右边都是偶数 。
+
+![image-20220404161217051](lcof.assets/image-20220404161217051.png)
+
+算法流程：
+
+![image-20220404161240739](lcof.assets/image-20220404161240739.png)
+
+复杂度分析：
+
+![image-20220404161301033](lcof.assets/image-20220404161301033.png)
+
+代码：
+
+![image-20220404161323780](lcof.assets/image-20220404161323780.png)
+
+```java
+class Solution {
+    public int[] exchange(int[] nums) {
+        int i = 0, j = nums.length - 1, tmp;
+        while(i < j) {
+            while(i < j && (nums[i] & 1) == 1) i++;
+            while(i < j && (nums[j] & 1) == 0) j--;
+            tmp = nums[i];
+            nums[i] = nums[j];
+            nums[j] = tmp;
+        }
+        return nums;
+    }
+}
+```
+
+- 我：本代码左右同时动，我是一个去找另一个，时间复杂度一样；我的代码没有双循环，甚至更优雅些。
+
+- 网友：本题蕴含快速排序的思想！
+
+### [剑指 Offer 57. 和为s的两个数字](https://leetcode-cn.com/problems/he-wei-sde-liang-ge-shu-zi-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+
+        /**
+        尽量用上“递增”这个条件，求和的两个数肯定一大一小；左右两端两个指针，求和，值大了左移右指针，值小了右移左指针
+         */
+
+        //处理空数组
+        if(nums.length==0)return new int[0];
+
+        int left=0,right=nums.length-1;
+        while(left<right){
+            if(nums[left]+nums[right]<target){
+                left++;
+            }else if(nums[left]+nums[right]>target){
+                right--;
+            }else{
+                //注意是输出元素值，而不是输出index
+                return new int[]{nums[left],nums[right]};
+            }
+        }
+
+        //如果没找到，返回空
+        return new int[0];
+    }
+}
+```
+
+#### 官方-对撞双指针
+
+解题思路：
+
+![image-20220404164513158](lcof.assets/image-20220404164513158.png)
+
+算法流程：
+
+![image-20220404164531875](lcof.assets/image-20220404164531875.png)
+
+正确性证明：
+
+![image-20220404164558086](lcof.assets/image-20220404164558086.png)
+
+- 我：意会一下，被排除掉的元素都是不可能构成结果的。
+  - 以初始状态为例，假设nums[left]+nums[right]<target，那么right左移，最右边的元素被排除在可能的结果集之外，
+  - 采用反证法，如果右边的元素不该被排除在结果集之外，那么需要一个比left更小的元素，可是left已经是数组中的最小值了，不会有更小的值，所以反例不存在；
+  - 所以被排除的最右边的元素不会是被误排除的，反证法证毕。
+
+复杂度分析：
+
+![image-20220404164622003](lcof.assets/image-20220404164622003.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        int i = 0, j = nums.length - 1;
+        while(i < j) {
+            int s = nums[i] + nums[j];
+            if(s < target) i++;
+            else if(s > target) j--;
+            else return new int[] { nums[i], nums[j] };
+        }
+        return new int[0];
+    }
+}
+```
+
+- 网友：提醒一下，判断条件最好不要用相加后的结果，应该用target - nums[i] 跟 nums[j]比较，这样保证不会溢出。虽然这题中不会出错。同样的例子还有二分查找，(left + right) / 2 可以用left + ((rigth - left) >> 1))代替。
+
+
+
+### [剑指 Offer 58 - I. 翻转单词顺序](https://leetcode-cn.com/problems/fan-zhuan-dan-ci-shun-xu-lcof/)
+
+#### 首战寄
+
+- 写的时候就感觉要是用一些工具类，看题解果然至少要用StringBuilder。
+
+#### 官方1-双指针
+
+算法解析：
+
+![image-20220404172111604](lcof.assets/image-20220404172111604.png)
+
+复杂度分析：
+
+![image-20220404172131469](lcof.assets/image-20220404172131469.png)
+
+代码：
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        s = s.trim(); // 删除首尾空格
+        int j = s.length() - 1, i = j;
+        StringBuilder res = new StringBuilder();
+        while(i >= 0) {
+            while(i >= 0 && s.charAt(i) != ' ') i--; // 搜索首个空格
+            res.append(s.substring(i + 1, j + 1) + " "); // 添加单词
+            while(i >= 0 && s.charAt(i) == ' ') i--; // 跳过单词间空格
+            j = i; // j 指向下个单词的尾字符
+        }
+        return res.toString().trim(); // 转化为字符串并返回，因为单词尾部会被人为加上空格
+    }
+}
+```
+
+- 注意`str.substing(左闭,右开)`和`StringBuilder`的用法。
+
+#### 官方2-分割 + 倒序（不建议）
+
+利用 “字符串分割”、“列表倒序” 的内置函数 *（**面试时不建议使用**）* ，可简便地实现本题的字符串翻转要求。
+
+算法解析：
+
+![image-20220404172258931](lcof.assets/image-20220404172258931.png)
+
+![Picture0.png](lcof.assets/9ef4a9ea565bf1c2d9209ca94881a77288f90f222476cfd44c418fa3f2d2d7c1-Picture0.png)
+
+复杂度分析：
+
+![image-20220404172508237](lcof.assets/image-20220404172508237.png)
+
+代码：
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        String[] strs = s.trim().split(" "); // 删除首尾空格，分割字符串
+        StringBuilder res = new StringBuilder();
+        for(int i = strs.length - 1; i >= 0; i--) { // 倒序遍历单词列表
+            if(strs[i].equals("")) continue; // 遇到空单词则跳过
+            res.append(strs[i] + " "); // 将单词拼接至 StringBuilder
+        }
+        return res.toString().trim(); // 转化为字符串，删除尾部空格，并返回
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        /**
+        用双指针的间距定位单词，类似双指针取倒数第n个数一样
+        掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
+         */
+
+        //先剔除首位空格，保证指针初始指向的不是空格
+        s.trim();
+
+        StringBuilder sb= new StringBuilder();
+        //ij想做取单词
+        int j=s.length()-1,i=j;
+        while(i>=0){
+            //取单词；同时注意防止一路i--导致超过字符串边界
+            while(i>=0&&s.charAt(i)!=' ')i--;
+            //单词以空格分开
+            sb.append(s.substring(i+1,j+1)+" ");
+            //剔除单词间的空格；这里也需要担心超过字符串边界，因为一路清除空格到i=-1时，还会继续执行本内存while，导致超过字符串边界；
+            while(i>=0&&s.charAt(i)==' ')i--;
+            //空格剔除完毕后，i停在下一个单词的尾部，把j移动过来
+            j=i;
+        }
+
+        //返回sb，记得去除最后单词后面的空格
+        return sb.toString().trim();
+    }
+}
+```
+
+- 难点坑点：
+  - 内部循环防超过字符串边界
+  - 掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
+
+
+
+## 搜索与回溯算法(中等)
+
+### [剑指 Offer 12. 矩阵中的路径](https://leetcode-cn.com/problems/ju-zhen-zhong-de-lu-jing-lcof/)
+
