@@ -3819,3 +3819,532 @@ class Solution {
 
 ### [剑指 Offer 12. 矩阵中的路径](https://leetcode-cn.com/problems/ju-zhen-zhong-de-lu-jing-lcof/)
 
+#### 首战寄
+
+完全无合适思路
+
+#### 官方-DFS+剪枝
+
+解题思路：
+
+![image-20220405153358478](lcof.assets/image-20220405153358478.png)
+
+DFS 解析：
+
+![image-20220405153443132](lcof.assets/image-20220405153443132.png)
+
+- 注意这里java中空字符的表达方式
+
+复杂度分析：
+
+![image-20220405153605776](lcof.assets/image-20220405153605776.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean exist(char[][] board, String word) {
+        char[] words = word.toCharArray();
+        for(int i = 0; i < board.length; i++) {
+            for(int j = 0; j < board[0].length; j++) {
+                if(dfs(board, words, i, j, 0)) return true;
+            }
+        }
+        return false;
+    }
+    boolean dfs(char[][] board, char[] word, int i, int j, int k) {
+        if(i >= board.length || i < 0 || j >= board[0].length || j < 0 || board[i][j] != word[k]) return false;
+        if(k == word.length - 1) return true;
+        board[i][j] = '\0';
+        boolean res = dfs(board, word, i + 1, j, k + 1) || dfs(board, word, i - 1, j, k + 1) || 
+                      dfs(board, word, i, j + 1, k + 1) || dfs(board, word, i , j - 1, k + 1);
+        board[i][j] = word[k];
+        return res;
+    }
+}
+```
+
+- 注意点：
+  - 注意java中空字符的表示；题目说数组只有英文大小写字母，空字符就能和原本的字符区分开。[参考](http://t.csdn.cn/E8dER)。
+  - String 转为CharArray的方法：str.toCharArray()
+  - 如何解决“本轮递归把元素置位空字符后，不影响下一轮递归”，即在本轮递归后用`board[i][j] = word[k];`把修改还原。
+
+- 我：感觉就是暴力算法啊，，对每个节点深度递归；不过这题要求得到目标字符串顺序的路径，应该也只能暴力递归
+
+#### 及时再战半寄
+
+```java
+class Solution {
+    public boolean exist(char[][] board, String word) {
+        /**
+        因为要求字符串的顺序，所以只能暴力+深度递归
+         */
+        //把字符串转化成charArrray备用
+        char[] wordch=word.toCharArray();
+        //题目规定了board不为空数组
+        for(int i=0;i<board.length;i++){
+            for(int j=0;j<board[0].length;j++){
+                //对于每一个数组元素，开始深度递归;最后一个参数k记录匹配到wordch的第几个字符了。如果本路劲为头递归成功，直接返回true，否则以board的盘面的另一个字符开始新递归尝试。
+                if(recur(board,wordch,i,j,0))
+                    return true;
+            }
+        }
+
+        //整个board递归完都没效果的话，返回false
+        return false;
+
+    }
+    /**
+    自己构造深度递归函数
+     */
+    public boolean recur(char[][] board, char[] wordch,int i,int j,int k){
+        //判断此路不通，即剪枝。注意先判断ij的范围再判断boardij的值，这样不会超过数组边界。
+        if(i<0||i>board.length-1||j<0||j>board[0].length-1||board[i][j]!=wordch[k]){
+            return false;
+        }
+        //如果上面的if没退出，那么说明当前字符比对没问题；这时发现wordch全部比对完毕了，就可以返回true；注意这里要用wordch.length-1，别漏掉-1
+        if(k==wordch.length-1){
+            return true;
+        }
+
+        //空字符串标记当前字符，表示以访问过，防止本轮递归再次访问；数组传递的是地址，函数内修改数组会同时影响函数外；\是x的第一画，称为反斜杠。
+        board[i][j]='\0';
+        //如果又不能返回，当前字符比对又没错，就进行更深度的递归(朝另外的四个方向，不过来时的方向会一进去会返回false)；因为要修复boardij的值，所以要暂存recur的值
+        boolean tempb= recur(board,wordch,i-1,j,k+1)||recur(board,wordch,i+1,j,k+1)||recur(board,wordch,i,j-1,k+1)||recur(board,wordch,i,j+1,k+1);
+        //本层次更深的递归结束后，把boardij还原，防止影响上层递归的其他方向;能走到这个位置说明board[i][j]==wordch[k]
+        board[i][j]=wordch[k];
+
+        //返回递归的结果
+        return tempb;
+    }
+}
+```
+
+- 思路都有，但是犯了两个错误：
+
+  - wordch判断结束长度时用了超过wordch边界的wordch.length，而没正确使用wordch.length-1
+
+  - 忘记用空字符串标记本次递归访问过的字符了，提交完看到错误案例才明白。
+
+
+
+### [剑指 Offer 13. 机器人的运动范围](https://leetcode-cn.com/problems/ji-qi-ren-de-yun-dong-fan-wei-lcof/)
+
+#### 首战寄
+
+```java
+class Solution {
+    public int movingCount(int m, int n, int k) {
+        /**
+        暴力深度递归，把访问过的字符标记并且不擦除，最后统计被标记的字符数；可访问块可能被不可访问块包围，造成不可访问的现象。
+        不能用boolean数组记录，因为有默认值，无法区分是认为标记的还是默认的；还是用int记录吧
+        1：可访问到
+        -1：不可访问
+        0：被-1包围导致无法被访问
+        遍历的时候只考虑1的个数即可
+         */
+        int [][] board=new int[m][n];
+        recur(board,m,n,k,0,0);
+
+        //得到可被到达的数目
+        int result=0;
+        for(int i=0;i<board.length;i++){
+            for(int j=0;j<board[0].length;j++){
+                System.out.println("当前元素为："+board[i][j]);
+                if(board[i][j]==1){
+                    result++;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+    参数讲解：
+    board：全局二维数组
+    m：最大行
+    n：最大列
+    k：限制
+    i：当前行
+    j：当前列
+     */
+    public void recur(int [][] board,int m,int n,int k,int i, int j){
+        System.out.println("进入了recur，此时i:"+i+" j:"+j);
+        //下标不符合要求的，直接返回
+        if(i<0||i>m-1||j<0||j>n-1){
+            System.out.println("下标不对");
+            return;
+        }
+        //如果已经标记过，说明早被处理过的，直接返回
+        if(board[i][j]==1||board[i][j]==-1){
+            System.out.println("被处理过");
+            return;
+        }
+
+        //如果没有被标记过，则处理本元素
+        //记录数位之和
+        int isum=0,jsum=0;
+        while(i/10>0){
+            int temp=i%10;
+            isum+=temp;
+            i/=10;
+        }
+        //单独处理一下m/10==0时的个位数的m
+        isum+=i;
+        while(j/10>0){
+            int temp=j%10;
+            jsum+=temp;
+            j/=10;
+        }
+        //单独处理一下m/10==0时的个位数的m
+        jsum+=j;
+        //根据数位之和做标记
+        if(isum+jsum>k){
+            System.out.println("这个不是");
+            board[i][j]=-1;
+        }else{
+            System.out.println("找到了");
+            board[i][j]=1;
+        }
+
+        //本元素处理完后，递归处理周边元素
+        recur(board,m,n,k,i-1,j);
+        recur(board,m,n,k,i+1,j);
+        recur(board,m,n,k,i,j-1);
+        recur(board,m,n,k,i,j+1);
+    }
+}
+```
+
+- 问答问：按照自己的思路，没发现什么错误，也通过了32/49的测试案例；不过m==11,n==8,k==16的案例就没通过
+  - 我：问题有两个：
+    - `if(isum+jsum>k)`中，既然不符合就该及时返回
+    - 最致命的错误：`if(isum+jsum>k)和else`中给`board[i][j]`复制，我这里赋参数的i不是传进来的i，因为中间执行了i自除！！所以出现了m>10就会发生和预期结果不一致，因为m>10后i最大就会超过9，即i会大于等于10，就会出发i自除，就会导致board填数错误。这也就解释了：求数位和的算法没错，为什么最后board的结果还不一致；求和是对的，但是最后board记录的位置错了！。
+      - 大神评论：自除这种操作，要小心；有的时候宁可多一个变量也别少一个变量。
+
+根据自己发现的两处错误，略微修改代码如下，即成功提交！：
+
+```java
+class Solution {
+    public int movingCount(int m, int n, int k) {
+        /**
+        暴力深度递归，把访问过的字符标记并且不擦除，最后统计被标记的字符数；可访问块可能被不可访问块包围，造成不可访问的现象。
+        不能用boolean数组记录，因为有默认值，无法区分是认为标记的还是默认的；还是用int记录吧
+        1：可访问到
+        -1：不可访问
+        0：被-1包围导致无法被访问
+        遍历的时候只考虑1的个数即可
+         */
+        int [][] board=new int[m][n];
+        recur(board,m,n,k,0,0);
+
+        //得到可被到达的数目
+        int result=0;
+        for(int i=0;i<board.length;i++){
+            for(int j=0;j<board[0].length;j++){
+                //System.out.println("当前元素为："+board[i][j]);
+                if(board[i][j]==1){
+                    result++;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+    参数讲解：
+    board：全局二维数组
+    m：最大行
+    n：最大列
+    k：限制
+    i：当前行
+    j：当前列
+     */
+    public void recur(int [][] board,int m,int n,int k,int i, int j){
+        //System.out.println("进入了recur，此时i:"+i+" j:"+j);
+        //下标不符合要求的，直接返回
+        if(i<0||i>m-1||j<0||j>n-1){
+            //System.out.println("下标不对");
+            return;
+        }
+        //如果已经标记过，说明早被处理过的，直接返回
+        if(board[i][j]==1||board[i][j]==-1){
+            //System.out.println("被处理过");
+            return;
+        }
+
+        //如果没有被标记过，则处理本元素
+        //记录数位之和
+        int isum=0,jsum=0;
+        //保存ij
+        int storedi=i,storedj=j;
+        while(i/10>0){
+            int temp=i%10;
+            isum+=temp;
+            i/=10;
+        }
+        //单独处理一下m/10==0时的个位数的m
+        isum+=i;
+        while(j/10>0){
+            int temp=j%10;
+            jsum+=temp;
+            j/=10;
+        }
+        //单独处理一下m/10==0时的个位数的m
+        jsum+=j;
+        //根据数位之和做标记
+        if(isum+jsum>k){
+            //System.out.println("这个不是");
+            board[storedi][storedj]=-1;
+            //别忘了在不合法的时候return
+            return;
+        }else{
+            //System.out.println("找到了");
+            board[storedi][storedj]=1;
+        }
+
+        //本元素处理完后，递归处理周边元素
+        recur(board,m,n,k,storedi-1,storedj);
+        recur(board,m,n,k,storedi+1,storedj);
+        recur(board,m,n,k,storedi,storedj-1);
+        recur(board,m,n,k,storedi,storedj+1);
+    }
+}
+```
+
+
+
+#### 高赞大佬评论解法-类似我
+
+官方评论里有一个和我代码类似的，可以对照下看看哪错了：
+
+```java
+class Solution {
+    public int movingCount(int m, int n, int k) {
+        boolean[][] visited = new boolean[m][n];
+        return dfs(0, 0, m, n, k, visited);
+    }
+
+    private int dfs(int i, int j, int m, int n, int k, boolean visited[][]) {
+        if (i < 0 || i >= m || j < 0 || j >= n || (i/10 + i%10 + j/10 + j%10) > k || visited[i][j]) {
+            return 0;
+        }
+        visited[i][j] = true;
+        return dfs(i + 1, j, m, n, k, visited) + dfs(i - 1, j, m, n, k, visited) + 
+               dfs(i, j + 1, m, n, k, visited) + dfs(i, j - 1, m, n, k, visited) + 1;
+    }
+}
+```
+
+- 我和网友问：(i/10 + i%10 + j/10 + j%10) 当 i = 100 j =100的时候不就 不成立了吗？
+  - 网友答：下标最大是99，所有不会出现100
+- 网友问：为什么判断条件还要加上当前这个位置visited[i][j]，不加上就不对，这个时候的这个值没有定义，肯定是false啊
+  - 我答：没被访问过为默认的false，所以会往下走；如果被访问过即为true，则会return而不会往下走。
+
+#### 官方-BFS/DFS初始分析
+
+- 我：这两个解法现场很难想到“增量公式”的思路，个人不建议
+
+解题思路：
+
+- 本题与 [矩阵中的路径](https://leetcode-cn.com/problems/ju-zhen-zhong-de-lu-jing-lcof/solution/mian-shi-ti-12-ju-zhen-zhong-de-lu-jing-shen-du-yo/) 类似，是典型的搜索 & 回溯问题。在介绍回溯算法算法前，为提升计算效率，首先讲述两项前置工作： **数位之和计算** 、 **可达解分析** 。
+
+数位之和计算：
+
+![image-20220405194741529](lcof.assets/image-20220405194741529.png)
+
+```java
+int sums(int x)
+    int s = 0;
+    while(x != 0) {
+        s += x % 10;
+        x = x / 10;
+    }
+    return s;
+
+```
+
+![image-20220405194811250](lcof.assets/image-20220405194811250.png)
+
+数位和增量公式:
+
+![image-20220405194840568](lcof.assets/image-20220405194840568.png)
+
+![image-20220405194851009](lcof.assets/image-20220405194851009.png)
+
+以下代码为增量公式的三元表达式写法，将整合入最终代码中。
+
+```java
+(x + 1) % 10 != 0 ? s_x + 1 : s_x - 8;
+```
+
+可达解分析：
+
+![image-20220405195157201](lcof.assets/image-20220405195157201.png)
+
+![image-20220405195214003](lcof.assets/image-20220405195214003.png)
+
+#### 官方-DFS
+
+![image-20220405195255693](lcof.assets/image-20220405195255693.png)
+
+![image-20220405195324541](lcof.assets/image-20220405195324541.png)
+
+代码：
+
+```java
+class Solution {
+    int m, n, k;
+    boolean[][] visited;
+    public int movingCount(int m, int n, int k) {
+        this.m = m; this.n = n; this.k = k;
+        this.visited = new boolean[m][n];
+        return dfs(0, 0, 0, 0);
+    }
+    public int dfs(int i, int j, int si, int sj) {
+        if(i >= m || j >= n || k < si + sj || visited[i][j]) return 0;
+        visited[i][j] = true;
+        return 1 + dfs(i + 1, j, (i + 1) % 10 != 0 ? si + 1 : si - 8, sj) + dfs(i, j + 1, si, (j + 1) % 10 != 0 ? sj + 1 : sj - 8);
+    }
+}
+```
+
+- Java/C++ 代码中 `visited` 为辅助矩阵，
+
+#### 官方-BFS
+
+![image-20220405195545232](lcof.assets/image-20220405195545232.png)
+
+![image-20220405195559049](lcof.assets/image-20220405195559049.png)
+
+代码：
+
+```java
+class Solution {
+    public int movingCount(int m, int n, int k) {
+        boolean[][] visited = new boolean[m][n];
+        int res = 0;
+        Queue<int[]> queue= new LinkedList<int[]>();
+        queue.add(new int[] { 0, 0, 0, 0 });
+        while(queue.size() > 0) {
+            int[] x = queue.poll();
+            int i = x[0], j = x[1], si = x[2], sj = x[3];
+            if(i >= m || j >= n || k < si + sj || visited[i][j]) continue;
+            visited[i][j] = true;
+            res ++;
+            queue.add(new int[] { i + 1, j, (i + 1) % 10 != 0 ? si + 1 : si - 8, sj });
+            queue.add(new int[] { i, j + 1, si, (j + 1) % 10 != 0 ? sj + 1 : sj - 8 });
+        }
+        return res;
+    }
+}
+```
+
+- Java/C++ 代码中 `visited` 为辅助矩阵
+
+#### 及时再战成功
+
+没有用官方的解法，用我+大佬的思路，修改了下判断k的条件就成功了；看来之前确实判断k的算法有漏洞。
+
+```java
+class Solution {
+    public int movingCount(int m, int n, int k) {
+        /**
+        暴力深度递归，把访问过的字符标记并且不擦除，最后统计被标记的字符数；可访问块可能被不可访问块包围，造成不可访问的现象。
+        不能用boolean数组记录，因为有默认值，无法区分是认为标记的还是默认的；还是用int记录吧
+        1：可访问到
+        -1：不可访问
+        0：被-1包围导致无法被访问
+        遍历的时候只考虑1的个数即可
+         */
+        int [][] board=new int[m][n];
+        recur(board,m,n,k,0,0);
+
+        //得到可被到达的数目
+        int result=0;
+        for(int i=0;i<board.length;i++){
+            for(int j=0;j<board[0].length;j++){
+                System.out.println("当前元素为："+board[i][j]);
+                if(board[i][j]==1){
+                    result++;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+    参数讲解：
+    board：全局二维数组
+    m：最大行
+    n：最大列
+    k：限制
+    i：当前行
+    j：当前列
+     */
+    public void recur(int [][] board,int m,int n,int k,int i, int j){
+        //System.out.println("进入了recur，此时i:"+i+" j:"+j);
+        //下标不符合要求的，直接返回
+        if(i<0||i>m-1||j<0||j>n-1){
+            //System.out.println("下标不对");
+            return;
+        }
+        //如果已经标记过，说明早被处理过的，直接返回
+        if(board[i][j]==1||board[i][j]==-1){
+            //System.out.println("被处理过");
+            return;
+        }
+
+        // //如果没有被标记过，则处理本元素
+        // //记录数位之和
+        // int isum=0,jsum=0;
+        // while(i/10>0){
+        //     int temp=i%10;
+        //     isum+=temp;
+        //     i/=10;
+        // }
+        // //单独处理一下m/10==0时的个位数的m
+        // isum+=i;
+        // while(j/10>0){
+        //     int temp=j%10;
+        //     jsum+=temp;
+        //     j/=10;
+        // }
+        // jsum+=j;
+        // //根据数位之和做标记
+        // if(isum+jsum>k){
+        //     System.out.println("这个不是");
+        //     board[i][j]=-1;
+        // }else{
+        //     System.out.println("找到了");
+        //     board[i][j]=1;
+        // }
+        if(i/10 + i%10 + j/10 + j%10>k){
+            board[i][j]=-1;
+            return ;
+        }else{
+            board[i][j]=1;
+        }
+
+
+        //本元素处理完后，递归处理周边元素
+        recur(board,m,n,k,i-1,j);
+        recur(board,m,n,k,i+1,j);
+        recur(board,m,n,k,i,j-1);
+        recur(board,m,n,k,i,j+1);
+    }
+}
+```
+
+- 注意：题目说m和n可以为100，但是数组下标为m-1和n-1，最多2位数。
+
+- 之后推荐“高赞大佬评论解法”的做法，效率高：
+  - 他只用boolean标记已访问，是因为它直接用dfs返回值了，说明本身返回的值就是所有可达元素的值；但是我这解法要遍历一遍boolean数组，不知道有哪些是不可达（被不合法包围了导致过不去），有哪些是可达但不合法，所以我至少需要三个状态来记录，boolean就不合适了。
+
+- 至于为什么自己的算法不行，参见“首战寄”
+
+### [剑指 Offer 34. 二叉树中和为某一值的路径](https://leetcode-cn.com/problems/er-cha-shu-zhong-he-wei-mou-yi-zhi-de-lu-jing-lcof/)
+
