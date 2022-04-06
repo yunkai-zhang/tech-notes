@@ -4348,3 +4348,365 @@ class Solution {
 
 ### [剑指 Offer 34. 二叉树中和为某一值的路径](https://leetcode-cn.com/problems/er-cha-shu-zhong-he-wei-mou-yi-zhi-de-lu-jing-lcof/)
 
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    //建立全局列表便于操作
+    List<List<Integer>>result=new LinkedList<>();
+    public List<List<Integer>> pathSum(TreeNode root, int target) {
+        /**
+        5000*1000<2的9次方，所以不用担心数组值求和导致超过整数边界
+
+        初步思路：dfs+剪枝
+         */
+        recur(root,target,new LinkedList<>());
+
+        return result;
+    }
+    public void recur(TreeNode root, int target, Deque<Integer> way){
+        //返回值处理  
+        if(root==null){//注意节点可以为负数，所以不能用target<root.val判断路径不通;此步还可以防止后面操作空指针异常。
+            return;
+        }else if(target==root.val&&root.left==null&&root.right==null){//找到合理路径;注意单单target==root.val还不够，题目要求是从根节点到叶子结点的路径
+            //把本元素压入way，再把way压入全局result中;把linkedlist实现的deque强转为list
+            way.offerLast(root.val);
+            //!!!不能直接result.add((List<Integer>)way);存节点，这样way中修改增删节点会影响result，应该用new另给空间成立新对象。
+            result.add(new LinkedList<>((List<Integer>)way));
+            //把way中本元素取出来，避免影响其他兄弟枝的递归
+            way.pollLast();
+            //找到合理路劲表示当前节点是叶子节点，可以直接返回，不需要再对左右子树做递归了
+            return;
+        }
+        //以上都没返回，说明此路径还可以再递归试试
+        way.offerLast(root.val);
+        recur(root.left,target-root.val,way);
+        recur(root.right,target-root.val,way);
+        //本节点相关的递归处理完了，从路径中拿出本节点，防止影响其他兄弟枝的递归
+        way.pollLast();
+
+    }
+}
+```
+
+- 注意点：
+  - 全局变量往往会让事情简单一点，不用各种传参和考虑返回，容易绕晕。
+  - 不能直接result.add((List\<Integer>)way);存节点，这样way中修改增删节点会影响result，应该用new另给空间成立新对象。LinkedList和ArrayList的构造函数都支持传入一个列表，表示根据列表的内容新建本列表。（这个在官方解析中也提到了）
+  - 递归前往列表放本节点的值，递归，递归后拿出本节点往列表放的值，（处理并返回）
+    - 可以利用deque的特性，精准从尾部往链表增删节点。
+- 反思：
+  - 我无意中正用了dfs-先序遍历，即按照 “根、左、右” 的顺序，遍历树的所有节点。
+
+#### 官方
+
+解题思路：本问题是典型的二叉树方案搜索问题，使用回溯法解决，其包含 先序遍历 + 路径记录 两部分。
+
+- 先序遍历： 按照 “根、左、右” 的顺序，遍历树的所有节点。
+- 路径记录： 在先序遍历中，记录从根节点到当前节点的路径。当路径为 ① 根节点到叶节点形成的路径 且 ② 各节点值的和等于目标值 sum 时，将此路径加入结果列表。
+
+![image-20220406145505142](lcof.assets/image-20220406145505142.png)
+
+算法流程：
+
+- pathSum(root, sum) 函数：
+  - 初始化： 结果列表 res ，路径列表 path 。
+  - 返回值： 返回 res 即可。
+- recur(root, tar) 函数：
+  - 递推参数： 当前节点 root ，当前目标值 tar 。
+  - 终止条件： 若节点 root 为空，则直接返回。
+  - 递推工作：
+    1. 路径更新： 将当前节点值 root.val 加入路径 path ；
+    2. 目标值更新： tar = tar - root.val（即目标值 tar 从 sum 减至 00 ）；
+    3. 路径记录： 当 ① root 为叶节点 且 ② 路径和等于目标值 ，则将此路径 path 加入 res 。
+    4. 先序遍历： 递归左 / 右子节点。
+    5. 路径恢复： 向上回溯前，需要将当前节点从路径 path 中删除，即执行 path.pop() 。
+
+复杂度分析：
+
+- 时间复杂度 O(N)： N为二叉树的节点数，先序遍历需要遍历所有节点。
+- 空间复杂度 O(N)： 最差情况下，即树退化为链表时，path 存储所有树节点，使用 O(N)额外空间。
+
+代码：
+
+```java
+class Solution {
+    LinkedList<List<Integer>> res = new LinkedList<>();
+    LinkedList<Integer> path = new LinkedList<>(); 
+    public List<List<Integer>> pathSum(TreeNode root, int sum) {
+        recur(root, sum);
+        return res;
+    }
+    void recur(TreeNode root, int tar) {
+        if(root == null) return;
+        path.add(root.val);
+        tar -= root.val;
+        if(tar == 0 && root.left == null && root.right == null)
+            res.add(new LinkedList(path));
+        recur(root.left, tar);
+        recur(root.right, tar);
+        path.removeLast();
+    }
+}
+```
+
+- 值得注意的是，记录路径时若直接执行 res.append(path) ，则是将 path 对象加入了 res ；后续 path 改变时， res 中的 path 对象也会随之改变。
+  - 正确做法：res.append(list(path)) ，相当于复制了一个 path 并加入到 res 。
+
+- 网友评论：剪枝剪了个寂寞。。。。到 叶子 结点！！！
+
+- 我：本例用一对增删节点包裹整个recur方法内容的方式值得借鉴；我自己写的方法，做了两处增删节点操作，不那么优雅了。
+
+
+
+### [剑指 Offer 36. 二叉搜索树与双向链表](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-yu-shuang-xiang-lian-biao-lcof/)
+
+#### 首战寄
+
+只有大概思路，但是没有跑通：
+
+```java
+/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public Node left;
+    public Node right;
+
+    public Node() {}
+
+    public Node(int _val) {
+        val = _val;
+    }
+
+    public Node(int _val,Node _left,Node _right) {
+        val = _val;
+        left = _left;
+        right = _right;
+    }
+};
+*/
+class Solution {
+    int min=Integer.MAX_VALUE;
+    public Node treeToDoublyList(Node root) {
+        /**
+        中序遍历，可以实现节点从小到大阅读
+        二叉搜索树：左子树小于本节点，右子树大于本节点
+        递归返回的时候，正是二叉搜索树的指针能逆向的时机（返回本节点，到上一层递归让被返回的节点指向上一层递归的节点）
+        首尾节点要单独记录才能连上，但是这里要求不能新建节点，就有点难搞。（因为双向列表是有序的，找到最小的节点就能找到最大的节点，就能通过右指针找到最大的节点，中间记录经过节点数，while(节点数)来连上收尾节点，这里只是获得收尾节点的引用，所以没新建节点）
+         */
+        //返回的是链表中最大的节点,一直查找左指针即可拿到最小节点，最小节点的左指针为null，右指针指向倒数第2小的节点
+        Node max=recur(root);
+        Node min=null,maxStored=max;//min显式设置为null，防止编译不通过，说“min的值无”
+        while(max!=null){
+            System.out.println(max.val);
+            if(max.left==null){//找到当前节点为最小节点
+                min=max;
+            }
+            max=max.left;
+        }
+        //把min的左指针练到maxStored，把maxStored的右指针连到min
+        min.left=maxStored;
+        maxStored.right=min;
+
+        //返回链表第一个节点
+        return min;
+        
+    }
+    public Node recur(Node root){
+        //递归最重要的：设置返回条件
+        //设置叶子节点返回
+        if(root.left==null&&root.right==null)return root;
+        //中序遍历，先遍历左节点，拿到左节点
+        Node left=recur(root.left);
+        //让左子节点右指针指向自己(右指针比自己大)
+        left.right=root;
+        if(root.right!=null){
+            root.right.left=root;
+        }
+        
+        //得到的右子节点，返回给当前节点的父节点，因为右子节点在当前节点和当前节点的父节点之间
+        return recur(root.right);
+    }
+}
+```
+
+- 虽然没有做出来，但是我抓住了：
+  - 二叉搜索树的中序遍历为 **递增序列** 。
+  - 思路和题解一致
+
+#### 官方-中序遍历
+
+解题思路：
+
+- 本文解法基于性质：二叉搜索树的中序遍历为 递增序列 。
+- 将 二叉搜索树 转换成一个 “排序的循环双向链表” ，其中包含三个要素：
+  - 排序链表： 节点应从小到大排序，因此应使用 中序遍历 “从小到大”访问树的节点。
+  - 双向链表： 在构建相邻节点的引用关系时，设前驱节点 pre 和当前节点 cur ，不仅应构建 pre.right = cur ，也应构建 cur.left = pre 。
+  - 循环链表： 设链表头节点 head 和尾节点 tail ，则应构建 head.left = tail 和 tail.right = head 。
+
+![image-20220406173635111](lcof.assets/image-20220406173635111.png)
+
+**中序遍历** 为对二叉树作 “左、根、右” 顺序遍历，递归实现如下：
+
+```java
+// 打印中序遍历
+void dfs(Node root) {
+    if(root == null) return;
+    dfs(root.left); // 左
+    System.out.println(root.val); // 根
+    dfs(root.right); // 右
+}
+```
+
+根据以上分析，考虑使用中序遍历访问树的各节点 cur ；并在访问每个节点时构建 cur 和前驱节点 pre 的引用指向；中序遍历完成后，最后构建头节点和尾节点的引用指向即可。
+
+算法流程：
+
+- dfs(cur): 递归法中序遍历；
+
+  1. 终止条件： 当节点 cur 为空，代表越过叶节点，直接返回；
+
+  2. 递归左子树，即 dfs(cur.left) ；
+  3. 构建链表：
+     1. 当 pre 为空时： 代表正在访问链表头节点，记为 head ；
+     2. 当 pre 不为空时： 修改双向节点引用，即 pre.right = cur ， cur.left = pre ；
+     3. 保存 cur ： 更新 pre = cur ，即节点 cur 是后继节点的 pre ；
+  4. 递归右子树，即 dfs(cur.right) ；
+
+- treeToDoublyList(root)：
+  1. 特例处理： 若节点 root 为空，则直接返回；
+  2. 初始化： 空节点 pre ；
+  3. 转化为双向链表： 调用 dfs(root) ；
+  4. 构建循环链表： 中序遍历完成后，head 指向头节点， pre 指向尾节点，因此修改 head 和 pre 的双向节点引用即可；
+  5. 返回值： 返回链表的头节点 head 即可；
+
+复杂度分析：
+
+- 时间复杂度 O(N)： N为二叉树的节点数，中序遍历需要访问所有节点。
+- 空间复杂度 O(N)： 最差情况下，即树退化为链表时，递归深度达到 N，系统使用 O(N)栈空间。
+
+代码：
+
+```java
+class Solution {
+    Node head, pre;
+    public Node treeToDoublyList(Node root) {
+        if(root==null) return null;
+        dfs(root);
+
+        pre.right = head;
+        head.left =pre;//进行头节点和尾节点的相互指向，这两句的顺序也是可以颠倒的
+
+        return head;
+
+    }
+
+    public void dfs(Node cur){
+        if(cur==null) return;
+        dfs(cur.left);
+
+        //pre用于记录双向链表中位于cur左侧的节点，即上一次迭代中的cur,当pre==null时，cur左侧没有节点,即此时cur为双向链表中的头节点
+        if(pre==null) head = cur;
+        //反之，pre!=null时，cur左侧存在节点pre，需要进行pre.right=cur的操作。
+        else pre.right = cur;
+       
+        cur.left = pre;//pre是否为null对这句没有影响,且这句放在上面两句if else之前也是可以的。
+
+        pre = cur;//pre指向当前的cur
+        dfs(cur.right);//全部迭代完成后，pre指向双向链表中的尾节点
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+/*
+// Definition for a Node.
+class Node {
+    public int val;
+    public Node left;
+    public Node right;
+
+    public Node() {}
+
+    public Node(int _val) {
+        val = _val;
+    }
+
+    public Node(int _val,Node _left,Node _right) {
+        val = _val;
+        left = _left;
+        right = _right;
+    }
+};
+*/
+class Solution {
+    Node prev=null,min=null;
+    public Node treeToDoublyList(Node root) {
+        /**
+        二叉搜索树，中序遍历得到递增的数
+        通过全局指针，处理pre和cur的关系；由于搜索二叉树的基础，右指针指向比自己大的，左指针指向比自己小的
+         */
+        //处理恶心人的特殊情况[],传入空节点时，不做下面的处理的话，prev不会被赋值，会导致prev.riht报空指针异常
+        if(root==null){
+            return null;
+        }
+        //dfs-中序遍历 返回的后，prev为链表中最大的值
+        dfs(root);
+        //把双向链表的头尾连接
+        prev.right=min;
+        min.left=prev;
+
+        //min指向链表最小值，返回min即为头
+        return min;
+    }
+    
+    public void dfs(Node cur){
+        //设置返回条件：节点超过叶子节点时
+        if(cur==null){
+            return;
+        }
+        //中序遍历：先访问左子节点
+        dfs(cur.left);
+        //中序遍历：再访问本节点，处理本节点相关事宜
+        //prev即为值比当前节点更小的节点：可能是当前节点的左子节点（如2的1），也可能是当前节点的左子节点的右子节点（如4的3）
+        if(prev==null){//prev为空表示没有更小的数，也即当前节点为最小的数,记录保存下来
+            min=cur;
+        }else{//如果当前节点不是最小的节点，那么就处理它和之前节点的关系:每次都是处理当前节点和之前更小节点之间的关系，够成链
+            prev.right=cur;
+            cur.left=prev;
+        }
+        //要离开本节点了，更新prev节点为当前节点
+        prev=cur;
+        //中序遍历：最后递归遍历右子树
+        dfs(cur.right);
+
+    }
+}
+```
+
+- 我和官方有一个点不一样，就是`cur.left=prev;`:
+  - 我把cur.left放到else里，是只有非链表首节点才需要处理cur.left
+  - 官方把cur.left放到ifelse外，相当于在if里和else里都放置了cur.left；但是if时当前节点为链表首节点，且此时无法知道链表尾节点，所以其实不需要在if中放`cur.left=prev;`，这句话在if也就相当于是把链表首节点本来就是null的左子指针又赋值为null；这么看，我的”即时再战“版的代码更合理，没做无意义操作。
+
+
+
+### [剑指 Offer 54. 二叉搜索树的第k大节点](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-di-kda-jie-dian-lcof/)
+
+二叉搜索树中序遍历得到的是递增的数。全局变量记录一下当前遍历了几个节点即可。
