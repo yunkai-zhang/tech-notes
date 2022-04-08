@@ -4709,4 +4709,885 @@ class Solution {
 
 ### [剑指 Offer 54. 二叉搜索树的第k大节点](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-di-kda-jie-dian-lcof/)
 
-二叉搜索树中序遍历得到的是递增的数。全局变量记录一下当前遍历了几个节点即可。
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    List<Integer> vals=new ArrayList<>();
+    public int kthLargest(TreeNode root, int k) {
+        /**
+        理想：二叉搜索树中序遍历得到的是递增的数;利用退栈记录倒数第k个数，但是中序退栈的话就不会回本节点了；全局变量记录目标值即可。
+        现实：ArrayList填入结果，再取出。不建议使用deque存储值，再倒序遍历(把deque当栈用)，因为不需要遍历，直接根据下标拿即可，而且linkedlist查找元素效率低。
+        deque用offerlast或offerfirst，arraylist就用add即加到链表尾。
+         */
+
+        //处理特殊情况(本例应该不会有这个情况)
+        if(root==null)return -1;
+
+        //利用dfs获得递增链表
+        dfs(root);
+        //从递增链表中拿到结果
+
+         return vals.get(vals.size()-k);
+
+    }
+    public void dfs(TreeNode root){
+        //设定dfs返回条件
+        if(root==null)return;
+        
+        //中序遍历：左
+        dfs(root.left);
+        
+        //中序遍历：本节点
+        //存值
+        vals.add(root.val);
+        
+        //中序遍历：右
+        dfs(root.right);
+
+    }
+}
+```
+
+- 性能比较差，时间空间复杂度都是后30%
+
+- 我之前想：二叉搜索树中序遍历得到的是递增的数，全局变量记录一下当前遍历了几个节点即可；但是本题要第k大的数，即升序链表倒数第k个数，但是中序遍历应该又不能在退栈的时候处理节点（中序遍历处理节点的操作，在对左右子树dfs之间）；所以只能用本例这个笨方法。
+- 看了“大佬解法”，看来我和最优解很接近了，改成先右再左的中序，就可以得到递减的遍历！
+
+#### 大佬-中序dfs+递减
+
+作为一个普通人，我来分析下这题。
+
+1. 假设，你花了点时间，练习了二叉树的三种遍历方式： a. 前序遍历 b. 中序遍历 c. 后续遍历
+2. 你也学习了二叉搜索树，深入研究了二叉树搜索树的特性，并且深刻知道二叉搜索树的一个特性：通过中序遍历所得到的序列，就是有序的。
+
+好，有了以上两点知识，我认为你必须能想到（如果想不到，以上两点知识肯定没有学扎实）：中序遍历二叉搜索树，遍历的同时，把遍历到的节点存到一个可变数组里（Java的话，可以用ArrayList)。 思路转化为代码，如下：
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public int kthLargest(TreeNode root, int k) {
+        // clarification:  root == null?   k <= 1?
+        List<Integer> list = new ArrayList<>();
+        helper(root, list);
+        return list.get(list.size() - k);
+    }
+    
+    private void helper(TreeNode root, List<Integer> list) {
+        if (root == null) return;
+        if (root.left != null) helper(root.left, list);
+        list.add(root.val);
+        if (root.right != null) helper(root.right, list);
+    }
+}
+```
+
+到这里，这题，我觉得已经离最优解很近了。作为一个学习了算法的人，你一定会想：上面的算法空间复杂度是O(n)，可不可以优化？
+
+深入再思考下，其实，当遍历到了第K大数的时候，就可以停止遍历了，同时，把遍历到节点对应的数保存下来即可。
+
+想到这里，一定能写出下面的代码：
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    private int ans = 0, count = 0;
+    public int kthLargest(TreeNode root, int k) {
+        // clarification:  root == null?   k <= 1?
+        helper(root, k);
+        return ans;
+    }
+    
+    private void helper(TreeNode root, int k) {
+        if (root.right != null) helper(root.right, k);
+        
+        if (++count == k) {
+            ans = root.val;
+            return;
+        }
+        
+        if (root.left != null) helper(root.left, k);
+    }
+}
+```
+
+第二种方法返回了++count == k的情况，但实际上并没有 `停止` 遍历；可以用题目中的第二个测试用例输出一下count，发现count还在增加的；这是因为得到结果后，++count发现不符合后，会进入left的遍历，我们应该让得到结果后不再进入left递归，改良代码如下：
+
+```java
+class Solution {
+    int n = 0;
+    int res = 0;
+    public int kthLargest(TreeNode root, int k) {
+        n = k;
+        helper(root);
+        return res;
+    }
+    public void helper(TreeNode root){
+        if(root.right != null && n>0 )  helper(root.right);
+        n--;
+        if(n==0){
+            res = root.val;
+            return;
+        }
+        if(root.left != null && n>0 )  helper(root.left);
+    }
+}
+```
+
+- n>0会阻止得到目标结果后的遍历。
+- 我：他的对节点为null的判断可以像我一样，进入节点后再判断，这样if判断的内容就会少些，更清晰。
+
+这题到这就比较完美了。
+
+#### 官方-中序遍历+提前返回
+
+解题思路：
+
+本文解法基于此性质：二叉搜索树的中序遍历为 递增序列 。
+
+- 根据以上性质，易得二叉搜索树的 中序遍历倒序 为 递减序列 。
+- 因此，求 “二叉搜索树第 k大的节点” 可转化为求 “此树的中序遍历倒序的第 k个节点”。
+
+![Picture1.png](lcof.assets/4ebcaefd4ecec0d76bfab98474dfed323fb86bfcd685d1a5bf610200fdca4405-Picture1.png)
+
+中序遍历 为 “左、根、右” 顺序，递归法代码如下：
+
+```java
+// 打印中序遍历
+void dfs(TreeNode root) {
+    if(root == null) return;
+    dfs(root.left); // 左
+    System.out.println(root.val); // 根
+    dfs(root.right); // 右
+}
+```
+
+中序遍历的倒序 为 “右、根、左” 顺序，递归法代码如下：
+
+```java
+// 打印中序遍历倒序
+void dfs(TreeNode root) {
+    if(root == null) return;
+    dfs(root.right); // 右
+    System.out.println(root.val); // 根
+    dfs(root.left); // 左
+}
+```
+
+为求第 k 个节点，需要实现以下 三项工作 ：
+
+1. 递归遍历时计数，统计当前节点的序号；
+2. 递归到第 kk个节点时，应记录结果 resres ；
+3. 记录结果后，后续的遍历即失去意义，应提前终止（即返回）。
+
+递归解析：
+
+![image-20220407152836167](lcof.assets/image-20220407152836167.png)
+
+复杂度分析：
+
+![image-20220407152901363](lcof.assets/image-20220407152901363.png)
+
+代码：
+
+![image-20220407153000649](lcof.assets/image-20220407153000649.png)
+
+```java
+class Solution {
+    int res, k;
+    public int kthLargest(TreeNode root, int k) {
+        this.k = k;
+        dfs(root);
+        return res;
+    }
+    void dfs(TreeNode root) {
+        if(root == null) return;
+        dfs(root.right);
+        if(k == 0) return;
+        if(--k == 0) res = root.val;
+        dfs(root.left);
+    }
+}
+```
+
+- 我：官方代码就用了`if(k == 0) return;`做了提前返回，比“大佬解法”的代码更简洁易读；不过“大佬解法”的优化思路还是很值得借鉴的。
+
+## 排序(简单)
+
+### [剑指 Offer 45. 把数组排成最小的数](https://leetcode-cn.com/problems/ba-shu-zu-pai-cheng-zui-xiao-de-shu-lcof/)
+
+#### 首战寄
+
+应该是按照数字最高位去降序排序，没思路
+
+- 网友评：这道题似乎变成了lambda讨论会，其实我觉得a+b < b+a 真的好难想
+- 网友：我在纸上反复写，找规律，脑子都要炸了，然后突然发现，就是在比较两个字符串不同顺序相加的结果，然后就豁然开朗。
+- 网友：华为机试+第一轮技术面的题，有点高频。
+
+#### 官方-自定义排序
+
+解题思路：
+
+![image-20220407155555720](lcof.assets/image-20220407155555720.png)
+
+排序规则的传递性证明：
+
+- 这里是证明，不然上面的解释太牵强了，此题解作者估计也不真正明白为什么可以这样做，这道题目其实属于很难的题目，不能让人信服为什么那样排序一下就可以，也不是简单的 x +y > y +x 则 x > y 譬如 x=6, y=305 x+y(6305) > y+x(3056) 但是真实数字上x < y
+
+为什么这样排个序就可以了呢？简单证明一下。根据算法，如果a < b，那么a排在b前面，否则b排在a前面。可利用反证法，假设排成的最小数字为xxxxxx，并且至少存在一对字符串满足这个关系：a > b，但是在组成的数字中a排在b前面。根据a和b出现的位置，分三种情况考虑：
+
+```
+  （1）xxxxab，用ba代替ab可以得到xxxxba，这个数字是小于xxxxab，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+  （2）abxxxx，用ba代替ab可以得到baxxxx，这个数字是小于abxxxx，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+  （3）axxxxb，这一步证明麻烦了一点。可以将中间部分看成一个整体ayb，则有ay < ya，yb < by成立。将ay和by表示成10进制数字形式，则有下述关系式，这里a，y，b的位数分别为n，m，k。
+
+    关系1： ay < ya => a * 10^m + y < y * 10^n + a => a * 10^m - a < y * 10^n - y => a( 10^m - 1)/( 10^n - 1) < y
+
+    关系2： yb < by => y * 10^k + b < b * 10^m + y => y * 10^k - y < b * 10^m - b => y < b( 10^m -1)/( 10^k -1) 
+
+    关系3： a( 10^m - 1)/( 10^n - 1) < y < b( 10^m -1)/( 10^k -1)  => a/( 10^n - 1)< b/( 10^k -1) => a*10^k - a < b * 10^n - b =>a*10^k + b < b * 10^n + a => a < b
+
+   这与假设a > b矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+   综上所述，得出假设不成立，从而得出结论：对于排成的最小数字，不存在满足下述关系的一对字符串：a > b，但是在组成的数字中a出现在b的前面。从而得
+```
+
+- 根据本证明，只要列表排序后为xyz，且保证xy<yx,yz<zy，就可以保证xyz是用【x y z】三个整数能实现的最小的拼接数；所以我们就自定义Comparator把【x y z】按照“若xy<yx，则x必须放y前面”的规则排序好即可。
+
+算法流程：
+
+![image-20220407155615917](lcof.assets/image-20220407155615917.png)
+
+复杂度分析：
+
+![image-20220407155640803](lcof.assets/image-20220407155640803.png)
+
+代码：
+
+本文列举 快速排序 和 内置函数 两种排序方法，其他排序方法也可实现。
+
+快速排序：
+
+- 需修改快速排序函数中的排序判断规则。字符串大小（字典序）对比的实现方法：
+  - Java 中使用函数 A.compareTo(B)；
+
+```java
+public String minNumber(int[] nums) {
+    String[] strs = new String[nums.length];
+    for (int i = 0; i < nums.length; i++) {
+        strs[i] = String.valueOf(nums[i]);
+    }
+    quickSort(strs, 0, strs.length - 1);
+    StringBuilder res = new StringBuilder();
+    for (String s : strs)
+        res.append(s);
+    return res.toString();
+}
+
+public void quickSort(String[] strs, int low, int high) {
+    if (low < high) {
+        int middle = getMiddle(strs, low, high);
+        quickSort(strs, low, middle - 1);
+        quickSort(strs, middle + 1, high);
+    }
+}
+
+public int getMiddle(String[] strs, int low, int high) {
+    //数组的第一个数为基准元素
+    String temp = strs[low];
+    while (low < high) {
+        //从后向前找比基准小的数
+        while (low < high && (strs[high] + temp).compareTo(temp + strs[high]) >= 0)
+            high--;
+        //把比基准小的数移到低端
+        strs[low] = strs[high];
+        //从前向后找比基准大的数
+        while (low < high && (strs[low] + temp).compareTo(temp + strs[low]) <= 0)
+            low++;
+        //把比基准大的数移到高端
+        strs[high] = strs[low];
+    }
+    strs[low] = temp;
+    return low;
+}
+```
+
+- 网友评：你这个写法像左神。
+
+内置函数：
+
+- 需定义排序规则：
+  - Java 定义为 (x, y) -> (x + y).compareTo(y + x) ；
+
+```java
+class Solution {
+    public String minNumber(int[] nums) {
+        //构建字符串数组
+        String[] strs = new String[nums.length];
+        for(int i = 0; i < nums.length; i++)
+            strs[i] = String.valueOf(nums[i]);
+        //排序字符串数组
+        Arrays.sort(strs, (x, y) -> (x + y).compareTo(y + x));
+        //合并字符串数组
+        StringBuilder res = new StringBuilder();
+        for(String s : strs)
+            res.append(s);
+        return res.toString();
+    }
+}
+```
+
+- Arrays.sort方法使用，[参考](https://blog.csdn.net/ted_cs/article/details/82713706)；本例用的 Compareable接口，而不是Compartor接口。
+  - 但是我看官方的sort接口是传入Comparator接口的实现类，我还是安装java官方的来吧，即自己传Comparator。
+
+- [Java中java.util.Comparator用法](https://www.cnblogs.com/XDU-Lakers/p/13985258.html)
+  - 重写方法`public int compare(String o1, String o2) `，凡是返回1或者大于0的正数的时候就要交换位置
+  - Comparator是一个函数式接口，所以能用lamda表达式表示。
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public String minNumber(int[] nums) {
+        /**
+        核心就是要把数组，按照首位排序（升序）；首位一样的比较第二位。但是有一种简单的算法：
+        1. 把整数数组转化为字符串数组
+        2. 把字符串数组排序。例如x=="1"且y=="45"，若x+y<y+x，即认为x<y
+        3. 把字符串数组排好升序，就意味着
+         */
+        //整数数组转换为字符串数组。新建数组列表的末尾不需要括号，别写成new String[nums.length]()
+        String [] nstr=new String[nums.length];
+        for(int i=0;i<nums.length;i++){
+            nstr[i]=nums[i]+"";
+        }
+        //排序数组，使用sort+Comparator接口。注意匿名内部类的写法，要把重写方法写在花括号{}里。
+        Arrays.sort(nstr,new Comparator<String>(){
+            //重写public compare方法，指示元素间大小关系的判断。注解首字母大写，参照@Autowired
+            @Override
+            public int compare(String s1,String s2){
+                //防止超过整数边界
+                long s1s2= Long.valueOf(s1+s2).longValue();
+                long s2s1= Long.valueOf(s2+s1).longValue();
+                if(s1s2<s2s1){//返回-1，表示不交换s1和s2的值，因为此时s1本来就小于s2
+                    return -1;
+                }else if(s1s2==s2s1){
+                    return 0;
+                }else{
+                    return 1;//返回1表示交换s1和s2的值
+                }
+            }
+        });
+        //把排序后的数组转换成字符串,StringBuilder线程不安全，但是效率高些
+        StringBuilder sb=new StringBuilder();
+        for(int i=0;i<nstr.length;i++){
+            sb.append(nstr[i]);
+        }
+        return sb.toString();
+    }
+}
+```
+
+- 思路和代码主题没问题，但是有几个知识点没记牢，靠百度和debug解决的：
+  - 新建字符数组用`String [] nstr=new String[nums.length];`，而不是String [] nstr=new String[nums.length]\();就是注意不应该有小括号。
+  - Comparator.compare()方法是public的；并且此方法要重写在匿名内部类的花括号中，用lamda表达式也可以，但是个人感觉可读性差。
+  - 理解“若x+y<y+x，即认为x<y，按照此规则排序完数组后为什么就能让拼接成的”字符串值最小
+
+- 自我表扬：
+  - 记住了注解首字母大写
+  - 用`long`避免超过整数边界，用`Long.valueOf(obj)`把字符串转化为Long(long的包装类)，用`Long.longValue();`把Long转化成基本数据类型long。
+  - 基本能自主写出Arrays.sort自定义排序。
+
+### [剑指 Offer 61. 扑克牌中的顺子](https://leetcode-cn.com/problems/bu-ke-pai-zhong-de-shun-zi-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        /**
+        排序，查gap和0的关系
+         */
+
+        //题目说抽5张牌，所以不需要处理特殊情况
+
+        //排序数组，默认升序
+        Arrays.sort(nums);
+
+        //遍历排序后的数组，记录gap和0
+        int zNum=0,lastNum=-1,gapNum=0,i=0;
+        //记录0的个数
+        while(nums[i]==0){
+            zNum++;
+            i++;
+        }
+        //记录gap的总长度
+        lastNum=nums[i];//保存第一个非0的数，作为lastNum
+        i++;
+        while(i<nums.length){
+            if(nums[i]-lastNum>1){//侦查到gap
+                gapNum+=(nums[i]-lastNum-1);
+            }else if(nums[i]==lastNum){//考虑数目相同的情况，只要出现非0数目相同，即不是扑克牌的顺子，直接返回false。之前以为根据题意，不用考虑非0数多次出现。。失策了
+                return false;
+            }
+
+            //不管有没有侦查到gap，都更新lastNum和i
+            lastNum=nums[i];
+            i++;
+        }
+
+        return gapNum<=zNum;
+
+    }
+}
+```
+
+- 初始思路：升序排序数组；遍历数组，碰到0记录下总数，碰到gap区记录下长度。遍历完毕后，如果gap的总长度<=0的个数，即顺子。
+- 注意：虽然题目没有说明白“牌连续”的概念，但是扑克牌里，手牌中有非0重复的牌的话，不算顺子。
+
+#### 官方1-set集合+遍历
+
+解题思路：
+
+![image-20220408165259162](lcof.assets/image-20220408165259162.png)
+
+集合 Set + 遍历，做法：
+
+- 遍历五张牌，遇到大小王（即 0 ）直接跳过。
+- **判别重复**： 利用 Set 实现遍历判重， Set 的查找方法的时间复杂度为 O(1)；
+- **获取最大 / 最小的牌**： 借助辅助变量 ma 和 mi，遍历统计即可。
+
+复杂度分析：
+
+![image-20220408165525298](lcof.assets/image-20220408165525298.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        Set<Integer> repeat = new HashSet<>();
+        int max = 0, min = 14;
+        for(int num : nums) {
+            if(num == 0) continue; // 跳过大小王
+            max = Math.max(max, num); // 最大牌
+            min = Math.min(min, num); // 最小牌
+            if(repeat.contains(num)) return false; // 若有重复，提前返回 false
+            repeat.add(num); // 添加此牌至 Set
+        }
+        return max - min < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
+    }
+}
+```
+
+#### 官方2-排序 + 遍历
+
+![image-20220408165708980](lcof.assets/image-20220408165708980.png)
+
+复杂度分析：
+
+![image-20220408165727381](lcof.assets/image-20220408165727381.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        int joker = 0;
+        Arrays.sort(nums); // 数组排序
+        for(int i = 0; i < 4; i++) {
+            if(nums[i] == 0) joker++; // 统计大小王数量
+            else if(nums[i] == nums[i + 1]) return false; // 若有重复，提前返回 false
+        }
+        return nums[4] - nums[joker] < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
+    }
+}
+```
+
+- 我和网友：max - min < 5的思路很赞！这样效率就比我硬执行高。
+
+### [剑指 Offer 40. 最小的k个数](https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        /** 
+        数组splice(闭,开)表示切数组；类似的有String用substring切
+        */
+        //快排
+        Arrays.sort(arr);
+        
+        //return arr.splice(0,k);这个函数怎么用？
+        int[] result=new int[k];
+        for(int i=0;i<k;i++){
+            result[i]=arr[i];
+        }
+
+        return result;
+    }
+}
+```
+
+- 反省：忘记了数组切割的函数
+
+#### 官方-单纯快速排序
+
+本题使用排序算法解决最直观，对数组 arr 执行排序，再返回前 k个元素即可。使用任意排序算法皆可，本文采用并介绍 快速排序 ，为下文 方法二 做铺垫。
+
+快速排序原理：
+
+- 快速排序算法有两个核心点，分别为 “哨兵划分” 和 “递归” 。
+
+哨兵划分操作： 
+
+- 以数组某个元素（一般选取首元素）为 基准数 ，将所有小于基准数的元素移动至其左边，大于基准数的元素移动至其右边。
+
+> 如下图所示，为哨兵划分操作流程。通过一轮 哨兵划分 ，可将数组排序问题拆分为 两个较短数组的排序问题 （本文称之为左（右）子数组）。
+
+![image-20220408174558724](lcof.assets/image-20220408174558724.png)
+
+- 原版的这个动图不错
+
+递归： 对 左子数组 和 右子数组 递归执行 哨兵划分，直至子数组长度为 1 时终止递归，即可完成对整个数组的排序。
+
+> 如下图所示，为示例数组 [2,4,1,0,3,5] 的快速排序流程。观察发现，快速排序和 二分法 的原理类似，都是以 \loglog 时间复杂度实现搜索区间缩小。
+
+![Picture1.png](lcof.assets/1612615552-rifQwI-Picture1.png)
+
+复杂度分析：
+
+![image-20220408174755183](lcof.assets/image-20220408174755183.png)
+
+- [参考：快排时间复杂度分析](https://zhuanlan.zhihu.com/p/341201904)
+
+代码：
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        quickSort(arr, 0, arr.length - 1);
+        return Arrays.copyOf(arr, k);
+    }
+    private void quickSort(int[] arr, int l, int r) {
+        // 子数组长度为 1 时终止递归
+        if (l >= r) return;
+        // 哨兵划分操作（以 arr[l] 作为基准数）
+        int i = l, j = r;
+        while (i < j) {
+            while (i < j && arr[j] >= arr[l]) j--;
+            while (i < j && arr[i] <= arr[l]) i++;
+            swap(arr, i, j);
+        }
+        swap(arr, i, l);
+        // 递归左（右）子数组执行哨兵划分
+        quickSort(arr, l, i - 1);
+        quickSort(arr, i + 1, r);
+    }
+    private void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+- 在选最左边的数为哨兵的前提下，因为先whilej--，再whilei++，导致了最后一步总是j早就停在了一个比哨兵小的数，而i主动靠过来导致ij重合；所以重合的地方应该归左边，即交换哨兵和重合位置的元素。（看动图看的更清晰）
+- 注意：这里Arrays.copyOf(arr, k)有截取数组的功能，k表示截取前k个数。
+
+#### 官方-基于快速排序的数组划分
+
+优化思路：
+
+![image-20220408175159330](lcof.assets/image-20220408175159330.png)
+
+算法流程：
+
+![image-20220408175449452](lcof.assets/image-20220408175449452.png)
+
+复杂度分析：
+
+![image-20220408175517282](lcof.assets/image-20220408175517282.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        if (k >= arr.length) return arr;
+        return quickSort(arr, k, 0, arr.length - 1);
+    }
+    private int[] quickSort(int[] arr, int k, int l, int r) {
+        int i = l, j = r;
+        while (i < j) {
+            while (i < j && arr[j] >= arr[l]) j--;
+            while (i < j && arr[i] <= arr[l]) i++;
+            swap(arr, i, j);
+        }
+        swap(arr, i, l);
+        if (i > k) return quickSort(arr, k, l, i - 1);
+        if (i < k) return quickSort(arr, k, i + 1, r);
+        return Arrays.copyOf(arr, k);
+    }
+    private void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+### [剑指 Offer 41. 数据流中的中位数](https://leetcode-cn.com/problems/shu-ju-liu-zhong-de-zhong-wei-shu-lcof/)
+
+#### 首战半寄
+
+思路对，有人用我这种暴力法也过了，可能我这暴力中间有些多余步骤，导致超时；不超时的暴力可以在下面看到。
+
+```java
+class MedianFinder {
+
+    /** initialize your data structure here. */
+    //使用列表存储数据，每次取中位数之前排序一下
+    List<Integer> list=null; 
+    int lsSize=0;//自己保存列表大小，省的每次都on查找列表大小
+    public MedianFinder() {
+        list=new ArrayList<>();
+    }
+    
+    public void addNum(int num) {
+        list.add(num);
+        lsSize++;
+    }
+    
+    public double findMedian() {
+        //排序；列表
+        list.sort(new Comparator<Integer>(){
+            @Override
+            public int compare(Integer o1,Integer o2){
+                if(o1<=o2){//本身升序的话，不交换位置
+                    return -1;
+                }else{
+                    return 1;//1表示交换位置
+                }
+            }
+        });
+
+        //拿中位数
+        if(lsSize%2==0){
+            //拿出数，并把数转为double
+            double templ=(double)list.get(lsSize/2-1).intValue();
+            double tempr=(double)list.get(lsSize/2).intValue();
+            return templ/2+tempr/2;//防止超过边界
+        }else{
+            return (double)list.get(lsSize/2).intValue();
+        }
+    }
+}
+
+/**
+ * Your MedianFinder object will be instantiated and called as such:
+ * MedianFinder obj = new MedianFinder();
+ * obj.addNum(num);
+ * double param_2 = obj.findMedian();
+ */
+```
+
+- 失败原因：超时。我的算法对于输入不多的时候都ok，但是对于长输入会有超时；估计是因为长列表排序太消耗时间了。
+
+- 注意：
+
+  - 我这方法每次插入都得排序列表。像Arrays.sort()只能排序数组而不能排序list，想排序列表ls就可以用ls.sort(new Comparator\<T>(){})；或者用`Collections.sort(List<T> list, Comparator<? super T> c)`。
+    - 注意本匿名内部类Comparator，”尖括号，小括号，花括号“都不能少。
+    - 我：还是喜欢**Collections的静态方法sort**一点，因为这个方法和Arrays.sort的样式统一；java暴力算法过的老哥也是用这个方法。
+
+  - 官方解法用来堆排序，[堆排序实战参考](https://blog.csdn.net/qq_41682302/article/details/95910651)，这里介绍的堆排序实战和官方使用的PriorityQueue一致！
+
+  - 官方用的堆排序，和我自己用的快速排序的[对比](https://www.cnblogs.com/gzshan/p/10904254.html)，为什么使用堆排序？
+    - 我理解：
+      - 使用插入排序的话，虽然每次插入耗时间但是取数据节省时间；数组实现插入排序的时间复杂度是on2，取数据实现复杂度是o1；但是链表实现插入排序的时间复杂度是on（链表插入数据不用移动后续数据），取数据时间复杂度是o1。。于此同时使用链表+快速排序的话，查找的时候（包含排序）时间复杂度是onlogn，插入的时候时间复杂度是o1。所以n比较大时，“链表+快速排序”的综合性能，弱于“链表+插入排序”，所以首先排除用的这种“每次查询时快排”的方式
+      - 现在再看堆排序，但是使用堆排序的话，可以实现ologn的插入，和o1的查找，综合性能比“链表+插入排序”更高。
+
+有老哥就用java暴力法过了，方法和我类似，但是少了“自定义排序，手动装箱拆箱，类型强转“。
+
+```java
+class MedianFinder { 
+List<Integer> list = new ArrayList<Integer>();
+/** initialize your data structure here. */
+public MedianFinder() {
+}
+
+public void addNum(int num) {
+    list.add(num);
+}
+
+public double findMedian() {
+    Collections.sort(list);
+    int len = list.size();
+    if (len == 0) {
+        return 0.0;
+    }
+    if (len%2 == 1) {
+        return list.get(len/2);
+    } else {
+        return (list.get(len/2-1) + list.get(len/2))/2.0;
+    }
+}
+}
+```
+
+#### 官方-优先队列/堆
+
+解题思路：
+
+![image-20220408204404242](lcof.assets/image-20220408204404242.png)
+
+- billibili堆排序[教学](https://www.bilibili.com/video/BV1Eb41147dK?from=search&seid=8087900261957567930&spm_id_from=333.337.0.0)
+
+![Picture1.png](lcof.assets/25837f1b195e56de20587a4ed97d9571463aa611789e768914638902add351f4-Picture1.png)
+
+算法流程：
+
+![image-20220408204443165](lcof.assets/image-20220408204443165.png)
+
+- 我：之所以要先插入别人那，是因为要让对方堆也能根据新到数据排序，更新对方的堆；并且拿回来的数据，可能在对方堆的数据中间，导致拿回来的数据和插入对方堆的数据是不一样的。
+
+复杂度分析：
+
+![image-20220408204754191](lcof.assets/image-20220408204754191.png)
+
+代码：
+
+Java 使用 `PriorityQueue<>((x, y) -> (y - x))` 可方便实现大顶堆。
+
+```java
+class MedianFinder {
+    Queue<Integer> A, B;
+    public MedianFinder() {
+        A = new PriorityQueue<>(); // 小顶堆，保存较大的一半
+        B = new PriorityQueue<>((x, y) -> (y - x)); // 大顶堆，保存较小的一半
+    }
+    public void addNum(int num) {
+        if(A.size() != B.size()) {
+            A.add(num);
+            B.add(A.poll());
+        } else {
+            B.add(num);
+            A.add(B.poll());
+        }
+    }
+    public double findMedian() {
+        return A.size() != B.size() ? A.peek() : (A.peek() + B.peek()) / 2.0;
+    }
+}
+```
+
+- `/2.0`会自动把“integer自动拆箱得到的int”转化为double。
+- [PriorityQueue详解](https://www.jianshu.com/p/f1fd9b82cb72):
+  - 利用堆排序，保证树里总是最大/最小的元素在父节点；并且除顶部是最大值/最小值外，集合的其余部分是不保证有序的。
+  - Comparator自定义排序的话，返回-1表示o1和o2的顺序是默认的升序，即o1<o2，所以不用交换两者顺序。
+
+#### 即时再战半寄
+
+```java
+class MedianFinder {
+
+    /** initialize your data structure here. */
+    /**
+    smaller是较小的一半集合，用大顶堆处理这个集合，让较小集合里的最大值始终在堆顶部，即在中位数附近；允许smaller比bigger多一个元素
+    bigger是较大的一半集合，用小顶堆处理这个集合，让较大集合里的最小值始终在堆顶部，即在中位数附近
+     */
+    PriorityQueue<Integer> smaller=null;
+    PriorityQueue<Integer> bigger=null;
+    public MedianFinder() {
+        smaller=new PriorityQueue<>(new Comparator<Integer>(){//大顶堆递减，不是默认的，要自定义比较规则
+            @Override
+            public int compare(Integer o1,Integer o2){
+                if(o1<o2){//如果前面的更小，返回1表示交换两者顺序，即为了让前面的更大（即实现降序）
+                    return 1;
+                }else if(o1>o2){
+                    return -1;
+                }else{
+                    return 0;
+                }
+            }
+        });
+        //smaller=new PriorityQueue<>((x, y) -> (y - x));
+        bigger=new PriorityQueue<>();//小顶堆递增
+    }
+    
+    public void addNum(int num) {
+        //因为待插入值可能属于对面堆，所以每个值都要先填入对面堆，再从对面堆顶部拿值；
+        if(smaller.size()==bigger.size()){//如果两个堆数目相同，往smaller中插入；但是先插入bigger保证smaller是总集合的较小一半数的集合
+            bigger.offer(num);
+            smaller.offer(bigger.poll());
+        }else{//如果smaller数目多1，就往bigger堆插入；但是先插入smaller,才能保证bigger是总集合的较大一半数的集合
+            smaller.offer(num);
+            bigger.offer(smaller.poll());
+        }
+    }
+    
+    public double findMedian() {
+        if(smaller.size()==bigger.size()){//如果两个堆的元素数目相同，那么各取堆顶计算中位数
+            return (smaller.peek()+bigger.peek())/2.0;//2.0自动把整个式子转化为float；返回类型是double，我估计就自动转化了。注意查找中位数不能执行poll，poll会移除元素，要用peek
+        }else{//如果smaller的元素多1，说明共奇数个元素，直接拿smaller堆的堆顶返回即可
+            return smaller.peek();
+        }
+    }
+}
+
+/**
+ * Your MedianFinder object will be instantiated and called as such:
+ * MedianFinder obj = new MedianFinder();
+ * obj.addNum(num);
+ * double param_2 = obj.findMedian();
+ */
+```
+
+- 关于[`size()`时间复杂度](https://blog.csdn.net/Kevin___________/article/details/108681594)
+
+- 错误点：
+
+  - 求中位数时，误用poll取数，导致更改了堆影响后续操作；应该用peek。
+  - poll的是堆顶，小顶堆是递增，那么poll出的就是最小值；反之大顶堆poll出来的就是最大值。
+
+- 问答问：为什么都用了堆排序，我的效率比官方低这么多？（红框是我，绿框是官方）
+
+  <img src="lcof.assets/image-20220409010404047.png" alt="image-20220409010404047" style="zoom:50%;" />
+
+  - 经过使用官方的lamda表达式决定大顶堆，但是线效率没变，说明是其他部位导致的。
+
+  - 自答：发现代码遗留了debug时设置的System.out.println()，删掉之后效率和官方一致；看来输出很耗时啊！
+
+    <img src="lcof.assets/image-20220409010830512.png" alt="image-20220409010830512" style="zoom:50%;" />
+
+## 搜索与回溯算法(中等)
+
+### [剑指 Offer 55 - I. 二叉树的深度](https://leetcode-cn.com/problems/er-cha-shu-de-shen-du-lcof/)
+
