@@ -5591,3 +5591,278 @@ class MedianFinder {
 
 ### [剑指 Offer 55 - I. 二叉树的深度](https://leetcode-cn.com/problems/er-cha-shu-de-shen-du-lcof/)
 
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public int maxDepth(TreeNode root) {
+        //判断返回条件
+        if(root==null)return 0;
+
+        //递归拿到左右子树的深度。取大的深度，加一返回为本节点返回的最大深度
+        return Math.max(maxDepth(root.left),maxDepth(root.right))+1;
+
+    }
+}
+```
+
+#### 官方1-后序遍历（DFS）
+
+树的遍历方式总体分为两类：深度优先搜索（DFS）、广度优先搜索（BFS）；
+
+- 常见的 DFS ： 先序遍历、中序遍历、后序遍历；
+- 常见的 BFS ： 层序遍历（即按层遍历）。
+
+求树的深度需要遍历树的所有节点，本文将介绍基于 后序遍历（DFS） 和 层序遍历（BFS） 的两种解法。
+
+思路：
+
+![image-20220409165709831](lcof.assets/image-20220409165709831.png)
+
+算法解析：
+
+![image-20220409165731652](lcof.assets/image-20220409165731652.png)
+
+复杂度分析：
+
+![image-20220409165757840](lcof.assets/image-20220409165757840.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxDepth(TreeNode root) {
+        if(root == null) return 0;
+        return Math.max(maxDepth(root.left), maxDepth(root.right)) + 1;
+    }
+}
+```
+
+- 是在得到左右子树结果后，操作本节点（即+1），所以是后序遍历
+
+#### 官方2-层序遍历（BFS）
+
+思路：
+
+- 树的层序遍历 / 广度优先搜索往往利用 **队列** 实现。
+- **关键点：** 每遍历一层，则计数器 +1+1 ，直到遍历完成，则可得到树的深度。
+
+算法解析：
+
+1. 特例处理： 当 root 为空，直接返回 深度 00 。
+2. 初始化： 队列 queue （加入根节点 root ），计数器 res = 0。
+3. 循环遍历： 当 queue 为空时跳出。
+   1. 初始化一个空列表 tmp ，用于临时存储下一层节点；
+   2. 遍历队列： 遍历 queue 中的各节点 node ，并将其左子节点和右子节点加入 tmp；
+   3. 更新队列： 执行 queue = tmp ，将下一层节点赋值给 queue；
+   4. 统计层数： 执行 res += 1 ，代表层数加 11；
+4. 返回值： 返回 res 即可。
+
+复杂度分析：
+
+![image-20220409170223187](lcof.assets/image-20220409170223187.png)
+
+代码：
+
+```java
+public int maxDepth(TreeNode root) {
+    if (root == null) return 0;
+    Queue<TreeNode> queue = new LinkedList<>();
+    queue.add(root);
+    int res = 0;
+    while (!queue.isEmpty()) {
+        res++;
+        int n = queue.size();
+        for (int i = 0; i < n; i++) {
+            TreeNode node = queue.poll();
+            if (node.left != null) queue.add(node.left);
+            if (node.right != null) queue.add(node.right);
+        }
+    }
+    return res;
+}
+```
+
+- 我和网友：这个很像从上往下分层打印二叉树。
+
+### [剑指 Offer 55 - II. 平衡二叉树](https://leetcode-cn.com/problems/ping-heng-er-cha-shu-lcof/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public boolean isBalanced(TreeNode root) {
+        if(root==null)return true;
+
+        //查询本节点为根的树，的左右子树深度是否满足平衡
+        if(depth(root.left)-depth(root.right)>1||depth(root.left)-depth(root.right)<-1){
+            return false;
+        }
+        //递归查询左右子树中所有节点的平衡性
+        return isBalanced(root.left)&&isBalanced(root.right);
+    }
+    public int depth(TreeNode root){//查看某节点为根节点的子树的深度。会对每个节点求左右子树深度，导致大量重复计算，最好是tree有个字段存一下深度，但是这又没有
+        if(root==null)return 0;
+
+        return Math.max(depth(root.right),depth(root.left))+1;
+    }
+}
+```
+
+- 对每个节点反复计算了深度，重复计算了；但是没想到更好的解法。
+
+#### 官方1-后序遍历 + 剪枝 （从底至顶）
+
+做题前提：
+
+![image-20220409173300101](lcof.assets/image-20220409173300101.png)
+
+思路：
+
+> 后序遍历 + 剪枝 （从底至顶）为此方法为本题的最优解法，但剪枝的方法不易第一时间想到。
+
+思路是对二叉树做后序遍历，从底至顶返回子树深度，若判定某子树不是平衡树则 “剪枝” ，直接向上返回。
+
+算法流程：
+
+![image-20220409173850610](lcof.assets/image-20220409173850610.png)
+
+复杂度分析：
+
+![image-20220409174009514](lcof.assets/image-20220409174009514.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isBalanced(TreeNode root) {
+        return recur(root) != -1;
+    }
+
+    private int recur(TreeNode root) {
+        if (root == null) return 0;
+        int left = recur(root.left);
+        if(left == -1) return -1;
+        int right = recur(root.right);
+        if(right == -1) return -1;
+        return Math.abs(left - right) < 2 ? Math.max(left, right) + 1 : -1;
+    }
+}
+```
+
+- 学习剪枝思想。用返回值为-1剪枝是没想到的；自己写的时候一直想在树节点处记录信息，在递归查询的时候查询节点的历史记录来剪枝。
+- 我认为思想：求深度的函数，不单单是求深度了，在求每个节点的深度时，还会求已本节点为顶点的二叉树是否为完全二叉树。
+
+#### 官方2-先序遍历 + 判断深度 （从顶至底）
+
+> 此方法(就是我的算法)容易想到，但会产生大量重复计算，时间复杂度较高。
+
+思路是构造一个获取当前子树的深度的函数 depth(root) （即 面试题55 - I. 二叉树的深度 ），通过比较某子树的左右子树的深度差 abs(depth(root.left) - depth(root.right)) <= 1 是否成立，来判断某子树是否是二叉平衡树。若所有子树都平衡，则此树平衡。
+
+算法流程：
+
+![image-20220409174524696](lcof.assets/image-20220409174524696.png)
+
+复杂度分析：
+
+![image-20220409174554930](lcof.assets/image-20220409174554930.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isBalanced(TreeNode root) {
+        if (root == null) return true;
+        return Math.abs(depth(root.left) - depth(root.right)) <= 1 && isBalanced(root.left) && isBalanced(root.right);
+    }
+
+    private int depth(TreeNode root) {
+        if (root == null) return 0;
+        return Math.max(depth(root.left), depth(root.right)) + 1;
+    }
+}
+```
+
+### [剑指 Offer 64. 求1+2+…+n](https://leetcode-cn.com/problems/qiu-12n-lcof/)
+
+#### 首战寄
+
+没思路；并且codetop显示这道题就出现过2次，说明不是考察点；这题目还有个“脑筋急转弯”的标签。。
+
+#### 官方-逻辑符短路
+
+解题思路：
+
+![image-20220409192607863](lcof.assets/image-20220409192607863.png)
+
+方法一： 平均计算
+
+![image-20220409192632853](lcof.assets/image-20220409192632853.png)
+
+方法二： 迭代
+
+![image-20220409192654183](lcof.assets/image-20220409192654183.png)
+
+方法三： 递归
+
+![image-20220409192805645](lcof.assets/image-20220409192805645.png)
+
+![Picture1.png](lcof.assets/2d25bb3aec987712b717f7954d93494beb0a3e352acee486b3ce58bce60ee07c-Picture1.png)
+
+逻辑运算符的短路效应：
+
+![image-20220409193031359](lcof.assets/image-20220409193031359.png)
+
+复杂度分析：
+
+![image-20220409193047238](lcof.assets/image-20220409193047238.png)
+
+代码：
+
+![image-20220409193156424](lcof.assets/image-20220409193156424.png)
+
+```java
+class Solution {
+    int res = 0;
+    public int sumNums(int n) {
+        boolean x = n > 1 && sumNums(n - 1) > 0;
+        res += n;
+        return res;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    int res=0;
+    public int sumNums(int n) {
+        //n==1的时候终止递归，开始退栈
+        boolean x=n>1&&sumNums(n-1)>0;
+        res+=n;
+        return res;
+    }
+}
+```
+
+### [剑指 Offer 68 - I. 二叉搜索树的最近公共祖先](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-zui-jin-gong-gong-zu-xian-lcof/)
+
