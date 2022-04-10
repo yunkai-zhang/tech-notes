@@ -5866,3 +5866,156 @@ class Solution {
 
 ### [剑指 Offer 68 - I. 二叉搜索树的最近公共祖先](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-zui-jin-gong-gong-zu-xian-lcof/)
 
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    //全局变量保存结果
+    TreeNode result=null;
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        /**
+        后序遍历，先拿到左右子树是否有给定节点；再看本节点是否有给定节点；然后剪枝返回
+         */
+        //处理特殊情况
+        if(root==null)return null;
+        
+        //深度递归，查找公共祖先
+        recur(root,p,q);
+
+        //recur过后目标节点保存在result中，直接返回
+        return result;
+    }
+    public boolean recur(TreeNode root, TreeNode p, TreeNode q){
+        //处理返回条件。只要本节点包含目标节点，就给上层递归返回true；注意root==p或q的时候不能直接返回true，因为要对他做公共祖先的判断
+        if(root==null)return false;
+        // else if(root==p)return true;
+        // else if(root==q)return true;
+
+        if(result!=null){//剪枝。防止得到结果后还不停递归。这种一个if没else的剪枝判断感觉可读性较好
+            return false;
+        }
+
+        //后序遍历
+        boolean left=recur(root.left,p,q);
+        boolean right=recur(root.right,p,q);
+        
+        //如果左右子树+本节点中包含了两个目标节点，说明当前节点就是公共祖先，保存当前节点
+        if((left&&right)||(left&&root==p)||(left&&root==q)||(right&&root==p)||(right&&root==q)){
+            //System.out.println("找到root为："+root.val);
+            result=root;
+            return false;
+        }
+
+        //如果左右子树+本节点中包含了一个目标节点，返回true。如果包含了两个，在上面一个判断就会返回了
+        if(left||right||root==p||root==q)return true;
+
+        //如果左右子树都不包含目标节点，当前节点也不是目标节点，返回false。如果包含两个或1个，在上面的两个判断之一就会返回了
+        return false;
+    }
+}
+```
+
+- 我这由底向顶的，dfs后续遍历递归处理，没有做重复判断，效率应该还行。但是我感觉三个if的判断语句那可以优化，比如用if(root==q||root==p)套if，这样可以减少不必要的判断；但是可读性会稍差，毕竟就不是并行的三个判断了
+
+- 倒数的三个判断的这种顺序可以参考：
+  1. 先放出现多种情况的
+  2. 再放只出现一种情况的（此时就不在需要判断多种情况）
+  3. 再放一种情况都不出现的（此时甚至都不需要做判断）
+- 反思：
+  - 没认真看题目，，没用上“二叉搜索树”的条件，当普通树处理了。
+
+#### 官方1-迭代
+
+解题思路：
+
+![image-20220410175623459](lcof.assets/image-20220410175623459.png)
+
+![image-20220410175707490](lcof.assets/image-20220410175707490.png)
+
+迭代的做法：
+
+![image-20220410175729876](lcof.assets/image-20220410175729876.png)
+
+复杂度分析：
+
+![image-20220410175815304](lcof.assets/image-20220410175815304.png)
+
+代码：
+
+```java
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        while(root != null) {
+            if(root.val < p.val && root.val < q.val) // p,q 都在 root 的右子树中
+                root = root.right; // 遍历至右子节点
+            else if(root.val > p.val && root.val > q.val) // p,q 都在 root 的左子树中
+                root = root.left; // 遍历至左子节点
+            else break;
+        }
+        return root;
+    }
+}
+```
+
+- 我：break的情况，正好是当前节点为pq的最近公共祖先的情况
+
+代码优化，若可保证 p.val < q.val ，则在循环中可减少判断条件：
+
+```java
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        if(p.val > q.val) { // 保证 p.val < q.val
+            TreeNode tmp = p;
+            p = q;
+            q = tmp;
+        }
+        while(root != null) {
+            if(root.val < p.val) // p,q 都在 root 的右子树中
+                root = root.right; // 遍历至右子节点
+            else if(root.val > q.val) // p,q 都在 root 的左子树中
+                root = root.left; // 遍历至左子节点
+            else break;
+        }
+        return root;
+    }
+}
+```
+
+#### 官方2-递归
+
+递归思路：
+
+![image-20220410180944663](lcof.assets/image-20220410180944663.png)
+
+复杂度分析：
+
+![image-20220410181003714](lcof.assets/image-20220410181003714.png)
+
+代码：
+
+```java
+class Solution {
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        if(root.val < p.val && root.val < q.val)
+            return lowestCommonAncestor(root.right, p, q);
+        if(root.val > p.val && root.val > q.val)
+            return lowestCommonAncestor(root.left, p, q);
+        return root;
+    }
+}
+```
+
+- 核心：抓住二叉搜索树的特性！
+
+## 分治算法(中等)
+
+### [剑指 Offer 07. 重建二叉树](https://leetcode-cn.com/problems/zhong-jian-er-cha-shu-lcof/)
