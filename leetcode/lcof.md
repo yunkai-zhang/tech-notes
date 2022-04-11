@@ -6019,3 +6019,284 @@ class Solution {
 ## 分治算法(中等)
 
 ### [剑指 Offer 07. 重建二叉树](https://leetcode-cn.com/problems/zhong-jian-er-cha-shu-lcof/)
+
+#### 首战寄
+
+能用笔实现出来，但是用算法实现没有思路。
+
+#### 官方-分治
+
+[文字看不懂的话，可以看这个讲解视频](https://www.bilibili.com/video/BV1LJ411y7Xa?from=search&seid=7337447768713066113&spm_id_from=333.337.0.0)，看完视频后再看下面的解析和代码。
+
+解题思路：
+
+![image-20220411200426772](lcof.assets/image-20220411200426772.png)
+
+![image-20220411200437879](lcof.assets/image-20220411200437879.png)
+
+分治算法解析：
+
+![image-20220411200501485](lcof.assets/image-20220411200501485.png)
+
+复杂度分析：
+
+![image-20220411200517480](lcof.assets/image-20220411200517480.png)
+
+代码：
+
+> 注意：本文方法只适用于 “无重复节点值” 的二叉树。
+
+```java
+ //利用原理,先序遍历的第一个节点就是根。在中序遍历中通过根 区分哪些是左子树的，哪些是右子树的
+    //左右子树，递归
+    HashMap<Integer, Integer> map = new HashMap<>();//标记中序遍历
+    int[] preorder;//保留的先序遍历
+
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        this.preorder = preorder;
+        for (int i = 0; i < preorder.length; i++) {
+            map.put(inorder[i], i);
+        }
+        return recursive(0,0,inorder.length-1);
+    }
+
+    /**
+     * @param pre_root_idx  先序遍历的索引
+     * @param in_left_idx  中序遍历的索引
+     * @param in_right_idx 中序遍历的索引
+     */
+    public TreeNode recursive(int pre_root_idx, int in_left_idx, int in_right_idx) {
+        //相等就是自己
+        if (in_left_idx > in_right_idx) {
+            return null;
+        }
+        //root_idx是在先序里面的
+        TreeNode root = new TreeNode(preorder[pre_root_idx]);
+        // 有了先序的,再根据先序的，在中序中获 当前根的索引
+        int idx = map.get(preorder[pre_root_idx]);
+
+        //左子树的根节点就是 左子树的(前序遍历）第一个，就是+1,左边边界就是left，右边边界是中间区分的idx-1
+        root.left = recursive(pre_root_idx + 1, in_left_idx, idx - 1);
+
+        //由根节点在中序遍历的idx 区分成2段,idx 就是根
+
+        //右子树的根，就是右子树（前序遍历）的第一个,就是当前根节点 加上左子树的数量
+        // pre_root_idx 当前的根  左子树的长度 = 左子树的左边-右边 (idx-1 - in_left_idx +1) 。最后+1就是右子树的根了
+        root.right = recursive(pre_root_idx + (idx-1 - in_left_idx +1)  + 1, idx + 1, in_right_idx);
+        return root;
+    }
+```
+
+- 我理解：用hash关联中序的值和index，是为了根据先序的root值，求得root在中序中的index；进而根据中序中root的index，得到root的左右子树元素的个数。因为无论是中序还是先序数组，左/右子树的所有节点都是紧贴在一起的；而中序遍历的特点就是root能分割左右子树，特别适合用来判断数组中左/右子树的元素的个数。
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    int[] pre;
+    Map<Integer,Integer> in=new HashMap<>();
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        /**
+        利用特性：
+        1.先序遍历的第一个节点为当前树的root；
+        2.中序中root分割左右子树，可以求得左or右子树分别有多少个元素
+        
+        本解法的前提是树中元素都不唯一
+         */
+
+        //处理特殊情况
+        if(preorder.length==0)return null;
+
+        //为了在递归中使用preorder数组，并且不必往方法传入preorder数组，这里用全局变量保存preorder数组
+        pre=preorder;
+        //把inorder中元素和index用hash关联起来；便于后续根据root值求得左右子树的元素数目
+        for(int i=0;i<inorder.length;i++){
+            in.put(inorder[i],i);
+        }
+
+        //递归， 根据pre中root的index 和 in中树的左右边界，构建树并返回根节点
+        return recur(0,0,inorder.length-1);
+    }
+    public TreeNode recur(int pre_root_idx, int in_left_idx, int in_right_idx){
+        //设置递归返回条件，in_left_idx和in_right_idx交叉时说明子树是空节点了，直接返回null
+        if(in_left_idx>in_right_idx)return null;
+
+        //先利用pre_root_index拿到root的值
+        int rootValue=pre[pre_root_idx];
+        //再根据root的值得到中序遍历数组中，root的位置
+        int in_root_index=in.get(rootValue);
+
+        //创建当前节点
+        TreeNode cur=new TreeNode(rootValue);
+
+        /*
+        递归创建当前节点的左右子节点：
+        1.根据先序遍历数组的特点可知，左子节点的pre_root_idx即为当前pre_root_idx+1，右子节点的pre_root_idx即为当前pre_root_idx+左子树节点个数+1(加1是为了越过左子树而到达右子树)
+        2.根据中序遍历数组的特点可知，中序遍历中，左子树的左边界为in_left_idx，左子树的右边界为in_root_index-1;
+                                                  右子树的左边界为in_root_index+1，右子树的右边界为in_right_idx
+         */
+        cur.left=recur(pre_root_idx+1,in_left_idx,in_root_index-1);
+        cur.right=recur(pre_root_idx+(in_root_index-in_left_idx)+1,in_root_index+1,in_right_idx);
+
+        return cur;
+    }
+}
+```
+
+- 我：我感觉我这个代码的命名和编写，搭配注释，比官方还要容易理解。
+
+- 注意：可以如本例`pre=preorder;`，直接对数组增加引用。
+
+### [剑指 Offer 16. 数值的整数次方](https://leetcode-cn.com/problems/shu-zhi-de-zheng-shu-ci-fang-lcof/)
+
+#### 首战半寄
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        /**
+        对n分类讨论，同时注意分母为0的情况
+         */
+        //针对x处理特殊情况，减少计算
+        if(x==1)return 1;
+        if(x==0)return 0;
+        
+        if(n>0){
+            double stordX=x;//注意x是double类型，保存的x也得是声明为double
+            for(int i=0;i<n-1;i++){//指数是n的话，x自乘n-1次。注意是n-1次！！！！
+                //但是不能使用x*=x;这回导致：第一次计算是n*n，第二次计算实际上是(n的平方)*(n的平方)了
+                x*=stordX;
+            }
+            return x;
+        }else if(n<0){
+            if(x==0){//0不能做分母
+                return 0;
+            }
+            double stordX=x;
+            for(int i=n;i<0;i++){//指数是-n的话，用1除以x进行n次
+                //x=1/x;不能直接1/x，因为第一次除后为1/x，再用1/(1/x)那么又得到了x。。
+                if(i==n){//第一次是1/x，其他的都是之前的结果除以x
+                    x=1/x;
+                }else{
+                    x=x/stordX;
+                } 
+            }
+            return x;
+        }else{//指数n==0，直接返回1即可
+            return 1;
+        }
+
+    }
+}
+```
+
+- 用常规思路做的，通过了301/303个测试案例，但是2.00000的 -2147483648次方计算超时了。
+- 反思：
+  - n>0时，没用心，最开始做成了指数为n就自乘n次，实际上是自乘n-1次。
+  - n<0时，没用心，最开始做成了指数为n就不停让x=1/x，但是这样相当于总是把1放在分子，而实际上应该把除后的结果放在分子。
+  - 之前计算时，没把x保留下来，导致每次都会把计算后的x当成原x，导致错误。
+
+#### 大佬-快速幂
+
+官方的解释的不清楚，就用大佬的。
+
+解题思路：
+
+![image-20220411180036705](lcof.assets/image-20220411180036705.png)
+
+[知乎快速幂](https://zhuanlan.zhihu.com/p/95902286)：
+
+- 我理解：就不让cpu每次乘一个小数，而是先乘得一个大数，然后两个大数相乘，这样就减少了乘法的次数。
+
+位运算使用：
+
+![image-20220411184903746](lcof.assets/image-20220411184903746.png)
+
+我理解：
+
+![image-20220411183243537](lcof.assets/image-20220411183243537.png)
+
+代码：
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        if(x == 0) return 0;
+        long b = n;
+        double res = 1.0;
+        //如果幂是负数，就把它转化为正数来处理
+        if(b < 0) {
+            x = 1 / x;
+            b = -b;
+        }
+        while(b > 0){
+            // 最后一位为1，需要乘上该位上的权重
+            if((b & 1) == 1){
+                res *= x;
+            }
+            x *= x;
+            b >>= 1;
+        }
+        return res;
+    }
+}
+```
+
+- 网友问：为什么要把其中的n换成long类型？
+  - 网友答：因为32位int是补码形式，正数是和原码相同，范围是0到2的31次方-1，但是对于负数，需要反码+1，范围是负2的31次方到0，负数要比正数多一个数字。如果传进来的int刚好是负2的32次方，取相反数之后就超过int32类型的取值范围了，所以需要用long来扩大取值范围。不好意思啊，评论区数学公式不太好打。
+  - 注意：有符号的话有个符号站位，就级数是2的31次方；如果没有正负号，就所有位都用来保存数字，级数就为2的32次方。
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        /**
+        使用快速幂，尽量让大数相乘，不要让小数相乘占用CPU
+         */
+        //特殊情况处理
+        if(x==0)return 0;
+        
+        //用于返回结果，需要的自乘的x的结果会被乘入res
+        double res=1;
+        
+        //n为负数的时候，把它转换为正数的问题来处理
+        long b=n;//因为负数的绝对值更大，为了防止负数变成正数问题时超过证书边界，得用long来处理n
+        if(b<0){
+            b=-b;
+            x=1/x;//因为x为0的情况排除了，所以可以安心把x放在分母
+        }
+        
+        //开始快速幂运算，让x不断自己平方，当幂的二进制的对应位为1时，则说明需要把自乘x的当前结果往结果中乘
+        //处理幂转化为二进制后的每个二进制位
+        while(b>0){
+            if((b&1)==1){//如果当前处理而二进制幂的位置为1，说明x自乘的当前结果要乘入结果
+                res*=x;
+            }
+            x*=x;//x不断自己平方，是快速幂节省cpu运算的关键
+            b=b>>1;//把幂的二进制右移一位（即从低位砍掉一位），下一次循环就会处理的是更高一位
+        }
+
+        return res;
+    }
+}
+```
+
+- 反思：
+  - 位运算>>后会得到一个结果，所以必须要用等号来赋值。` b=b>>1;`等价于` b>>=1;`
+  - 与运算符&的优先级没有==高，所以要用括号包裹`b&1`
+    - 运算符优先级容易记混，总是用括号包裹好了；可读性还蛮好。
+
+
+
+### [剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
+
