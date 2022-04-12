@@ -6300,3 +6300,119 @@ class Solution {
 
 ### [剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
 
+#### 首战半寄
+
+```java
+class Solution {
+    int[] postorder;
+    boolean falseFound;//默认是false
+    public boolean verifyPostorder(int[] postorder) {
+        /**
+        二叉搜索树中左子树的所有值小于rootval，右子树的所有值大于rootval。
+        后续遍历的话，数组末尾就是树的根节点。根节点的左边是【左子树】【右子树】黏连而成。分割左右子树的方法：
+        遍历【左子树】【右子树】区域，第一次发现节点大于rootval的时候，说明前一步遍历完了左子树，现在在遍历右子树的第一个节点；因为不知道什么时候节点变大，所以用hash没用
+         */
+        this.postorder=postorder;//把传入的数组赋值给全局数组，使得在递归中也能访问到数组
+        int root_index=postorder.length-1;
+        int left_index=0,right_index=postorder.length-2;
+        return recur(root_index,left_index,right_index);
+    }
+    public boolean recur(int root_index,int left_index,int right_index){
+        //如果分治到最后lr交叉都没发现问题，说明至少本段分治符合二叉搜索树
+        if(left_index>right_index){
+            return true;
+        }
+
+        
+        //遍历数组，找到第一个比root大的，即为右子树的第一个节点；如果没遍历到，说明右子树为空
+        int firstRight=-1;
+        for(int i=left_index;i<=right_index;i++){
+            System.out.println("正在寻找右子树的首节点，当前节点值为："+postorder[i]);
+            if(postorder[i]>postorder[root_index]){
+                firstRight=i;
+                System.out.println("找到了右子树的首节点，节点值为："+postorder[i]);
+                //找到了右子树的首节点后要及时break，不然首节点会右移
+                break;
+            }
+        }
+        
+        //右子树为空的话，右子树的首节点设置在数组范围外。这样下一轮递归的话，left是firstRight，right是right-1，就会形成交叉，直接返回true而不会进一步处理
+        if(firstRight==-1){
+            System.out.println("右子树为空");
+            firstRight=right_index+1;
+        }
+        
+        
+        //由于是用节点是否比rootval小找到右子树第一个节点，所以左子树的合法性不需要验证，是已成立的。
+        //检查右子树合法性，右子树中出现比root大的数的话，直接返回false
+        for(int i=firstRight;i<=right_index;i++){
+            System.out.println("正在校验右子树的合法性，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
+            if(postorder[i]<postorder[root_index]){
+                System.out.println("右子树不合法，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
+                falseFound=true;
+                return false;
+            }
+        }
+
+        //剪枝
+        if(falseFound)return false;
+
+        System.out.println("进入更深层次递归");
+        //如果没看出什么问题，递归查看当前root的左右子树的情况；左边函数是左子树，右边函数是右子树。两个都为true才返回true。
+        return recur(firstRight-1,left_index,firstRight-2)&&recur(right_index,firstRight,right_index-1);
+    }
+}
+```
+
+- 思路完整，框架完整，但是有一些小细节是debug才发现的。
+
+- 注意把代码中的sout注释掉后，代码的执行速度更快。
+
+- 解题debug反思：
+
+  - 用` if(postorder[i]>postorder[root_index])`找到右子树首节点后，忘记退出for循环，导致循环可能继续右移。
+
+  - firstRight初始值设置为0，然后用`if(firstRight==0)`判断得firstRight在找右子树首节点的过程中没被修改过，便手动给右子树首节点赋值；但是忽视了一种情况，就是左子树为空，那么firstRight本身就是==0的，反而被我手动赋值了。所以应该如提交代码中似的，把firstRight初始值设置为-1，并且针对firstRight在寻找完右子树后有没有变化来判断（没变化说明右子树为空）是否需要手动赋值。
+
+#### 官方-递归分治
+
+思想就是我写代码的思想
+
+解题思路：
+
+![image-20220412195804787](lcof.assets/image-20220412195804787.png)
+
+递归分支思路：
+
+- 根据二叉搜索树的定义，可以通过递归，判断所有子树的 **正确性** （即其后序遍历是否满足二叉搜索树的定义） ，若所有子树都正确，则此序列为二叉搜索树的后序遍历。
+
+递归解析：
+
+![image-20220412195901552](lcof.assets/image-20220412195901552.png)
+
+- 注意：划分左右子树的时候，寻找的**第一个**大于根节点的节点；我写代码就漏了这点，虽然思考的时候肯定是知道要找第一个。
+
+复杂度分析：
+
+![image-20220412200013412](lcof.assets/image-20220412200013412.png)
+
+- 时间复杂度“每轮递归都需要遍历树所有节点”解释：从left到firstRight，从firstRight到right，正好遍历完当前root对应的子树，也就是on的遍历。递归节点又有on，所以综合来看时间复杂度是on2。
+
+代码：
+
+```java
+class Solution {
+    public boolean verifyPostorder(int[] postorder) {
+        return recur(postorder, 0, postorder.length - 1);
+    }
+    boolean recur(int[] postorder, int i, int j) {
+        if(i >= j) return true;
+        int p = i;
+        while(postorder[p] < postorder[j]) p++;
+        int m = p;
+        while(postorder[p] > postorder[j]) p++;
+        return p == j && recur(postorder, i, m - 1) && recur(postorder, m, j - 1);
+    }
+}
+```
+
