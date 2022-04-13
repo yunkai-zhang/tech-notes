@@ -6416,3 +6416,205 @@ class Solution {
 }
 ```
 
+## 位运算(简单)
+
+### [剑指 Offer 15. 二进制中1的个数](https://leetcode-cn.com/problems/er-jin-zhi-zhong-1de-ge-shu-lcof/)
+
+####  首战寄
+
+有思路，但是代码运行结果不符合预期。
+
+```java
+public class Solution {
+    // you need to treat n as an unsigned value
+    public int hammingWeight(int n) {
+        /**
+        使用位运算，总是&最小位，为1的话则计数；计数完毕后右移，直到没有位了
+         */
+        System.out.println("输入的n:"+n);
+        int count=0;
+        while(n>0){
+            System.out.println("当前n:"+n);
+            if((n&1)==1){//计算数的二进制表示的末尾是否为1，是的话计数
+                System.out.println("当前n的末尾为1");
+                count++;
+            }
+            //不管末尾是否为1，都右移，即二进制末尾截掉一位
+            n>>=n;
+            System.out.println("右移1位后n:"+n);
+        }
+
+        return count;
+        
+    }
+}
+```
+
+![image-20220413155221429](lcof.assets/image-20220413155221429.png)
+
+- 问答问：打印出来的是输入了11右移一位后不是5，而直接为0退出了，不懂了。就算是以十进制为单位右移（除法），那也还有1啊。
+  - 自答：我这应该是`n>>>=1;`，原因有两个：
+    1. 源代码`n>>=n;`表示一下右移11位，肯定一下就移完了
+    2. java中无符号位运算用`>>>`。注意区别`>>`和`>>>`，`>>>`是对int32和int64才有用的无符号右移,[参考](https://www.cnblogs.com/SunArmy/p/9837348.html)
+- 看完官方解析后的反思，错误：
+  - `while(n>0)`导致输入n<0的数话，会不进入while。应该写成`while(n!=0)`
+  - ` n>>=n;`会一下子有符号右移n位，直接为0；并且对负数有符号位移的话补1，会导致计算错误。应该写成`n>>>=1;`。
+
+#### 网友热门
+
+java居然有这个方法:
+
+```java
+public class Solution {
+    // you need to treat n as an unsigned value
+    public int hammingWeight(int n) {
+        return Integer.bitCount(n);
+    }
+}
+```
+
+#### 官方1-位运算+逐位判断
+
+思路：
+
+![image-20220413161839865](lcof.assets/image-20220413161839865.png)
+
+算法流程：
+
+![image-20220413161858902](lcof.assets/image-20220413161858902.png)
+
+
+
+复杂度分析：
+
+![image-20220413161917124](lcof.assets/image-20220413161917124.png)
+
+代码：
+
+```java
+public class Solution {
+    public int hammingWeight(int n) {
+        int res = 0;
+        while(n != 0) {
+            res += n & 1;
+            n >>>= 1;
+        }
+        return res;
+    }
+}
+```
+
+- 我：思路就是我首战寄的思路
+
+#### 官方2-位运算+巧用 n \& (n - 1)
+
+思路：
+
+![image-20220413162127582](lcof.assets/image-20220413162127582.png)
+
+算法流程：
+
+![image-20220413162143982](lcof.assets/image-20220413162143982.png)
+
+复杂度分析：
+
+![image-20220413162204749](lcof.assets/image-20220413162204749.png)
+
+- 官方1中，哪怕当前很多位是0也要一个一个地位移，浪费时间复杂度。本方法2直接采取“消去1”的策略，每次消去末尾的1都可以给res加一，只需要做1的个数次操作即可，而不是像官方方法1中做多位次运算。
+
+代码：
+
+```java
+public class Solution {
+    public int hammingWeight(int n) {
+        int res = 0;
+        while(n != 0) {
+            res++;
+            n &= n - 1;
+        }
+        return res;
+    }
+}
+```
+
+### [剑指 Offer 65. 不用加减乘除做加法](https://leetcode-cn.com/problems/bu-yong-jia-jian-cheng-chu-zuo-jia-fa-lcof/)
+
+#### 首战寄
+
+无思路。
+
+建议熟悉java位运算：[参考](https://zhuanlan.zhihu.com/p/106893096)
+
+#### 官方-位运算
+
+解题思路：
+
+![image-20220413165208729](lcof.assets/image-20220413165208729.png)
+
+- 异或：不同为1，相同为0；与：都为1才为1，有一个是0都为0。
+
+- 我：比如`1111+1111`=`0000+11110`=30，无进位跳出
+
+![Picture1.png](lcof.assets/56d56524d8d2b1318f78e209fffe0e266f97631178f6bfd627db85fcd2503205-Picture1.png)
+
+> Q ： 若数字 aa 和 bb 中有负数，则变成了减法，如何处理？
+> A ： 在计算机系统中，数值一律用 补码 来表示和存储。补码的优势： 加法、减法可以统一处理（CPU只有加法器）。因此，以上方法 同时适用于正数和负数的加法 。
+>
+
+复杂度分析：
+
+![image-20220413165358375](lcof.assets/image-20220413165358375.png)
+
+代码：
+
+```java
+class Solution {
+    public int add(int a, int b) {
+        while(b != 0) { // 当进位为 0 时跳出
+            int c = (a & b) << 1;  // c = 进位
+            a ^= b; // a = 非进位和
+            b = c; // b = 进位
+        }
+        return a;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int add(int a, int b) {
+        /**
+        加法=异或+与<<
+         */
+        
+        //求进位；求进位要放在求非进位之前，因为“求非进位”时会修改a的值。注意<<1的移动位数1别忘记！！
+        int c=(a&b)<<1;
+        //求非进位
+        a^=b;
+        //要记住把c赋值给b，这样才能让进位和非进位继续相加
+        b=c;
+
+        //进位为0的时候，求和结果即为a。
+        while(b!=0){
+            //求进位
+            c=(a&b)<<1;
+            //求非进位
+            a^=b;
+            //要记住把c赋值给b，这样才能让进位和非进位继续相加
+            b=c;
+        }
+
+        return a;
+
+    }
+}
+```
+
+- 注意：<<1的移动位数1别忘记！！
+
+## 位运算(中等)
+
+### [剑指 Offer 56 - I. 数组中数字出现的次数](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-lcof/)
+
