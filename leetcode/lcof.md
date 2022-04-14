@@ -6618,3 +6618,343 @@ class Solution {
 
 ### [剑指 Offer 56 - I. 数组中数字出现的次数](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-lcof/)
 
+#### 首战寄 
+
+没思路
+
+#### 官方-位运算异或
+
+解题思路：
+
+![image-20220414142917210](lcof.assets/image-20220414142917210.png)
+
+```java
+public int[] singleNumber(int[] nums) {
+    int x = 0;
+    for(int num : nums)  // 1. 遍历 nums 执行异或运算
+        x ^= num;
+    return x;            // 2. 返回出现一次的数字 x
+}
+```
+
+异或符合交换律解析如下：
+
+![image-20220414142641610](lcof.assets/image-20220414142641610.png)
+
+难点：
+
+![image-20220414145633625](lcof.assets/image-20220414145633625.png)
+
+- 异或两个数，那么原数不同的地方会在异或后表示为1，我们侦测异或后的1的位置，就可以把两个不同的数区分开来；两个数可能有多个位不一样，任意抓住一位都能区分开原来的两个数，这里去找不同的最低位。
+- 用mask不仅可以区分出两个目标数，还能把剩余的所有数分两队；在“mask为1的位” 为1的数被分到一队，在“mask为1的那位” 为0的数被分到另一队，因为前者和mask异或得0，后者和mask异或不得0。
+
+代码：
+
+```java
+class Solution {
+    public int[] singleNumbers(int[] nums) {
+        //用于将所有的数异或起来。最后的k即为两个只出现一次的数的异或结果
+        int k = 0;
+        for(int num: nums) {
+            k ^= num;
+        }
+        
+        //获得k中最低位的1。这个1标记了“两个只出现一次的数”从低位往高位比，第一次出现不同的位置
+        int mask = 1;
+        //mask = k & (-k) 这种方法也可以得到mask，具体原因百度 哈哈哈哈哈
+        while((k & mask) == 0) {//异或结果k和mask再进行“与操作”得0，表示在mask为1的位置 k在此位置不为1，即两个只出现一次的数在这位是相同的（这样异或后 此位才为0）
+            mask <<= 1;
+        }
+        
+        //对数组用mask做分组的同时，用a和b分别异或处理属于不同类的数据，得到的a b结果即为两个只出现一次的数
+        int a = 0;
+        int b = 0;
+        for(int num: nums) {
+            if((num & mask) == 0) {
+                a ^= num;
+            } else {
+                b ^= num;
+            }
+        }
+        
+        return new int[]{a, b};
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] singleNumbers(int[] nums) {
+        /**
+        使用异或^从出现两次的数中找到只出现一次的数
+        使用与&把两个只出现一次的数，利用他两的异或结果，把它们分成2组
+         */
+        
+        //数组全体异或，假设只出现一次的数为a b，那么得到的结果是a^b
+        int c=0;
+        for(int i=0;i<nums.length;i++){
+            c^=nums[i];
+        }
+
+        //用探针pin把两个只出现一次的数分开
+        int pin=1;
+        while((c&pin)==0){//a和b在pin中1的位置相同。注意按位与&的优先级低，每次使用必须用括号包裹！！！
+            pin=pin<<1;
+        }
+
+        //根据pin把nums分两队；两队内自行异或，即得到a和b
+        int a=0,b=0;
+        for(int i=0;i<nums.length;i++){
+            if((nums[i]&pin)==0){
+                a^=nums[i];
+            }else{
+                b^=nums[i];
+            }
+        }
+
+        return new int[]{a,b};
+    }
+}
+```
+
+- 注意：
+  - 按位与&的优先级低，每次使用必须用括号包裹
+  - pin用&操作把数组分两组，因为一组与pin为0，另一组不是；num & pin得0，是因为num在pin为1的那一位为0，0&1==0,1&1==1。
+
+### [剑指 Offer 56 - II. 数组中数字出现的次数 II](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-ii-lcof/)
+
+#### 首战寄
+
+#### 官方-位运算+有限状态自动机
+
+如下图所示，考虑数字的二进制形式，对于出现三次的数字，各 **二进制位** 出现的次数都是 3 的倍数。
+因此，统计所有数字的各二进制位中 1 的出现次数，并对 3求余，结果则为只出现一次的数字。
+
+![Picture1.png](lcof.assets/28f2379be5beccb877c8f1586d8673a256594e0fc45422b03773b8d4c8418825-Picture1.png)
+
+略。。题目出现率不高
+
+#### 大佬-hashMap法
+
+```java
+// 使用 HashMap 记录各个数字出现的次数
+    public int singleNumber(int[] nums) {
+        Map<Integer, Integer> map = new HashMap();
+
+        for(int i = nums.length - 1; i >= 0; --i){
+            int key = nums[i];
+            if(!map.containsKey(key)){
+                // 如果之前没有遇到这一数字，则放入 map 中
+                map.put(key, 1);
+            }else{
+                // 如果之前遇到过这一数字，则出现次数加 1
+                map.put(key, map.get(key) + 1);
+            }
+        }
+
+        for(Map.Entry<Integer, Integer> entry: map.entrySet()){
+            if(entry.getValue() == 1){
+                return entry.getKey();
+            }
+        }
+
+        return -1;
+    }
+```
+
+- 网友评：可以再优化一下，已经记过一次的数再放进来直接置值为-1就好，少一次get操作。
+
+  ```
+          for (int i = 0; i < nums.length; i++) {
+              Integer obj = map.get(nums[i]);
+              if(obj == null){
+                  map.put(nums[i],1);
+              }else if(obj == 1){
+                  map.put(nums[i],-1);
+              }
+          }
+  ```
+
+#### 即时再战
+
+用hashmap的话，就不需要再战了。
+
+## 数学(简单)
+
+### [剑指 Offer 39. 数组中出现次数超过一半的数字](https://leetcode-cn.com/problems/shu-zu-zhong-chu-xian-ci-shu-chao-guo-yi-ban-de-shu-zi-lcof/)
+
+#### 首战寄
+
+有正负电荷抵消的思想，但是想不出来怎么实施。能实施的只有hashmap计数算法，性能不算好。
+
+#### 官方-摩尔投票法
+
+我个人更愿意称之为正负电荷抵消法,关注抵消的时刻。
+
+解题思路：
+
+![image-20220414164157239](lcof.assets/image-20220414164157239.png)
+
+摩尔投票法：
+
+![image-20220414164224802](lcof.assets/image-20220414164224802.png)
+
+![Picture1.png](lcof.assets/1603612327-bOQxzq-Picture1.png)
+
+![image-20220414164246112](lcof.assets/image-20220414164246112.png)
+
+算法流程：
+
+![image-20220414164259764](lcof.assets/image-20220414164259764.png)
+
+复杂度分析：
+
+![image-20220414164332148](lcof.assets/image-20220414164332148.png)
+
+代码：
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        int x = 0, votes = 0;
+        for(int num : nums){
+            if(votes == 0) x = num;
+            votes += num == x ? 1 : -1;
+        }
+        return x;
+    }
+}
+```
+
+![image-20220414164717570](lcof.assets/image-20220414164717570.png)
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        int x = 0, votes = 0, count = 0;
+        for(int num : nums){
+            if(votes == 0) x = num;
+            votes += num == x ? 1 : -1;
+        }
+        // 验证 x 是否为众数
+        for(int num : nums)
+            if(num == x) count++;
+        return count > nums.length / 2 ? x : 0; // 当无众数时返回 0
+    }
+}
+```
+
+- 本题众数指数目超过一般的数，但是一般指[出现次数最多的数](https://baike.baidu.com/item/%E4%BC%97%E6%95%B0/44796)
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        /**
+        正负电荷抵消
+         */
+
+        int major=0;
+        int count=0;
+        for(int i=0;i<nums.length;i++){
+            //在计数为0时，把当前节点设置为众数,重设置计数为1
+            if(count==0){
+                major=nums[i];
+                count=1;
+            }else{//如果计数不为0，比较当前数和众数是否相同，相同则给计数+1，不同则给计数-1
+                if(nums[i]==major){
+                    count++;
+                }else{
+                    count--;
+                }
+            }
+        }
+
+        //退出for循环后，留下的众数必定是目标众数
+        return major;
+    }
+}
+```
+
+### [剑指 Offer 66. 构建乘积数组](https://leetcode-cn.com/problems/gou-jian-cheng-ji-shu-zu-lcof/)
+
+解题思路：
+
+![image-20220414172126126](lcof.assets/image-20220414172126126.png)
+
+![Picture1.png](lcof.assets/1624619180-vpyyqh-Picture1.png)
+
+算法流程：
+
+![image-20220414172154862](lcof.assets/image-20220414172154862.png)
+
+复杂度分析：
+
+![image-20220414172212852](lcof.assets/image-20220414172212852.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] constructArr(int[] a) {
+        int len = a.length;
+        if(len == 0) return new int[0];
+        int[] b = new int[len];
+        b[0] = 1;
+        int tmp = 1;
+        for(int i = 1; i < len; i++) {
+            b[i] = b[i - 1] * a[i - 1];
+        }
+        for(int i = len - 2; i >= 0; i--) {
+            tmp *= a[i + 1];
+            b[i] *= tmp;
+        }
+        return b;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] constructArr(int[] a) {
+        /**
+        用两个dp乘法
+         */
+        //处理特殊情况。我认为是不用处理的，但是系统还是会输入空数组,空数组如下设置
+        if(a.length==0||a.length==1)return new int[0];
+
+        //把对角线下半的乘积先放入结果数组。新建数组要new int[length],别忘了new
+        int[] res=new int[a.length];
+        int temp=1;
+        res[0]=1;
+        for(int i=1;i<a.length;i++){
+            temp*=a[i-1];
+            res[i]=temp;
+        }
+
+        //把对角线上半的成绩放入结果数组
+        temp=1;
+        for(int i=a.length-2;i>=0;i--){
+            temp*=a[i+1];
+            res[i]*=temp;
+        }
+
+        return res;
+
+    }
+}
+```
+
+- 注意：
+  - 新建空数组的方式:`new int[0];`
+  - 新建数组不要忘记new关键字
+
+## 数学(中等)
+
+### [剑指 Offer 14- I. 剪绳子](https://leetcode-cn.com/problems/jian-sheng-zi-lcof/)
+
