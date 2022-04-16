@@ -6958,3 +6958,741 @@ class Solution {
 
 ### [剑指 Offer 14- I. 剪绳子](https://leetcode-cn.com/problems/jian-sheng-zi-lcof/)
 
+#### 没思路
+
+#### 官方-贪心
+
+![image-20220415170356783](lcof.assets/image-20220415170356783.png)
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        if(n <= 3) return n - 1;
+        int a = n / 3, b = n % 3;
+        if(b == 0) return (int)Math.pow(3, a);
+        if(b == 1) return (int)Math.pow(3, a - 1) * 4;
+        return (int)Math.pow(3, a) * 2;
+    }
+}
+```
+
+
+
+#### 即时重做
+
+题目普适性不大，出现率低，没重做。。
+
+### [剑指 Offer 57 - II. 和为s的连续正数序列](https://leetcode-cn.com/problems/he-wei-sde-lian-xu-zheng-shu-xu-lie-lcof/)
+
+#### 首战半寄
+
+能通过23/32个测试案例，但是在大数上超时了；至少有思路，不过不够优化。
+
+```java
+class Solution {
+    public int[][] findContinuousSequence(int target) {
+        /**
+        等差数列求和公式+while双指针
+         */
+        List<List<Integer>> resultList =new ArrayList<>();
+        List<Integer> oneTempInstance=null;
+        //以每个整数为left开始做双指针
+        for(int i=1;i<target;i++){
+            long left=i,right=target;
+            //做双指针
+            while(left<right){
+                long temp1=(left+right)*(right-left+1),temp2=target*2;//避免反复计算.除法默认向下取整，尽量避免。用long防止超过整数边界
+                if(temp1==temp2){//找到目标时。不会再在本基础上缩小范围了，用break跳出while避免无效计算
+                    oneTempInstance=new ArrayList<>();
+                    for(int j=(int)left;j<=right;j++){
+                        oneTempInstance.add(j);
+                    }
+                    resultList.add(new ArrayList<>(oneTempInstance));//为了避免oneInstance的操作影响resultList中已存入的结果，根据oneTempInstance的内容新分配一块内存作为resultList的元素
+                    break;
+                }else if(temp1<temp2){
+                    left++;
+                }else{
+                    right--;
+                }
+            }
+        }
+
+        //把列表转化为2维数组返回。转换成数组是真傻比，直接返回链表不就行了！
+        int[][] result=new int[resultList.size()][];//第一个方括号表示行，应该在这个括号限定行数
+        for(int i=0;i<resultList.size();i++){
+            //复用oneTempInstance
+            oneTempInstance=resultList.get(i);
+            int tempSize=oneTempInstance.size();
+            //对二维数组不等长的情况分配内存：https://blog.csdn.net/weixin_30709179/article/details/115082821
+            result[i]=new int[tempSize];
+            for(int j=0;j<tempSize;j++){
+                result[i][j]=oneTempInstance.get(j);
+            }
+        }
+        return result;
+    }
+}
+```
+
+- 注意：
+  - 大数乘法的时候可能会超过整数边界，要用long
+  - long基本类型可以使用`(int) longValue`来强转成int。
+- 我：已经想到左右指针了，相当于是官方解法滑动窗口的两边，但是用for循环暴力导致O(nlogn)的时间复杂度
+
+#### 官方-滑动窗口
+
+什么是滑动窗口：
+
+![image-20220415204353222](lcof.assets/image-20220415204353222.png)
+
+- 注意：官方这里说 滑动窗口一般左闭右开，但是实战中也可以自己实现两个都闭的方法，如本题。
+
+如何用滑动窗口解这道题：
+
+![image-20220415204435385](lcof.assets/image-20220415204435385.png)
+
+![proof](lcof.assets/728c705889a672d5a85709cb3fd157216bb1a41dc377dcc125818d9e18b8dd55.jpg)
+
+![image-20220415204506800](lcof.assets/image-20220415204506800.png)
+
+时间复杂度：
+
+![image-20220415204754472](lcof.assets/image-20220415204754472.png)
+
+代码：
+
+```java
+public int[][] findContinuousSequence(int target) {
+    int i = 1; // 滑动窗口的左边界
+    int j = 1; // 滑动窗口的右边界
+    int sum = 0; // 滑动窗口中数字的和
+    List<int[]> res = new ArrayList<>();
+
+    while (i <= target / 2) {
+        if (sum < target) {
+            // 右边界向右移动
+            sum += j;
+            j++;
+        } else if (sum > target) {
+            // 左边界向右移动
+            sum -= i;
+            i++;
+        } else {
+            // 记录结果
+            int[] arr = new int[j-i];
+            for (int k = i; k < j; k++) {
+                arr[k-i] = k;
+            }
+            res.add(arr);
+            // 左边界向右移动
+            sum -= i;
+            i++;
+        }
+    }
+
+    return res.toArray(new int[res.size()][]);
+}
+```
+
+- 网友：还是有点不太懂为什么i <= target/2？求大佬
+  - 网友答：5最大只可能是2+3，不可能等于3+4
+- 注意：
+  - `list.toArray(new 数组)`，要传入“分配了内存的数组“
+  - 可以先使用`List<int[]>`对结果列表进行初始化，最后把只有一层的list轻松转为数组，即得二维数组。
+  - `int[] arr = new int[j-i];//记录结果`体现了左闭右开，因为i位置的数不会被记录。
+
+网友补充，有左闭右闭的，都闭更利于理解：
+
+```java
+class Solution {
+public int[][] findContinuousSequence(int target) {
+            List<int[]> res = new ArrayList<>();
+            // 滑动窗口,左右指针指向的数
+            // 初始窗口的宽度为1，所有左右都指向1
+            int left = 1;
+            int right = 1;
+            // 窗口内的数字和,左闭右闭
+            int sum = 1;
+            // 只需要遍历到目标值的一般即可，后面加起来肯定大于target
+            while (left <= target / 2){
+                // 如果小了，右指针增大
+                if (sum < target) {
+                    right++;
+                    sum += right;
+                }else if (sum > target){
+                    // 如果大了，左指针增大
+                    sum -= left;
+                    left++;
+                }else {
+                    // 说明匹配上了需要把窗口中的元素放进结果集
+                    int[] level = new int[right - left + 1];
+                    for (int i = left; i <= right; i++) {
+                        level[i - left] = i;
+                    }
+                    res.add(level);
+                    // 加入结果集之后窗口要移动
+                    sum -= left;
+                    left++;
+                }
+            }
+            return res.toArray(new int[res.size()][]);
+        }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[][] findContinuousSequence(int target) {
+        /**
+        滑动窗口左闭右闭，on时间复杂度
+        滑动窗口左右都只能右移
+         */
+        List<int[]>resultList=new ArrayList<>();
+        int l=1,r=1,sum=1;
+        while(l<=target/2){//之所以要<=而不是<,是因为target==3的情况
+            if(sum>target){
+                sum-=l;
+                l++;
+            }else if(sum<target){
+                r++;//注意sum 窗沿的处理顺序，在两个if情况是不一样的
+                sum+=r;
+            }else{
+                //找到目标窗口，把数据填入
+                int[] temp=new int[r-l+1];
+                for(int i=l;i<=r;i++){
+                    temp[i-l]=i;
+                }
+                resultList.add(temp);//因为temp只在else的花括号中存活，所以不需要额外给内存，已防止修改temp导致resultList被修改
+                //左窗沿右移
+                sum-=l;
+                l++;
+            }
+        }
+
+        return resultList.toArray(new int[resultList.size()][]);
+    }
+}
+```
+
+- 注意：
+  - 把List<int[]>转化为int\[][]要用：`resultList.toArray(new int[resultList.size()][]);`。第二个中括号的内存是已知的，因为resultList中已经存了每个元素；需要让toArray知道的是resultList有多少个元素，所以要在第一个中括号中设置大小，即二维数组的行数。
+
+### [剑指 Offer 62. 圆圈中最后剩下的数字](https://leetcode-cn.com/problems/yuan-quan-zhong-zui-hou-sheng-xia-de-shu-zi-lcof/)
+
+codetop 27
+
+#### 首战寄
+
+没思路。
+
+[参考约瑟夫环](https://blog.csdn.net/u011500062/article/details/72855826)
+
+- 网友：每杀死一个人，整体往前移动m个数是为了假设下一次开始数m个数是从0开始。
+
+  也就是说f(11,3)=6
+  假设最后存活下来的人在第一轮的坐标为6,杀掉第3个人(i=2)的人，杀掉后下一次从i=3的位置开始计数下一轮，这时候还剩10个人，这时候如果想从0计算最后存活下来的人的坐标，就得从把下一轮开始计数位置(也就是i=3)那个位置的坐标向左移动3，这时候整体向左移3，最后存活下来的坐标也就变成了3，也会是10个人的时候坐标变成了3
+
+#### 官方1-模拟链表
+
+O(n^2)的时间复杂度
+
+![image-20220415235803966](lcof.assets/image-20220415235803966.png)
+
+![image.png](lcof.assets/0a7538f213070b64cac8427d453de6e305fb63c99e9585948f52a116e0558ddc-image.png)
+
+![image-20220415235828058](lcof.assets/image-20220415235828058.png)
+
+```java
+class Solution {
+    public int lastRemaining(int n, int m) {
+        ArrayList<Integer> list = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            list.add(i);
+        }
+        int idx = 0;
+        while (n > 1) {
+            idx = (idx + m - 1) % n;
+            list.remove(idx);
+            n--;
+        }
+        return list.get(0);
+    }
+}
+```
+
+
+
+#### 官方2-约瑟夫环
+
+> 这个问题是以弗拉维奥·约瑟夫命名的，他是1世纪的一名犹太历史学家。他在自己的日记中写道，他和他的40个战友被罗马军队包围在洞中。他们讨论是自杀还是被俘，最终决定自杀，并以抽签的方式决定谁杀掉谁。约瑟夫斯和另外一个人是最后两个留下的人。约瑟夫斯说服了那个人，他们将向罗马军队投降，不再自杀。约瑟夫斯把他的存活归因于运气或天意，他不知道是哪一个。 —— 【约瑟夫问题】维基百科
+
+数学解法，O(n):
+
+这么著名的约瑟夫环问题，是有数学解法的！
+因为数据是放在数组里，所以我在数组后面加上了数组的复制，以体现是环状的。我们先忽略图片里的箭头：
+【第一轮后面的数字应该是[0, 1, 2 ,3 ,4]，手误打错了。。抱歉】
+
+
+![image.png](lcof.assets/9dda886441be8d249abb76e35f53f29fd6e780718d4aca2ee3c78f947fb76e75-image.png)
+
+![image-20220415235554790](lcof.assets/image-20220415235554790.png)
+
+```java
+class Solution {
+    public int lastRemaining(int n, int m) {
+        int ans = 0;
+        // 最后一轮剩下2个人，所以从2开始反推
+        for (int i = 2; i <= n; i++) {
+            ans = (ans + m) % i;
+        }
+        return ans;
+    }
+}
+```
+
+## 模拟(中等)
+
+### [剑指 Offer 29. 顺时针打印矩阵](https://leetcode-cn.com/problems/shun-shi-zhen-da-yin-ju-zhen-lcof/)
+
+codetop 20
+
+#### 首战成功
+
+```java
+class Solution {
+    public int[] spiralOrder(int[][] matrix) {
+        /**
+        每次触及边界，就让该方向能触及的边界内缩一位。top，bottom，left，right；
+        用四个小while控制顺时针打印
+        用一个大while包裹四个小while，每次小while结束都会侦测是否要退出大while（up和buttom交叉，left和right交叉）
+         */
+        //处理特殊情况
+        if(matrix.length==0)return new int[0];
+
+        //限制顺时针访问能到达的边界
+        int top=0,bottom=matrix.length-1,left=0,right=matrix[0].length-1;
+        //保存结果的数组
+        int[] result=new int[matrix.length*matrix[0].length];
+        //ij是二维数组中要打印的当前元素；count是结果数组的待点入坐标，并且起到了计数功能
+        int i=0,j=0,count=0;
+        //大while保持顺时针
+        while(top<=bottom&&left<=right){
+            //四个小while控制顺时针的方向
+            while(j<=right){//先右移动
+                result[count]=matrix[i][j];
+                j++;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次j加法使j超过了right，要减少回来,使j停留在边界right，准备向下移动;count不需要减少，因为它得停留在下一次要存储的位置
+            j--;
+            //向右处理完了，top要++，下次不能再触及这一行了
+            top++;
+            //下一波往下走
+            i++;
+            
+            while(i<=bottom){//再向下移动
+                result[count]=matrix[i][j];
+                i++;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次i加法使i超过了bottom，要减少回来,使i停留在边界bottom，准备向左移动;count不需要减少，因为它得停留在下一次要存储的位置
+            i--;
+            //向右处理完了，right要--，下次不能再触及这一列了
+            right--;
+            //下一波往左走
+            j--;
+            
+            
+            while(j>=left){//再向左移动
+                result[count]=matrix[i][j];
+                j--;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次j减法使j超过了left，要增加回来,使j停留在边界left，准备向上移动;count不需要减少，因为它得停留在下一次要存储的位置
+            j++;
+            //向左处理完了，bottom要--，下次不能再触及这一行了
+            bottom--;
+            //下一波往上走
+            i--;
+            
+            while(i>=top){//再向上移动
+                result[count]=matrix[i][j];
+                i--;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次i减法使i超过了top，要减少回来，使i停留在边界top，准备向右移动;count不需要减少，因为它得停留在下一次要存储的位置
+            i++;
+            //向上处理完了，left要++，下次不能再触及这一列了
+            left++;
+            //下一波往右走
+            j++;
+            
+        }
+
+        return result;
+    }
+}
+```
+
+- 注意：i代表行，j代表列；想要向右移动的话，i不变，j增加。
+
+#### 官方-模拟+设定边界
+
+解题思路：
+
+![image-20220416141340955](lcof.assets/image-20220416141340955.png)
+
+算法流程：
+
+![image-20220416141406403](lcof.assets/image-20220416141406403.png)
+
+复杂度分析：
+
+![image-20220416141422173](lcof.assets/image-20220416141422173.png)
+
+代码：
+
+> Java 代码利用了 ++ 操作的便利性，详情可见 ++i 和 i++ 的区别 ；
+>
+> res[x++] 等价于先给 res[x] 赋值，再给 x 自增 11 ；
+> ++t > b 等价于先给 t 自增 11 ，再判断 t > b 逻辑表达式。
+
+```java
+class Solution {
+    public int[] spiralOrder(int[][] matrix) {
+        if(matrix.length == 0) return new int[0];
+        int l = 0, r = matrix[0].length - 1, t = 0, b = matrix.length - 1, x = 0;
+        int[] res = new int[(r + 1) * (b + 1)];
+        while(true) {
+            for(int i = l; i <= r; i++) res[x++] = matrix[t][i]; // left to right.
+            if(++t > b) break;
+            for(int i = t; i <= b; i++) res[x++] = matrix[i][r]; // top to bottom.
+            if(l > --r) break;
+            for(int i = r; i >= l; i--) res[x++] = matrix[b][i]; // right to left.
+            if(t > --b) break;
+            for(int i = b; i >= t; i--) res[x++] = matrix[i][l]; // bottom to top.
+            if(++l > r) break;
+        }
+        return res;
+    }
+}
+```
+
+- 网友问：有一个疑惑，什么叫模拟？
+  - 网友答：就是代码的思路是跟着实际要求的顺时针的思路来走的
+
+- 我：自己写的版本和官方思路一致。
+
+### [剑指 Offer 31. 栈的压入、弹出序列](https://leetcode-cn.com/problems/zhan-de-ya-ru-dan-chu-xu-lie-lcof/)
+
+#### 首战寄 
+
+没什么思路
+
+#### 官方-模拟
+
+解题思路：
+
+如下图所示，给定一个压入序列 pushed和弹出序列 popped，则压入 / 弹出操作的顺序（即排列）是 **唯一确定** 的。
+
+![Picture1.png](lcof.assets/c880f045c03a8e03b7908b2d49b658a9a32ba8f5d40cb19da62db32c7eb58830-Picture1.png)
+
+如下图所示，栈的数据操作具有 **先入后出** 的特性，因此某些弹出序列是无法实现的。
+
+![Picture2.png](lcof.assets/4397f5b44038603d70568147824877cacdaa76cef22371c2c80ff55f915092fd-Picture2.png)
+
+考虑借用一个辅助栈 stackstack ，模拟 压入 / 弹出操作的排列。根据是否模拟成功，即可得到结果。
+
+- 入栈操作： 按照压栈序列的顺序执行。
+- 出栈操作： 每次入栈后，循环判断 “栈顶元素 == 弹出序列的当前元素” 是否成立，将符合弹出序列顺序的栈顶元素全部弹出。
+
+> 由于题目规定 "栈的所有数字均不相等" ，因此在循环入栈中，每个元素出栈的位置的可能性是唯一的（若有重复数字，则具有多个可出栈的位置）。因而，在遇到 “栈顶元素 == 弹出序列的当前元素” 就应立即执行出栈。
+
+算法流程：
+
+![image-20220416152859724](lcof.assets/image-20220416152859724.png)
+
+- 不停按照入栈数组入栈，等到入栈的节点和出栈数组的顶部相同时，才有出栈的资格，这是很好理解的。使用模拟可以侦测到不合理的出入栈顺序。
+
+复杂度分析：
+
+![image-20220416152918099](lcof.assets/image-20220416152918099.png)
+
+代码：
+
+> 题目指出 pushed 是 popped 的排列 。因此，无需考虑 pushedpushed 和 poppedpopped 长度不同 或 包含元素不同 的情况。
+>
+
+```java
+class Solution {
+    public boolean validateStackSequences(int[] pushed, int[] popped) {
+        Stack<Integer> stack = new Stack<>();
+        int i = 0;
+        for(int num : pushed) {
+            stack.push(num); // num 入栈
+            while(!stack.isEmpty() && stack.peek() == popped[i]) { // 循环判断与出栈
+                stack.pop();
+                i++;
+            }
+        }
+        return stack.isEmpty();
+    }
+}
+```
+
+- 网友：不过Stack不建议使用，可以使用Deque，Deque也包含了栈的push和pop方法
+
+  - 网友问：为什么建议用 Deque 代替 Stack呢
+    - 网友答：这个是Java历史遗留问题，Stack继承了Vector且是Vector的唯一子类，Vector逐渐被Java抛弃了，且Stack是实体类，Deque是一个通用接口，使用起来更灵活，你查Java api中java.util.Stack中官方文档也给出了使用Deque来代替Stack的建议。Deque一般用LinkedList实现
+
+  - 网友追问： stack的方法，deque都可以用吗？
+    - 网友答：可以的，你就把它当成个stack就行，方法通用
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public boolean validateStackSequences(int[] pushed, int[] popped) {
+        /**
+        1. 一个节点只有先入栈才能出栈，所以根据入栈数组不停入栈。
+        2. 入栈后，当入栈的元素是出栈数组的顶部时，不停出栈
+        3. 出栈完毕后，继续入栈，看看能否继续有与出栈数组顶部相同的元素入栈
+
+        使用deque实现栈，而不是过时的stack
+         */
+        Deque<Integer> stack=new LinkedList<>();
+        int pophead=0;
+        for(int i=0;i<pushed.length;i++){
+            //不停入栈
+            stack.push(pushed[i]);
+            //每次push后检查是否可以开始pop。注意要先保证stack不为空，再做peek等操作，否则可能出现空指针异常。integer在较小时是在常量池里，不过本题不碍事。
+            while(!stack.isEmpty()&&stack.peek()==popped[pophead]){//退栈至不可再退为止，即栈顶元素和poped数组的当前元素不一致
+                stack.pop();
+                pophead++;
+            }
+        }
+        
+        //如果执行完入栈出栈后，stack不为空，说明poped[]是不合法的
+        return stack.isEmpty();
+    }
+}
+```
+
+
+
+## 字符串(中等)
+
+### [剑指 Offer 20. 表示数值的字符串](https://leetcode-cn.com/problems/biao-shi-shu-zhi-de-zi-fu-chuan-lcof/)
+
+codetop 1
+
+#### 首战寄
+
+没有啥很好的思路：
+
+- `s.trim().toCharArray();`，把字符串收尾空格去掉，然后转化成char数组处理 
+
+- 分段递归判断
+
+网友评价：
+
+- 关键是题目中给的示例不详尽，提交一次，修改一次代码，修改的全是细节 做一次恶心一次
+-  这题是个典型的面向测试用例编程的题目
+
+#### 大佬-常规思路
+
+个人感觉还是常规思路好理解= =，直接逐位遍历一遍，并做好标记。
+
+代码：
+
+```java
+class Solution {
+    public boolean isNumber(String s) {
+        if(s == null || s.length() == 0) return false; // s为空对象或 s长度为0(空字符串)时, 不能表示数值
+        boolean isNum = false, isDot = false, ise_or_E = false; // 标记是否遇到数位、小数点、‘e’或'E'
+        char[] str = s.trim().toCharArray();  // 删除字符串头尾的空格，转为字符数组，方便遍历判断每个字符
+        for(int i=0; i<str.length; i++) {
+            if(str[i] >= '0' && str[i] <= '9') isNum = true; // 判断当前字符是否为 0~9 的数位
+            else if(str[i] == '.') { // 遇到小数点
+                if(isDot || ise_or_E) return false; // 小数点之前可以没有整数，但是不能重复出现小数点、或出现‘e’、'E'
+                isDot = true; // 标记已经遇到小数点
+            }
+            else if(str[i] == 'e' || str[i] == 'E') { // 遇到‘e’或'E'
+                if(!isNum || ise_or_E) return false; // ‘e’或'E'前面必须有整数，且前面不能重复出现‘e’或'E'
+                ise_or_E = true; // 标记已经遇到‘e’或'E'
+                isNum = false; // 重置isNum，因为‘e’或'E'之后也必须接上整数，防止出现 123e或者123e+的非法情况
+            }
+            else if(str[i] == '-' ||str[i] == '+') { 
+                if(i!=0 && str[i-1] != 'e' && str[i-1] != 'E') return false; // 正负号只可能出现在第一个位置，或者出现在‘e’或'E'的后面一个位置
+            }
+            else return false; // 其它情况均为不合法字符
+        }
+        return isNum;
+    }
+}
+```
+
+#### 即时再战
+
+题目不是啥好题，就不再战了。
+
+### [剑指 Offer 67. 把字符串转换成整数](https://leetcode-cn.com/problems/ba-zi-fu-chuan-zhuan-huan-cheng-zheng-shu-lcof/)
+
+codetop 1
+
+#### 首战半寄
+
+过了1025 / 1079个测试案例，会有一些奇怪的判例出现，总是得修改代码，没考虑到哪些奇怪的情况，就不继续完善了。
+
+字符串的题以后出现率不高的就不要太花时间了，感觉不值。。
+
+```java
+class Solution {
+    public int strToInt(String str) {
+        //特殊处理：如果字符串为空，直接返回0
+        if(str==null)return 0;
+        char[] chs=str.trim().toCharArray();
+        //特殊处理：如果字符串只有空格，直接返回0
+        if(chs.length==0)return 0;
+
+        //lr夹住值
+        int l=0,r=0;
+        boolean alwaysZero=true;
+        //只要出现不合法的情况就break，这样break时i的位置及之前的数都是合法的。由于不合法的情况比较多，抓住合法的来判断放行
+        while(r<chs.length){
+            if(chs[r]=='0'&&alwaysZero){//只有从头开始的连贯的0才能进入本if
+                r++;
+                l++;
+            }else if(isInt(chs[r])){
+                alwaysZero=false;
+                r++;
+            }else if(isSig(chs[r])&&r==0&&chs.length!=1){//chs.length!=1是为了防止'+'和'-'通过过滤
+                r++;
+            }else{
+                break;
+            }
+
+            //特殊值处理，防止字符连long都超过
+            if(r-l+1>11){//最大整数有10位，加上-+一位
+                if(chs[0]=='-')return Integer.MIN_VALUE;
+                else return Integer.MAX_VALUE;
+            }
+        }
+
+        //System.out.println("截取到的结果为："+str.substring(0,i));
+        //得到的整数范围为0~i-1，把字符数组处理成整数。
+        int tens=1;
+        //用long记录结果，在结果超过整数范围的时候直接返回对应的整数边界
+        long result=0;
+        //针对正数和负数做不同处理，避免对每个字节判断-
+        if(chs[0]=='-'){
+            //处理到1为止
+            for(int j=r-1;j>=1;j--){
+                // System.out.print("当前处理的字符为：");
+                // System.out.println(chs[j]);
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                //System.out.println("temp为："+temp);
+                result+=temp;
+                if(-result<(long)Integer.MIN_VALUE)return Integer.MIN_VALUE;
+
+                tens*=10;
+            }
+            return (int)-result;
+        }else if(chs[0]=='+'){
+            //处理到1为止
+            for(int j=r-1;j>=1;j--){
+                // System.out.print("当前处理的字符为：");
+                // System.out.println(chs[j]);
+                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                //System.out.println("temp为："+temp);
+                result+=temp;
+                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
+
+                tens*=10;
+            }
+            return (int)result;
+
+        }else{
+            //处理到0为止
+            for(int j=r-1;j>=0;j--){
+                System.out.print("当前处理的字符为：");
+                System.out.println(chs[j]);
+                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                System.out.println("temp为："+temp);
+                result+=temp;
+                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
+
+                tens*=10;
+            }
+            return (int)result;
+        }
+
+    }
+    public boolean isInt(char ch){//可以用switch
+        if(ch=='0'||ch=='1'||ch=='2'||ch=='3'||ch=='4'||ch=='5'||ch=='6'||ch=='7'||ch=='8'||ch=='9')return true;
+
+        return false;
+    }
+    public boolean isSig(char ch){
+        if(ch=='+'||ch=='-')return true;
+
+        return false;
+    }
+}
+```
+
+#### 官方-数字越界处理
+
+解题思路：
+
+![image-20220416204636792](lcof.assets/image-20220416204636792.png)
+
+![Picture1.png](lcof.assets/0be9098b13047fe3e07f3c4e51c612244ace01a023ed010bce43940408334f2a-Picture1.png)
+
+数字越界处理：
+
+![image-20220416204705051](lcof.assets/image-20220416204705051.png)
+
+![Picture2.png](lcof.assets/d1b06a91801868af63f6e309da31bcfa01c7b6c385529fb974389a61e454cd12-Picture2.png)
+
+复杂度分析：
+
+![image-20220416204732055](lcof.assets/image-20220416204732055.png)
+
+代码：
+
+```java
+class Solution {
+    public int strToInt(String str) {
+        char[] c = str.trim().toCharArray();
+        if(c.length == 0) return 0;
+        int res = 0, bndry = Integer.MAX_VALUE / 10;
+        int i = 1, sign = 1;
+        if(c[0] == '-') sign = -1;
+        else if(c[0] != '+') i = 0;
+        for(int j = i; j < c.length; j++) {
+            if(c[j] < '0' || c[j] > '9') break;
+            if(res > bndry || res == bndry && c[j] > '7') return sign == 1 ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+            res = res * 10 + (c[j] - '0');
+        }
+        return sign * res;
+    }
+}
+```
+
+## 栈与队列(困难)
+
+### [剑指 Offer 59 - I. 滑动窗口的最大值](https://leetcode-cn.com/problems/hua-dong-chuang-kou-de-zui-da-zhi-lcof/)
+
