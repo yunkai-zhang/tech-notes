@@ -7696,3 +7696,161 @@ class Solution {
 
 ### [剑指 Offer 59 - I. 滑动窗口的最大值](https://leetcode-cn.com/problems/hua-dong-chuang-kou-de-zui-da-zhi-lcof/)
 
+codetop 7
+
+#### 首战寄
+
+没有好思路，只想到：遍历时没到达一个数，就遍历窗口内部拿到最大值，这么写没什么意义
+
+#### 大佬-priorityQueue
+
+优先队列秒了没有超时， 不能该是困难题吧
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        if(nums.length==0) return new int[0];
+        PriorityQueue<Integer> queue = new PriorityQueue<Integer>((o1,o2)->{return o2-o1;});
+        int[] res = new int[nums.length-k+1];
+        for(int i = 0;i<k-1;++i) queue.offer(nums[i]);
+        for(int i = 0;i<res.length;++i){
+            queue.offer(nums[i+k-1]);
+            res[i] = queue.peek();
+            queue.remove(nums[i]);
+        }
+        return res;
+    }
+}
+```
+
+- 网友评价：虽然时间复杂度是 nlogk ，但胜在思想和编写都简单。
+
+- [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)
+
+#### 官方-单调队列
+
+解题思路：
+
+![image-20220418193659791](lcof.assets/image-20220418193659791.png)
+
+![Picture1.png](lcof.assets/1600878237-pBiBdf-Picture1.png)
+
+![image-20220418193737505](lcof.assets/image-20220418193737505.png)
+
+- 问答问：获取窗口中最大值的时间复杂度是降到o1了，但是每次元素添加进deque，都需要遍历删除所有值比新加进来的元素小的元素，这我感觉也是ok的时间复杂度，那么总的时间复杂度是不是没变？
+  - 自答：就像分析时间复杂度处说的，deque中每个元素最多只会入队一次和出队一次，并且元素出队时removelast的时间复杂度是o1；所以就算是批量一次性删除多个元素，那么后续需要删除的元素就少了（总数最多会有n个元素入队），所以这块不构成on中嵌套ok的时间复杂度，而是on+on==o2n==on的时间复杂度。
+
+算法流程：
+
+![image-20220418194145067](lcof.assets/image-20220418194145067.png)
+
+复杂度分析：
+
+![image-20220418194228120](lcof.assets/image-20220418194228120.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        //单调队列
+        //下面是要注意的点：
+        //队列按从大到小放入
+        //如果首位值（即最大值）不在窗口区间，删除首位
+        //如果新增的值小于队列尾部值，加到队列尾部
+        //如果新增值大于队列尾部值，删除队列中比新增值小的值，如果在把新增值加入到队列中
+        //如果新增值大于队列中所有值，删除所有，然后把新增值放到队列首位，保证队列一直是从大到小
+        if (nums.length == 0)   return nums;
+
+        Deque<Integer> deque = new LinkedList<>();
+        int[] arr = new int[nums.length - k + 1];
+        int index = 0;  //arr数组的下标
+        //未形成窗口区间
+        for (int i = 0; i < k; i++) {
+            //队列不为空时，当前值与队列尾部值比较，如果大于，删除队列尾部值
+            //一直循环删除到队列中的值都大于当前值，或者删到队列为空
+            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
+            //执行完上面的循环后，队列中要么为空，要么值都比当前值大，然后就把当前值添加到队列中
+            deque.addLast(nums[i]);
+        }
+        //窗口区间刚形成后，把队列首位值添加到队列中
+        //因为窗口形成后，就需要把队列首位添加到数组中，而下面的循环是直接跳过这一步的，所以需要我们直接添加
+        arr[index++] = deque.peekFirst();
+        //窗口区间形成
+        for (int i = k; i < nums.length; i++) {
+            //i-k是已经在区间外了，如果首位等于nums[i-k]，那么说明此时首位值已经不再区间内了，需要删除
+            if (deque.peekFirst() == nums[i - k])   deque.removeFirst();
+            //删除队列中比当前值小的值
+            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
+            //把当前值添加到队列中
+            deque.addLast(nums[i]);
+            //把队列的首位值添加到arr数组中
+            arr[index++] = deque.peekFirst();
+        }
+        return arr;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        /**
+        使用单调队列
+         */
+
+        //处理特殊情况
+        if(nums.length==0)return new int[0];
+
+        //新建单调队列和存结果的数组
+        Deque<Integer> queue=new LinkedList<>();
+        int[] res=new int[nums.length-k+1];
+
+        //处理窗口未完全覆盖数组前的情况,即没有元素从窗口左边滑出的情况。i表示窗口未完全展现时的右边缘,0~k-1。删除和增加都是从last做，这样保证first总是最大元素。
+        for(int i=0;i<k;i++){
+            //把队列中比当前元素小的数都删掉，由于每个元素只会入栈出栈一次，所以这个while不会造成嵌套而成的乘法时间复杂度。
+            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){//!!!!while要确保queue不为空，否则会做peeklast会有空指针异常
+                queue.pollLast();
+            }
+            //把当前元素加入单调队列末尾，此时保证了队列中不会有比它还小的元素
+            queue.offerLast(nums[i]);
+        }
+
+        //此时窗子的左边缘正好在nums[0]，把此时窗口中的最大值记录下来
+        res[0]=queue.peekFirst();
+
+        //此时窗子的左边缘正好在nums[0]，接下来的滑动窗口就会有元素从窗户左边滑出了。这里的i还是以滑动窗口的右边缘为准
+        for(int i=k;i<nums.length;i++){
+            //先处理出队，再处理入队，这样可以保证队列单调递减
+            //如果出队的元素是queue的最大元素，就把它从queue中移除
+            if(nums[i-k]==queue.peekFirst()){
+                queue.pollFirst();
+            }
+            //窗口有边缘要往queue中进元素时，老规矩，先把queue中比要进的元素小的元素删除，再进元素
+            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){
+                queue.pollLast();
+            }
+            queue.offerLast(nums[i]);
+
+            //把queue的头部元素放入res，因为它就是此时窗口中最大的元素；第一次添加时窗口左侧在nums[1]
+            res[i-k+1]=queue.peekFirst();
+        }
+
+        return res;
+
+    }
+}
+```
+
+### [剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
+
+codetop 5
+
+#### 首战
+
+用单调队列来记录最大值，队列本题就用deque实现即可。
+
+
+
