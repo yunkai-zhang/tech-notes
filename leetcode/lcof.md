@@ -1,3 +1,13 @@
+## 前言
+
+笔记名词解释：
+
+- 大捷：指独立做出来，可能粗心导致有小debug也de出来了
+- 半寄：有思路且代码基本写对了，但是在不该错的地方debug，最后de出来了
+- 寄：有思路但是没完全写出来。
+
+
+
 ## 基础知识
 
 #### 类型转换
@@ -7848,9 +7858,151 @@ class Solution {
 
 codetop 5
 
-#### 首战
+#### 首战半寄
 
-用单调队列来记录最大值，队列本题就用deque实现即可。
+代码都写出来了，但是花了很多时间debug阿里手册提过的integer用equals比较的问题，所以算”半寄“
+
+```java
+class MaxQueue {
+    /**
+    pushback和popfront用队列实现，都天然是o1的时间复杂度
+    maxvalue就得用一个额外的单调队列，来记载此时存储队列中的最大值
+     */
+    //单调队列，用于保存当前deque的（潜在）最大值
+    Deque<Integer> monotonousQueue=null;
+    //当前deque，用于存储数据
+    Deque<Integer> queue=null;
+
+    //构造函数为本对象分配内存
+    public MaxQueue() {
+        monotonousQueue=new LinkedList<>();
+        queue=new LinkedList<>();
+    }
+    
+    //monotonousQueue的头部总是当前队列的最大值；如果队列为空则返回-1；
+    public int max_value() {
+        //printQueues();
+        if(monotonousQueue.isEmpty()){
+            return -1;
+        }else{
+            return monotonousQueue.peekFirst();
+        }
+    }
+    
+    public void push_back(int value) {
+        //数据直接往queue中放；
+        queue.offerLast(value);
+
+        //把monotonousQueue中比value小的节点删掉后，把value放入monotonousQueue的尾部，保证monotonousQueue单调递减
+        while(!monotonousQueue.isEmpty()&&monotonousQueue.peekLast()<value) monotonousQueue.pollLast();
+        monotonousQueue.offerLast(value);
+    }
+    
+    public int pop_front() {
+        //如果队列为空，不需要实际pop，直接返回-1
+        if(queue.isEmpty())return -1;
+
+        //队列不为空，查看要pop的是不是monotonousQueue的头节点，即queue中的最大节点；如果是的话，则删掉monotonousQueue中的头结点。注意queue.peekFirst().equals(monotonousQueue.peekFirst())不能写成用==比较，因为返回的是Integer对象会出现无法判等于的情况，原因见（https://blog.csdn.net/qq_39677544/article/details/78849988），这是阿里手册提过的大坑！！
+        if(queue.peekFirst().equals(monotonousQueue.peekFirst()))monotonousQueue.pollFirst();
+        //处理完monotonousQueue后，直接把queue的头节点即要出队的节点返回
+        return queue.pollFirst();
+    }
+
+    //debug测试时用的，提交时可以注释掉
+    public void printQueues(){
+        System.out.println("====================当前queue为：");
+        Iterator<Integer> iterator1 = queue.iterator();
+        while(iterator1.hasNext()){
+            System.out.print(iterator1.next()+" ");
+        }
+        System.out.println("====================当前queue结束");
+
+        System.out.println("=====================当前monotonousQueue为：");
+        Iterator<Integer> iterator2 = monotonousQueue.iterator();
+        while(iterator2.hasNext()){
+            System.out.print(iterator2.next()+" ");
+        }
+        System.out.println("=====================当前monotonousQueue结束");
+
+    }
+}
+
+/**
+ * Your MaxQueue object will be instantiated and called as such:
+ * MaxQueue obj = new MaxQueue();
+ * int param_1 = obj.max_value();
+ * obj.push_back(value);
+ * int param_3 = obj.pop_front();
+ */
+```
+
+- 注意： 大坑，Integer和String在比较内容值大小时，要使用equals，而不是使用比较地址的`==`。[原因](https://blog.csdn.net/qq_39677544/article/details/78849988)
+
+#### 官方-单调双向队列
+
+解题思路：
+
+![image-20220419161423045](lcof.assets/image-20220419161423045.png)
 
 
 
+![Picture1.png](lcof.assets/1609261470-WanZuG-Picture1.png)
+
+![image-20220419161504057](lcof.assets/image-20220419161504057.png)
+
+![Picture2.png](lcof.assets/1609261470-gMTEAf-Picture2.png)
+
+![image-20220419161545885](lcof.assets/image-20220419161545885.png)
+
+函数设计：
+
+![image-20220419161614034](lcof.assets/image-20220419161614034.png)
+
+复杂度分析：
+
+![image-20220419161638177](lcof.assets/image-20220419161638177.png)
+
+代码：
+
+```java
+class MaxQueue {
+    Queue<Integer> queue;
+    Deque<Integer> deque;
+    public MaxQueue() {
+        queue = new LinkedList<>();
+        deque = new LinkedList<>();
+    }
+    public int max_value() {
+        return deque.isEmpty() ? -1 : deque.peekFirst();
+    }
+    public void push_back(int value) {
+        queue.offer(value);
+        while(!deque.isEmpty() && deque.peekLast() < value)
+            deque.pollLast();
+        deque.offerLast(value);
+    }
+    public int pop_front() {
+        if(queue.isEmpty()) return -1;
+        if(queue.peek().equals(deque.peekFirst()))
+            deque.pollFirst();
+        return queue.poll();
+    }
+}
+
+```
+
+- 网友问（和我栽进一个坑了）：`queue.peek().equals(deque.peekFirst())`，询问个问题，为何==的时候就会不对，能讲下区别吗？
+  - 网友答：queue 里面保存的是 Integer 而非 int ，peek() 返回的是 Integer 类型，没有自动拆箱，因此需要用 equals() 来比~
+  - 网友答：比如Integer i1 = new Integer(1); Integer i2 = new Integer(1) 这样子比较i1 == i2是返回false的，因为比较的是对象， 同理 Integer i1 = 1; Integer i2 = new Integer(1);这样i1==i2也是返回false的，因为i1自动装箱了。 但是Integer i1 = 1; Integer i2 =1;这样i1==i2，返回是true， 因为自动装箱缓存机制，返回的同一个对象给i1和i2。在-128~127（比较常用？）的整数范围内都会存在自动拆装箱的缓存，所以126 和 900 的区别就在这里（126两个都是返回的同一个对象，900超过范围了返回的不是同一个对象）。 你也可以自己设定缓存的整数范围。 两个都是包装类最好用.equals()方法比较，这样比较的是值。 如果一个是int类型，一个是包装类，那么可以直接用==，因为包装类自动拆箱为int类型了，所以这时候比较的也是值，而不会存在一个是基本类型，一个是引用类型不能比较，这就是自动拆装箱。
+
+## 搜索与回溯算法(困难)
+
+### [剑指 Offer 37. 序列化二叉树](https://leetcode-cn.com/problems/xu-lie-hua-er-cha-shu-lcof/)
+
+#### 首战寄
+
+没有思路
+
+#### 官方-bfs
+
+https://leetcode-cn.com/problems/xu-lie-hua-er-cha-shu-lcof/solution/mian-shi-ti-37-xu-lie-hua-er-cha-shu-ceng-xu-bian-/
