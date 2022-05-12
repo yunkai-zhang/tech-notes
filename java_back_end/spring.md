@@ -2281,6 +2281,8 @@ public class UserServiceProxy implements UserService {
 }
 ```
 
+- 我：根据多态，这里的`private UserServiceImpl userService;`应该写成`private UserService userService;`，强调实现的是哪个接口服务
+
 编写客户类
 
 ```java

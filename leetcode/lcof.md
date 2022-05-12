@@ -4,13 +4,19 @@
 
 - 大捷：指独立做出来，可能粗心导致有小debug也de出来了
 - 半寄：有思路且代码基本写对了，但是在不该错的地方debug，最后de出来了或者放弃本思路
-- 寄：有思路但是没完全写出来。
+- 寄：有思路但是没完全写出来，或者完全没思路
 
 
 
 ## 基础知识
 
-#### 输入输出
+### 时间复杂度
+
+1，计算参考：时间复杂度是总运算次数表达式中受n的变化影响最大的那一项(不含系数)。[详情参考](https://blog.csdn.net/firefly_2002/article/details/8008987)。
+
+### 输入输出
+
+#### 前言
 
 1，Java的常用输入输出语句https://www.cainiaojc.com/java/java-basic-input-output.html
 
@@ -39,11 +45,245 @@ public class Main {
   - 可以用next接收字符串，然后用charAt拿到字符串中的指定字符。
 - 对整数或双精度浮点数，用hasNextInt,hasNextDouble来判断是否还有输入；并通过nextFloat和nextDouble获取输入整数或双精度浮点数。
 
-3，[牛客输入输出联系](https://ac.nowcoder.com/acm/contest/5657#question)
+#### 牛客ACM输入输出练习
 
-- 推荐bufferreader。
+牛客输入输出联系[网址](https://ac.nowcoder.com/acm/contest/5657#question)。
 
-#### 类型转换
+- 推荐bufferreader，速度快
+- 我：不需要都练习，直接练习“真实ACM练习”一道题即可
+
+#### 真实ACM练习
+
+1，ACM模式下的各种输入的[接收方式](https://blog.csdn.net/qq_39144436/article/details/124152391)：
+
+- 引入`import java.io.*`
+- 类名限定`public class Main{}`
+- 主方法限定`public static void main(String[] args) throws IOException {}`
+  - 注意main函数的入参String数组
+  - 注意`throws IOException`
+- BufferedReader的创建方式`new BufferedReader(new InputStreamReader(System.in));`
+  - 尤其是BufferedReader的构造函数中输入了InputStreamReader
+
+2，大厂一般都用牛客的ACM模式出题，可以[练习这一题目](https://ac.nowcoder.com/acm/problem/13883),题目来自[牛客ACM竞赛](https://ac.nowcoder.com/acm/problem/list):
+
+我用scanner会超时：
+
+```java
+import java.util.*;
+
+public class Main{
+    public static void main(String[]args){
+        //接收最基础的前两行参数
+        Scanner sc=new Scanner(System.in);
+        int total=Integer.valueOf(sc.nextLine());
+        
+        while(total>0){
+        //java split的用法：https://m.runoob.com/java/java-string-split.html
+        String[] s1s=sc.nextLine().split(" ");
+        int matrixSize=Integer.valueOf(s1s[0]);
+        int opNums=Integer.valueOf(s1s[1]);
+        
+        //构建数组
+        int[][] matrix=new int[matrixSize][matrixSize];
+            
+            while(opNums>0){
+                //针对每次操作做数组处理，获取参数
+                String[] ops=sc.nextLine().split(" ");
+                boolean doRow=ops[0].equals("1")?true:false;
+                //大坑，这里的location不是0起步的，是1起步的第几行/列的意思
+                int location=Integer.valueOf(ops[1]);
+                int v=Integer.valueOf(ops[2]);
+
+                //执行程序逻辑
+                if(doRow){
+                    for(int i=0;i<matrix[0].length;i++){
+                        matrix[location-1][i]=v;
+                    }
+                }else{
+                    for(int i=0;i<matrix.length;i++){
+                        matrix[i][location-1]=v;
+                    }
+                }
+
+                //while的循环条件处理别忘了     
+                opNums--;
+            }
+            //操作完毕后再打印
+            //打印的换行问题：https://www.cnblogs.com/WLCYSYS/p/13202378.html
+            for(int i=0;i<matrixSize;i++){
+                //注意每行的最后不能有空格,并且换行
+                int j=0;
+                for(j=0;j<matrixSize-1;j++){
+                    System.out.print(matrix[i][j]+" ");
+                }
+                System.out.println(matrix[i][j]);
+            }
+        
+          total--;  
+        }
+        
+        sc.close();
+        
+        
+    }
+}
+```
+
+参考不超时的代码用了BufferReader，[参考](https://blog.csdn.net/weixin_43314519/article/details/108590644s)：
+
+```java
+import java.io.*;
+public class Main{
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int cases = Integer.parseInt(br.readLine());
+        while (cases-- > 0) {
+            String[] strs = br.readLine().trim().split(" ");
+            int size = Integer.parseInt(strs[0]);
+            int times = Integer.parseInt(strs[1]);
+            int[][] matrix = new int[size][size];
+            while (times-- > 0) {
+                String[] strs1 = br.readLine().trim().split(" ");
+                int op = Integer.parseInt(strs1[0]);
+                int rowOrColum = Integer.parseInt(strs1[1]);
+                int toValue = Integer.parseInt(strs1[2]);
+                if (op == 1) {
+                    for (int k = 0; k < size; k++) {
+                        matrix[rowOrColum - 1][k] = toValue;
+                    }
+                } else if (op == 2) {
+                    for (int k = 0; k < size; k++) {
+                        matrix[k][rowOrColum - 1] = toValue;
+                    }
+                }
+            }
+            for (int m = 0; m < size; m++) {
+                for (int n = 0; n < size; n++) {
+                    System.out.print(matrix[m][n] + " ");
+                }
+                System.out.println();
+            }
+        }
+    }
+}
+```
+
+- [Integer.parseInt(s)与Integer.valueOf(s)的区别](https://blog.csdn.net/u010502101/article/details/79162587)，一个得到int，一个得到Integer。我超时的案例用的是valueOf，相当于拿到数值后解包装；通过的案例用的是parseInt。
+- 注意要引入`import java.io.*;`包
+
+自己重新使用BufferedReader改造程序，就运行成功了！！，看来确实是Scanner性能不如BufferedReader：
+
+```java
+import java.io.*;
+
+public class Main{
+    public static void main(String[]args) throws IOException{
+        //接收最基础的前两行参数
+        BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
+        int total=Integer.parseInt(br.readLine());
+        
+        while(total>0){
+        //java split的用法：https://m.runoob.com/java/java-string-split.html
+        String[] s1s=br.readLine().trim().split(" ");
+        int matrixSize=Integer.parseInt(s1s[0]);
+        int opNums=Integer.parseInt(s1s[1]);
+        
+        //构建数组
+        int[][] matrix=new int[matrixSize][matrixSize];
+            
+            while(opNums>0){
+                //针对每次操作做数组处理，获取参数
+                String[] ops=br.readLine().trim().split(" ");
+                boolean doRow=ops[0].equals("1")?true:false;
+                //大坑，这里的location不是0起步的，是1起步的第几行/列的意思
+                int location=Integer.parseInt(ops[1]);
+                int v=Integer.parseInt(ops[2]);
+
+                //执行程序逻辑
+                if(doRow){
+                    for(int i=0;i<matrix[0].length;i++){
+                        matrix[location-1][i]=v;
+                    }
+                }else{
+                    for(int i=0;i<matrix.length;i++){
+                        matrix[i][location-1]=v;
+                    }
+                }
+
+                //while的循环条件处理别忘了     
+                opNums--;
+            }
+            //操作完毕后再打印
+            //打印的换行问题：https://www.cnblogs.com/WLCYSYS/p/13202378.html
+            for(int i=0;i<matrixSize;i++){
+                //注意每行的最后不能有空格,并且换行
+                int j=0;
+                for(j=0;j<matrixSize-1;j++){
+                    System.out.print(matrix[i][j]+" ");
+                }
+                System.out.println(matrix[i][j]);
+            }
+        
+          total--;  
+        }
+        
+        
+    }
+}
+```
+
+20220428自己再次练习：
+
+```java
+import java.io.*;
+
+public class Main{
+    public static void main(String[]args) throws IOException{
+        //创建输入
+        BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
+        //先接上第一个参数，表示要做几次矩阵打印
+        int t=Integer.parseInt(br.readLine().trim());
+        while(t-->0){//t==1的话就只会执行1次
+            //接上第二行参数
+            String[] secPara=br.readLine().trim().split(" ");
+            int n=Integer.parseInt(secPara[0]);
+            int q=Integer.parseInt(secPara[1]);
+            
+            int[][] matrix=new int [n][n];
+            //根据操作数去接操作指令
+            while(q-->0){
+                String[] ops=br.readLine().trim().split(" ");
+                int op=Integer.parseInt(ops[0]);
+                int k=Integer.parseInt(ops[1]);
+                int v=Integer.parseInt(ops[2]);
+                
+                if(op==1){
+                    for(int i=0;i<n;i++){
+                        matrix[k-1][i]=v;
+                    }
+                }else{
+                    for(int i=0;i<n;i++){
+                        matrix[i][k-1]=v;
+                    }
+                }
+            }
+            
+            //打印案例，把做过一些列变换后的矩阵打印
+            for(int i=0;i<n;i++){
+                for(int j=0;j<n;j++){
+                    System.out.print(matrix[i][j]+" ");
+                }
+                //打印完一行要换行
+                System.out.println("");
+            }
+        }
+    }
+}
+```
+
+- 注意：类名后无括号；main的小括号中有String[]args；main函数要throws IOException；
+
+### 类型转换
 
 1，包装类 基本数据类型 String 的转换：
 
@@ -51,9 +291,353 @@ public class Main {
 
 2，set遍历及效率：https://www.cnblogs.com/east7/p/16115176.html
 
+### 查找
+
+#### 二分查找
+
+1，又名折半查找，binary search。[参考](https://www.zhihu.com/question/36132386)。[参考](https://zhuanlan.zhihu.com/p/141480088)。代码模板：
+
+```java
+public int lowerBound(int[] nums,int left,int right,int target) {//求非降序范围[left,right)内第一个不小于target的值的位置。注意left和right夹住的范围是左闭右开的。
+        while(left<right){//搜索区间[left,right)不为空
+            int mid=left+(right-left)/2;//防止溢出整数范围
+            if(target>nums[mid]){
+                left=mid+1;//这个+1体现了”左开“
+            }else{
+                right=mid;//这里没有+1体现了“右闭”
+            }
+        }
+        
+        return left;//right也行，因为[left,right)为空的时候他们重合
+}
+```
+
+- 左闭右开，while<，return left;
+- 我：else包含了`>=target`的情况，所以可以拿到第一个不小于target的值的位置。
+
+2，leetcode练习，我使用代码模板并略微结合题目“非重复”优化，首战告捷
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        int left=0,right=nums.length;//左闭右开
+        while(left<right){
+            int mid=left+(right-left)/2;//防止溢出整数范围
+            if(nums[mid]<target){
+                left=mid+1;
+            }else if(nums[mid]>target){//把经典的左闭右开区间的移动右指针拆成两步，方便找到值后及时返回，避免无效计算
+                right=mid;
+            }else{
+                return mid;//及时返回，避免无效计算
+            }
+        }
+        //退出循环时，两个指针重合。由于左闭右开，表示区间内没有数字了，所以遍历了整个数组都没找到，直接返回-1
+        return -1;
+    }
+}
+```
+
+### 常见手撕
+
+[网址](https://blog.nowcoder.net/n/00d691a3f9c04d6c9f5177624529d6cd)
+
+### 排序(手撕)
+
+手撕排序可以到力扣中的[这道题](https://leetcode-cn.com/problems/sort-an-array/)自行验证是否手撕正确。
+
+#### 排序基础知识
+
+1，排序的稳定性：
+
+- 参考：https://zhuanlan.zhihu.com/p/116046849
+
+#### 快速排序
+
+1，思路参考https://www.runoob.com/w3cnote/quick-sort.html。
+
+- 时间空间复杂度分析：https://blog.csdn.net/zrh_CSDN/article/details/81178125。
+
+2，实战手撕成功：
+
+```java
+class Solution {
+    public int[] sortArray(int[] nums) {
+        quick_sort(nums,0,nums.length-1);
+        return nums;
+    }
+    //把传入数组的分割成左小右大的情况，中间点
+    public int getMid(int[] nums,int left,int right){
+        //选定好用作pivot的元素，可以是[left,right]内任意位置的元素。这个pivot相当于是一个坑，坑要不停拆东墙补西墙去填平。
+        int target=nums[left];
+        while(left<right){
+            //先移动右指针，找到第一个比target小的元素。！！！注意while的同时要确保left<right
+            while(left<right&&target<=nums[right])right--;
+            //拿right位置的元素填平left位置的坑。那么right就是新的坑的位置
+            nums[left]=nums[right];//不需要判断left<right再赋值，因为及时上面的循环是因为left==right退出的，这里赋值相当于自我赋值，不影响结果
+
+            //再移动左指针，找到第一个比pivot大的元素，填入right的坑中
+            while(left<right&&target>=nums[left])left++;
+            //拿left位置的元素填平right位置的坑。那么left位置就是新的坑的位置
+            nums[right]=nums[left];
+
+        }
+        //退出while循环时，left==right，此时把之前找的用作pivot的元素的值填入left和right重合的此位置
+        nums[left]=target;
+
+        return left;
+    }
+    public void quick_sort(int[] nums,int left,int right){
+        //[left,right]区间内，有至少两个元素时，才会进行递归快排
+        if(left<right){
+            int i=getMid(nums,left,right);
+            quick_sort(nums,left,i-1);
+            quick_sort(nums,i+1,right);
+        }
+    }
+}
+```
+
+#### 归并排序
+
+1，思路和方法：https://www.runoob.com/w3cnote/merge-sort.html。
+
+- 我：快排和归并都用到了分治的思想；不过快排是自顶向下排序，让每层递归排序后，左边都小于pivot，右边都大于pivot；归并是自下向顶排序，每层递归排序时，把有序的左右两边合并到一起。
+
+2，力扣手撕归并实战，成功：
+
+```java
+class Solution {
+    public int[] sortArray(int[] nums) {
+        /**
+        归并：把数组二分到两个为止，然后左右构建有序数组；然后返回上一层，根据更大一些的数组的两边有序数组，合并两边构建一个有序数组；
+         */
+        
+        //预先分配号临时数组的内存，避免递归时频繁申请数组空间
+        int[] temp=new int[nums.length];
+        merge_sort(nums,0,nums.length-1,temp);
+
+        return nums;
+
+    }
+
+    //把有序的左右数组合并成大的有序数组
+    public void merge(int[] nums,int left,int mid,int right,int[] temp){
+        //避免修改left和right，因为这两者要作为合并的终点。因为merge_sort中解释了mid要放到左边处理，所以这里处理的右边的第一个元素设置为mid+1
+        int i=left,j=mid+1;
+        //设置temp数组的初始元素位置
+        int t=0;
+        while(i<=mid&&j<=right){
+            //把左右数组当前元素中小的那个加入temp数组，从而构建了升序的temp数组
+            if(nums[i]<nums[j]){
+                temp[t++]=nums[i++];
+            }else{
+                temp[t++]=nums[j++];
+            }
+        }
+        //左半或右半数组有一个会先被处理完，就把右半或左半数组中剩余的元素加入temp
+        while(i<=mid){
+            temp[t++]=nums[i++];
+        }
+        while(j<=right){
+            temp[t++]=nums[j++];
+        }
+
+        /**
+        把temp数组中的元素复制到原始数组即结果数组中,这个时候可以直接操作left和right了;
+        即把temp数组的[0,right-left]位置的元素移到nums数组的[left,right]处，使nums数组的[left,right]处为有序数组
+         */
+        t=0;
+        while(left<=right){
+            nums[left++]=temp[t++];
+        }
+    }
+
+    //递归的让左右两半的数组归并排序为有序数组，然后把有序的左右数组合并成大的有序数组
+    public void merge_sort(int[] nums,int left,int right,int[] temp){
+        //不停分割数组，直到最后数组中只存在两个数的时候才开始做归并
+        if(left<right){
+            //获取当前数组的位置中点;使用防整数溢出的写法
+            int mid=left+(right-left)/2;
+            /**
+            对数组左右继续分割，让他们从底层开始归并排序。
+            
+            mid必须放在左半边，因为划分到最后的index为left==0且right==1，此时mid==0，
+            如果mid放在右边那么右边的下一层递归的数组范围为[mid,right]即[0,1]没有缩小范围，
+            会一直递归下去导致栈溢出。
+             */
+            merge_sort(nums,left,mid,temp);
+            merge_sort(nums,mid+1,right,temp);
+
+            //把mid左右的已有序的数组合并成一个大的有序数组
+            merge(nums,left,mid,right,temp);
+        }
+        //如果没进入上面的if，说明数组已经分割为了单个元素，那么直接返回上一层递归，把左右两个元素合并为一个长度为2的有序数组
+
+    }
+}
+```
+
+#### 堆排序
+
+1，参考知识：
+
+- 简易视频：https://www.youtube.com/watch?v=MtQL_ll5KhQ
+
+- 详细视频：https://www.bilibili.com/video/BV1b7411N798?p=83
+- 知乎：https://zhuanlan.zhihu.com/p/124885051
+  - 完全二叉树解释：https://baike.baidu.com/item/%E5%AE%8C%E5%85%A8%E4%BA%8C%E5%8F%89%E6%A0%91/7773232
+  - 完全二叉树的三个重要知识：
+    - 节点坐标为i，左子节点坐标为`2i+1`
+    - 节点坐标为i，右子节点坐标为`2i+2`
+    - 平衡二叉树第一个非叶子节点的坐标为`floor(length/2)-1`。[来源](https://blog.csdn.net/weixin_41558411/article/details/104950162)
+  - 完全二叉树，平衡二叉树，满二叉树，[区别](https://blog.csdn.net/hytdsky/article/details/4783707)
+
+2，大佬代码：
+
+```java
+import java.util.Arrays;
+public class HeapSort {
+
+    private int[] arr;
+
+    public HeapSort(int[] arr){
+        this.arr = arr;
+    }
+
+    /**
+     * 堆排序的主要入口方法，共两步。
+     */
+    public void sort(){
+        /*
+         *  第一步：将数组堆化
+         *  beginIndex = 第一个非叶子节点。
+         *  从第一个非叶子节点开始即可。无需从最后一个叶子节点开始。
+         *  叶子节点可以看作已符合堆要求的节点，根节点就是它自己且自己以下值为最大。
+         */
+        int len = arr.length - 1;
+        int beginIndex = (len - 1) >> 1;
+        for(int i = beginIndex; i >= 0; i--){
+            maxHeapify(i, len);
+        }
+
+        /*
+         * 第二步：对堆化数据排序
+         * 每次都是移出最顶层的根节点A[0]，与最尾部节点位置调换，同时遍历长度 - 1。
+         * 然后从新整理被换到根节点的末尾元素，使其符合堆的特性。
+         * 直至未排序的堆长度为 0。
+         */
+        for(int i = len; i > 0; i--){
+            swap(0, i);
+            maxHeapify(0, i - 1);
+        }
+    }
+
+    private void swap(int i,int j){
+        int temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    /**
+     * 调整索引为 index 处的数据，使其符合堆的特性。
+     *
+     * @param index 需要堆化处理的数据的索引
+     * @param len 未排序的堆（数组）的长度
+     */
+    private void maxHeapify(int index,int len){
+        int li = (index << 1) + 1; // 左子节点索引
+        int ri = li + 1;           // 右子节点索引
+        int cMax = li;             // 子节点值最大索引，默认左子节点。
+
+        if(li > len) return;       // 左子节点索引超出计算范围，直接返回。
+        if(ri <= len && arr[ri] > arr[li]) // 先判断左右子节点，哪个较大。
+            cMax = ri;
+        if(arr[cMax] > arr[index]){
+            swap(cMax, index);      // 如果父节点被子节点调换，
+            maxHeapify(cMax, len);  // 则需要继续判断换下后的父节点是否符合堆的特性。
+        }
+    }
+
+    /**
+     * 测试用例
+     *
+     * 输出：
+     * [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9]
+     */
+    public static void main(String[] args) {
+        int[] arr = new int[]{3,5,3,0,8,6,1,5,8,6,2,4,9,4,7,0,1,8,9,7,3,1,2,5,9,7,4,0,2,6};        
+        new HeapSort(arr).sort();        
+        System.out.println(Arrays.toString(arr));
+    }
+```
+
+3，自己手撕实战成功：
+
+```java
+class Solution {
+    public int[] sortArray(int[] nums) {
+        /**
+        堆排序：
+        1.把数组构建成bfs形式打印出来的大顶堆
+        2.在已有大顶堆的基础上，每次把堆最后一个元素替换掉堆顶，并使堆大小减一，重新堆化；直到堆只剩最后一个节点
+         */
+        
+        //构建堆
+        int len=nums.length;//输入的数组的长度
+        int beginIndex=(len>>1)-1;//从完全二叉树的第一个非叶子节点开始往前堆化，堆化就是让以本节点为根的树的所有根节点大于自己的左右子树中的所有节点
+        for(int i=beginIndex;i>=0;i--){//把数组转化成大顶堆的格式
+            maxHeapify(nums,i,len-1);
+        }
+
+        //排序，把堆顶不停放置到堆的末尾，达到升序排序
+        for(int i=len-1;i>=0;i--){
+            swap(nums,0,i);//交换堆的末尾和堆顶
+            maxHeapify(nums,0,i-1);//为了保证拿出一个节点后的堆是大顶堆，因为换上大顶堆顶的值可能不是最大的，所以抓住这个值对树进行大顶堆化
+        }
+
+        return nums;
+
+    }
+
+    //交换nums数组中，i和j位置的值
+    public void swap(int[] nums,int i,int j){
+        int temp=nums[i];
+        nums[i]=nums[j];
+        nums[j]=temp;
+    }
+
+    //保证以坐标i的元素为根，大小不超过size的完全二叉树是大顶堆，采用了递归的方式
+    public void maxHeapify(int[] nums,int i,int size){
+        //根据完全二叉树的性质，求出当前节点i的左右子节点的坐标
+        int leftChildIndex=(i<<1)+1;
+        int rightChildIndex=leftChildIndex+1;
+        int maxChildIndex=leftChildIndex;//默认的左右两个子节点中，左子节点的值更大
+
+        if(leftChildIndex>size){//如果左子节点的坐标不在讨论的树的范围内，则说明当前i节点不违反大顶堆的性质，直接返回
+            return;
+        }
+        if(rightChildIndex<=size&&nums[leftChildIndex]<nums[rightChildIndex]){//如果左右子节点都在讨论的树的范围内，且右子节点更大，则让maxChild为右子节点
+            maxChildIndex=rightChildIndex;
+        }
+        //比较最大子节点，和当前节点的大小关系；保证当前节点比左右子节点大
+        if(nums[i]<nums[maxChildIndex]){
+            swap(nums,i,maxChildIndex);
+            maxHeapify(nums,maxChildIndex,size);//保证以交换到子节点的数为根节点的树，为大顶堆
+        }
+    }
+
+}
+```
 
 
-## 栈队列
+
+### DP
+
+1，贪心和DP问题的区别在哪？
+
+- 参考：https://www.zhihu.com/question/36662980。
+
+## 栈与队列(简单)
 
 ### [剑指 Offer 09. 用两个栈实现队列](https://leetcode-cn.com/problems/yong-liang-ge-zhan-shi-xian-dui-lie-lcof/)
 
@@ -382,7 +966,318 @@ class MinStack {
 - 我：重申，栈用deque实现！
 - 我：单调队列是o1拿到队列窗口内部的最值，是队列问题，队列是先进先出；本题是栈遵循先进后出，所以与单调队列问题相区别一下！所以本题实现o1拿到栈中最小值很简单，只需要辅助栈；但是窗口队列想o1拿到最小值就只能用单调队列实现了！
 
-## 链表
+## 栈与队列(困难)
+
+### [剑指 Offer 59 - I. 滑动窗口的最大值](https://leetcode-cn.com/problems/hua-dong-chuang-kou-de-zui-da-zhi-lcof/)
+
+codetop 7
+
+#### 首战寄
+
+没有好思路，只想到：遍历时没到达一个数，就遍历窗口内部拿到最大值，这么写没什么意义
+
+#### 大佬-priorityQueue
+
+优先队列秒了没有超时， 不能该是困难题吧
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        if(nums.length==0) return new int[0];
+        PriorityQueue<Integer> queue = new PriorityQueue<Integer>((o1,o2)->{return o2-o1;});
+        int[] res = new int[nums.length-k+1];
+        for(int i = 0;i<k-1;++i) queue.offer(nums[i]);
+        for(int i = 0;i<res.length;++i){
+            queue.offer(nums[i+k-1]);
+            res[i] = queue.peek();
+            queue.remove(nums[i]);
+        }
+        return res;
+    }
+}
+```
+
+- 网友评价：虽然时间复杂度是 nlogk ，但胜在思想和编写都简单。
+- 我：因为PQ内部会把元素排序，不是先进先出，而是保证最值先出；所以得用remove(val)来删除指定元素；用poll则每次把PQ的最大值移除了，不合理。
+- [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)
+
+#### 官方-单调队列
+
+解题思路：
+
+![image-20220418193659791](lcof.assets/image-20220418193659791.png)
+
+![Picture1.png](lcof.assets/1600878237-pBiBdf-Picture1.png)
+
+![image-20220418193737505](lcof.assets/image-20220418193737505.png)
+
+- 问答问：获取窗口中最大值的时间复杂度是降到o1了，但是每次元素添加进deque，都需要遍历删除所有值比新加进来的元素小的元素，这我感觉也是ok的时间复杂度，那么总的时间复杂度是不是没变？
+  - 自答：就像分析时间复杂度处说的，deque中每个元素最多只会入队一次和出队一次，并且元素出队时removelast的时间复杂度是o1；所以就算是批量一次性删除多个元素，那么后续需要删除的元素就少了（总数最多会有n个元素入队），所以这块不构成on中嵌套ok的时间复杂度，而是on+on==o2n==on的时间复杂度。
+
+算法流程：
+
+![image-20220418194145067](lcof.assets/image-20220418194145067.png)
+
+复杂度分析：
+
+![image-20220418194228120](lcof.assets/image-20220418194228120.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        //单调队列
+        //下面是要注意的点：
+        //队列按从大到小放入
+        //如果首位值（即最大值）不在窗口区间，删除首位
+        //如果新增的值小于队列尾部值，加到队列尾部
+        //如果新增值大于队列尾部值，删除队列中比新增值小的值，如果在把新增值加入到队列中
+        //如果新增值大于队列中所有值，删除所有，然后把新增值放到队列首位，保证队列一直是从大到小
+        if (nums.length == 0)   return nums;
+
+        Deque<Integer> deque = new LinkedList<>();
+        int[] arr = new int[nums.length - k + 1];
+        int index = 0;  //arr数组的下标
+        //未形成窗口区间
+        for (int i = 0; i < k; i++) {
+            //队列不为空时，当前值与队列尾部值比较，如果大于，删除队列尾部值
+            //一直循环删除到队列中的值都大于当前值，或者删到队列为空
+            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
+            //执行完上面的循环后，队列中要么为空，要么值都比当前值大，然后就把当前值添加到队列中
+            deque.addLast(nums[i]);
+        }
+        //窗口区间刚形成后，把队列首位值添加到队列中
+        //因为窗口形成后，就需要把队列首位添加到数组中，而下面的循环是直接跳过这一步的，所以需要我们直接添加
+        arr[index++] = deque.peekFirst();
+        //窗口区间形成
+        for (int i = k; i < nums.length; i++) {
+            //i-k是已经在区间外了，如果首位等于nums[i-k]，那么说明此时首位值已经不再区间内了，需要删除
+            if (deque.peekFirst() == nums[i - k])   deque.removeFirst();
+            //删除队列中比当前值小的值
+            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
+            //把当前值添加到队列中
+            deque.addLast(nums[i]);
+            //把队列的首位值添加到arr数组中
+            arr[index++] = deque.peekFirst();
+        }
+        return arr;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] maxSlidingWindow(int[] nums, int k) {
+        /**
+        使用单调队列
+         */
+
+        //处理特殊情况
+        if(nums.length==0)return new int[0];
+
+        //新建单调队列和存结果的数组
+        Deque<Integer> queue=new LinkedList<>();
+        int[] res=new int[nums.length-k+1];
+
+        //处理窗口未完全覆盖数组前的情况,即没有元素从窗口左边滑出的情况。i表示窗口未完全展现时的右边缘,0~k-1。删除和增加都是从last做，这样保证first总是最大元素。
+        for(int i=0;i<k;i++){
+            //把队列中比当前元素小的数都删掉，由于每个元素只会入栈出栈一次，所以这个while不会造成嵌套而成的乘法时间复杂度。
+            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){//!!!!while要确保queue不为空，否则会做peeklast会有空指针异常
+                queue.pollLast();
+            }
+            //把当前元素加入单调队列末尾，此时保证了队列中不会有比它还小的元素
+            queue.offerLast(nums[i]);
+        }
+
+        //此时窗子的左边缘正好在nums[0]，把此时窗口中的最大值记录下来
+        res[0]=queue.peekFirst();
+
+        //此时窗子的左边缘正好在nums[0]，接下来的滑动窗口就会有元素从窗户左边滑出了。这里的i还是以滑动窗口的右边缘为准
+        for(int i=k;i<nums.length;i++){
+            //先处理出队，再处理入队，这样可以保证队列单调递减
+            //如果出队的元素是queue的最大元素，就把它从queue中移除
+            if(nums[i-k]==queue.peekFirst()){
+                queue.pollFirst();
+            }
+            //窗口有边缘要往queue中进元素时，老规矩，先把queue中比要进的元素小的元素删除，再进元素
+            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){
+                queue.pollLast();
+            }
+            queue.offerLast(nums[i]);
+
+            //把queue的头部元素放入res，因为它就是此时窗口中最大的元素；第一次添加时窗口左侧在nums[1]
+            res[i-k+1]=queue.peekFirst();
+        }
+
+        return res;
+
+    }
+}
+```
+
+### [剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
+
+codetop 5
+
+#### 首战半寄
+
+代码都写出来了，但是花了很多时间debug阿里手册提过的integer用equals比较的问题，所以算”半寄“
+
+```java
+class MaxQueue {
+    /**
+    pushback和popfront用队列实现，都天然是o1的时间复杂度
+    maxvalue就得用一个额外的单调队列，来记载此时存储队列中的最大值
+     */
+    //单调队列，用于保存当前deque的（潜在）最大值
+    Deque<Integer> monotonousQueue=null;
+    //当前deque，用于存储数据
+    Deque<Integer> queue=null;
+
+    //构造函数为本对象分配内存
+    public MaxQueue() {
+        monotonousQueue=new LinkedList<>();
+        queue=new LinkedList<>();
+    }
+    
+    //monotonousQueue的头部总是当前队列的最大值；如果队列为空则返回-1；
+    public int max_value() {
+        //printQueues();
+        if(monotonousQueue.isEmpty()){
+            return -1;
+        }else{
+            return monotonousQueue.peekFirst();
+        }
+    }
+    
+    public void push_back(int value) {
+        //数据直接往queue中放；
+        queue.offerLast(value);
+
+        //把monotonousQueue中比value小的节点删掉后，把value放入monotonousQueue的尾部，保证monotonousQueue单调递减
+        while(!monotonousQueue.isEmpty()&&monotonousQueue.peekLast()<value) monotonousQueue.pollLast();
+        monotonousQueue.offerLast(value);
+    }
+    
+    public int pop_front() {
+        //如果队列为空，不需要实际pop，直接返回-1
+        if(queue.isEmpty())return -1;
+
+        //队列不为空，查看要pop的是不是monotonousQueue的头节点，即queue中的最大节点；如果是的话，则删掉monotonousQueue中的头结点。注意queue.peekFirst().equals(monotonousQueue.peekFirst())不能写成用==比较，因为返回的是Integer对象会出现无法判等于的情况，原因见（https://blog.csdn.net/qq_39677544/article/details/78849988），这是阿里手册提过的大坑！！
+        if(queue.peekFirst().equals(monotonousQueue.peekFirst()))monotonousQueue.pollFirst();
+        //处理完monotonousQueue后，直接把queue的头节点即要出队的节点返回
+        return queue.pollFirst();
+    }
+
+    //debug测试时用的，提交时可以注释掉
+    public void printQueues(){
+        System.out.println("====================当前queue为：");
+        Iterator<Integer> iterator1 = queue.iterator();
+        while(iterator1.hasNext()){
+            System.out.print(iterator1.next()+" ");
+        }
+        System.out.println("====================当前queue结束");
+
+        System.out.println("=====================当前monotonousQueue为：");
+        Iterator<Integer> iterator2 = monotonousQueue.iterator();
+        while(iterator2.hasNext()){
+            System.out.print(iterator2.next()+" ");
+        }
+        System.out.println("=====================当前monotonousQueue结束");
+
+    }
+}
+
+/**
+ * Your MaxQueue object will be instantiated and called as such:
+ * MaxQueue obj = new MaxQueue();
+ * int param_1 = obj.max_value();
+ * obj.push_back(value);
+ * int param_3 = obj.pop_front();
+ */
+```
+
+- 注意： 大坑，Integer和String在比较内容值大小时，要使用equals，而不是使用比较地址的`==`。[原因](https://blog.csdn.net/qq_39677544/article/details/78849988)
+- 打印集合可以用forEach方式：`for(Map.Entry<Integer,String> entry:myHashMap.entrySet())`，表示foreach遍历一个key为integer，value为string的hashmap。
+
+#### 官方-单调双向队列
+
+解题思路：
+
+![image-20220419161423045](lcof.assets/image-20220419161423045.png)
+
+
+
+![Picture1.png](lcof.assets/1609261470-WanZuG-Picture1.png)
+
+![image-20220419161504057](lcof.assets/image-20220419161504057.png)
+
+![Picture2.png](lcof.assets/1609261470-gMTEAf-Picture2.png)
+
+![image-20220419161545885](lcof.assets/image-20220419161545885.png)
+
+函数设计：
+
+![image-20220419161614034](lcof.assets/image-20220419161614034.png)
+
+复杂度分析：
+
+![image-20220419161638177](lcof.assets/image-20220419161638177.png)
+
+代码：
+
+```java
+class MaxQueue {
+    Queue<Integer> queue;
+    Deque<Integer> deque;
+    public MaxQueue() {
+        queue = new LinkedList<>();
+        deque = new LinkedList<>();
+    }
+    public int max_value() {
+        return deque.isEmpty() ? -1 : deque.peekFirst();
+    }
+    public void push_back(int value) {
+        queue.offer(value);
+        while(!deque.isEmpty() && deque.peekLast() < value)
+            deque.pollLast();
+        deque.offerLast(value);
+    }
+    public int pop_front() {
+        if(queue.isEmpty()) return -1;
+        if(queue.peek().equals(deque.peekFirst()))
+            deque.pollFirst();
+        return queue.poll();
+    }
+}
+
+```
+
+- 网友问（和我栽进一个坑了）：`queue.peek().equals(deque.peekFirst())`，询问个问题，为何==的时候就会不对，能讲下区别吗？
+  - 网友答：queue 里面保存的是 Integer 而非 int ，peek() 返回的是 Integer 类型，没有自动拆箱，因此需要用 equals() 来比~
+  - 网友答：比如Integer i1 = new Integer(1); Integer i2 = new Integer(1) 这样子比较i1 == i2是返回false的，因为比较的是对象， 同理 Integer i1 = 1; Integer i2 = new Integer(1);这样i1==i2也是返回false的，因为i1自动装箱了。 但是Integer i1 = 1; Integer i2 =1;这样i1==i2，返回是true， 因为自动装箱缓存机制，返回的同一个对象给i1和i2。在-128~127（比较常用？）的整数范围内都会存在自动拆装箱的缓存，所以126 和 900 的区别就在这里（126两个都是返回的同一个对象，900超过范围了返回的不是同一个对象）。 你也可以自己设定缓存的整数范围。 两个都是包装类最好用.equals()方法比较，这样比较的是值。 如果一个是int类型，一个是包装类，那么可以直接用==，因为包装类自动拆箱为int类型了，所以这时候比较的也是值，而不会存在一个是基本类型，一个是引用类型不能比较，这就是自动拆装箱。
+
+- 优先队列vs单调队列：
+
+  - 自答：
+
+    - 之前有点迷糊，单调队列和优先队列都能保障队列头为当前输入(窗口)的最大值，优先队列的时间复杂度还更高，那为什么不总是使用单调队列?
+
+    - 后面我想了下，优先队列能保证存储所有元素，但是单调队列为了保证单调会删掉众多元素，所以有存储所有节点的场景需要的话，只用单调队列是不行的。
+
+  - 网友：这俩使用场景区别还挺大的吧，单调队列经典题接雨水，用优先队列不行吧
+
+  - 网友：你只考虑最大为什么要优先队列和单调队列，直接maxx遍历取max就好了
+    用到这俩也是结束遍历的时候两个队列存的东西不一样
+    大家不要带偏了啊，你只关系当前最大用变量存max就好了
+
+
+
+
+## 链表(简单)
 
 ### [剑指 Offer 06. 从尾到头打印链表](https://leetcode-cn.com/problems/cong-wei-dao-tou-da-yin-lian-biao-lcof/)
 
@@ -886,9 +1781,535 @@ class Solution {
   - 我的拆分时，不需要最后处理最后节点粘在一起的情况，但是每次迭代都要if判断比较耗时；
   - 总之缝合链表拆分时，以粘合处的后者为判断离开的标志为好，不容易空指针异常。
 
+### [206. 反转链表](https://leetcode-cn.com/problems/reverse-linked-list/)
+
+codetop==481
+
+剑指写过
+
+#### 首战告捷-迭代法
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseList(ListNode head) {
+
+        //特殊值处理
+        if(head==null)return null;
+
+        //迭代方式翻转链表
+        ListNode prev=null,cur=head;
+        //交换cur和prev之间的指向
+        while(cur!=null){
+            ListNode temp=cur.next;
+            cur.next=prev;
+            prev=cur;
+            cur=temp;
+        }
+
+        //遍历结束时，prev为头结点
+        return prev;
+
+    }
+}
+```
+
+#### 首战告捷-递归法
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        /**
+        递归的方式，每次都返回最后一个节点。在当前递归交换两个节点间的指向
+         */
+        //处理特殊情况，并设置递归触底条件。如果传入的是空节点，则直接返回null，结束程序；如果传入的不是null，那么只会在“head.next==null”触底
+        if(head==null||head.next==null){
+            return head;
+        }
+
+        //类似树的后续遍历，先递归拿到下一层的结果，这样对应退栈的时候从链表尾部往链表头部的方向处理。总是把逆序后的头结点返回。
+        ListNode newHead=reverseList(head.next);
+
+        //让当前节点的下一节点指向当前节点，即交换cur和later的指向。因为之前判断过head.next!=null，所以head.next.next不会有空指针异常
+        head.next.next=head;
+        //当前节点指向null是为了让逆序链表的最后一个节点能指向null
+        head.next=null;
+
+        return newHead;
+    }
+}
+```
+
+### [146. LRU 缓存](https://leetcode-cn.com/problems/lru-cache/)
+
+#### 首战寄
+
+想到用hash达到o1时间复杂度的查找，但是实施细节的思路不是很清晰。
+
+#### 官方-LinkedHashMap版(不推荐)
+
+前言
+实现本题的两种操作，需要用到一个哈希表和一个双向链表。在面试中，面试官一般会期望读者能够自己实现一个简单的双向链表，而不是使用语言自带的、封装好的数据结构。在 Python 语言中，有一种结合了哈希表与双向链表的数据结构 OrderedDict，只需要短短的几行代码就可以完成本题。在 Java 语言中，同样有类似的数据结构 LinkedHashMap。这些做法都不会符合面试官的要求，因此下面只给出使用封装好的数据结构实现的代码，而不多做任何阐述。
+
+```java
+class LRUCache extends LinkedHashMap<Integer, Integer>{
+    private int capacity;
+    
+    public LRUCache(int capacity) {
+        super(capacity, 0.75F, true);
+        this.capacity = capacity;
+    }
+
+    public int get(int key) {
+        return super.getOrDefault(key, -1);
+    }
+
+    public void put(int key, int value) {
+        super.put(key, value);
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+        return size() > capacity; 
+    }
+}
+```
 
 
-## 111字符串
+
+#### 官方-哈希表 + 双向链表
+
+算法：
+
+![image-20220504174444905](lcof.assets/image-20220504174444905.png)
+
+小贴士：
+
+- 在双向链表的实现中，使用一个伪头部（dummy head）和伪尾部（dummy tail）标记界限，这样在添加节点和删除节点的时候就不需要检查相邻的节点是否存在。
+
+复杂度分析:
+
+![image-20220504174854682](lcof.assets/image-20220504174854682.png)
+
+代码：
+
+```java
+public class LRUCache {
+    class DLinkedNode {
+        int key;
+        int value;
+        DLinkedNode prev;
+        DLinkedNode next;
+        public DLinkedNode() {}
+        public DLinkedNode(int _key, int _value) {key = _key; value = _value;}
+    }
+
+    private Map<Integer, DLinkedNode> cache = new HashMap<Integer, DLinkedNode>();
+    private int size;
+    private int capacity;
+    private DLinkedNode head, tail;
+
+    public LRUCache(int capacity) {
+        this.size = 0;
+        this.capacity = capacity;
+        // 使用伪头部和伪尾部节点
+        head = new DLinkedNode();
+        tail = new DLinkedNode();
+        head.next = tail;
+        tail.prev = head;
+    }
+
+    public int get(int key) {
+        DLinkedNode node = cache.get(key);
+        if (node == null) {
+            return -1;
+        }5
+        // 如果 key 存在，先通过哈希表定位，再移到头部
+        moveToHead(node);
+        return node.value;
+    }
+
+    public void put(int key, int value) {
+        DLinkedNode node = cache.get(key);
+        if (node == null) {
+            // 如果 key 不存在，创建一个新的节点
+            DLinkedNode newNode = new DLinkedNode(key, value);
+            // 添加进哈希表
+            cache.put(key, newNode);
+            // 添加至双向链表的头部
+            addToHead(newNode);
+            ++size;
+            if (size > capacity) {
+                // 如果超出容量，删除双向链表的尾部节点
+                DLinkedNode tail = removeTail();
+                // 删除哈希表中对应的项
+                cache.remove(tail.key);
+                --size;
+            }
+        }
+        else {
+            // 如果 key 存在，先通过哈希表定位，再修改 value，并移到头部
+            node.value = value;
+            moveToHead(node);
+        }
+    }
+
+    private void addToHead(DLinkedNode node) {
+        node.prev = head;
+        node.next = head.next;
+        head.next.prev = node;
+        head.next = node;
+    }
+
+    private void removeNode(DLinkedNode node) {
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
+    }
+
+    private void moveToHead(DLinkedNode node) {
+        removeNode(node);
+        addToHead(node);
+    }
+
+    private DLinkedNode removeTail() {
+        DLinkedNode res = tail.prev;
+        removeNode(res);
+        return res;
+    }
+}
+```
+
+- 我讲解remove：
+  - `hashmap.remove(key)`可以删掉hashmap中的一个键值对
+  - `priorityQueue.remove(value)`可以删掉优先队列中的值为value的元素
+  - `list.remove(index)`可以删掉列表中第index个元素。
+
+#### 即时再战成功
+
+```java
+class LRUCache {
+    /**
+    o1的get和put，那么就得想到hash
+    超过capacity后删除最不常使用的kv，那么应该每次操作kv后都把被操作的kv移动到链表头部，这样尾部的就自然是最久没被使用过的kv了
+     */
+
+    //定义双向链表，这样才能记录最不常用的kv（链表尾部）
+    class Node{
+        //node中不仅要存value，还得存value对应的key；这样拿到node后才能操作hash映射，实现有hash key可以拿到node，有node可以拿到hash key。
+        int key;
+        int value;
+
+        Node prev;
+        Node next;
+
+        //存在自定义有参构造函数时，总是显式声明一个无参构造
+        public Node(){};
+        public Node(int key,int value){
+            this.key=key;
+            this.value=value;
+        }
+
+    }
+
+    //定义LRUCache类需要的其他变量，不需要初始化，初始化放到构造函数中做
+    int capacity;
+    int size;
+    Map<Integer,Node> cache=null;
+    //构建伪头尾节点，方便操作头尾的情况，并且避免空指针异常
+    Node head;
+    Node tail;
+
+    //做所有初始化
+    public LRUCache(int capacity) {
+        //虽然this可有可无，但是都使用this标记，强调是给本类变量赋值
+        this.capacity=capacity;
+        this.size=0;
+        this.cache=new HashMap<>();
+        this.head=new Node(-1,-1);
+        this.tail=new Node(-1,-1);
+        this.head.next=this.tail;
+        this.tail.prev=this.head;
+    }
+    
+    public int get(int key) {
+        //如果cache存在key对应的node，则返回node的值，并把node移动到双向链表头部
+        if(cache.containsKey(key)){
+            Node curNode=cache.get(key);
+            move2head(curNode);
+            return curNode.value;
+        }else{//如果不存在这个node，那么直接返回-1
+            return -1;
+        }
+    }
+    
+    public void put(int key, int value) {
+        //如果cache存在key对应node，则更新value，并把node移动到双向链表头部
+        if(cache.containsKey(key)){
+            Node curNode =cache.get(key);
+            curNode.value=value;
+            move2head(curNode);
+        }else{//如果当前cache不存在key对应的node，则添加一个node，并且add中要处理可能的超过capacity的情况
+            Node curNode=new Node(key,value);
+            add2head(curNode);//add包含在双向链表中add，和在cache中add
+        }
+
+    }
+
+    private void remove(Node curNode){
+        //从双向链表中删掉
+        curNode.prev.next=curNode.next;
+        curNode.next.prev=curNode.prev;
+        
+        //从cache中删掉。使用hashmap的根据key删除kv的remove方法
+        cache.remove(curNode.key);
+
+        size--;
+    }
+    private void add2head(Node curNode){
+        //在双向链表中添加
+        this.head.next.prev=curNode;
+        curNode.prev=this.head;
+        curNode.next=this.head.next;
+        this.head.next=curNode;
+
+        //在cache中添加
+        cache.put(curNode.key,curNode);
+        
+        size++;
+        
+        //处理可能的超过capacity的情况
+        if(this.size>this.capacity){
+            remove(this.tail.prev);//remove包括在双向链表中remove，和在cache中remove；
+        }
+
+        
+        
+    }
+    private void move2head(Node curNode){
+        remove(curNode);
+        add2head(curNode);
+    }
+
+}
+
+/**
+ * Your LRUCache object will be instantiated and called as such:
+ * LRUCache obj = new LRUCache(capacity);
+ * int param_1 = obj.get(key);
+ * obj.put(key,value);
+ */
+```
+
+- 反思：
+  - LRUCache构造函数初始化伪头尾节点后，不要忘记把伪头尾节点连接起来
+  - 自定义的move2head等函数，虽然不需要返回值，但是需要在函数定义处显式设置void表示函数不需要返回，即别忘了写void。
+
+
+
+### [25. K 个一组翻转链表](https://leetcode-cn.com/problems/reverse-nodes-in-k-group/)
+
+#### 首战寄
+
+```java
+/**
+   使用伪头节点起步，然后用除法求段数；用求余判断有没有末尾剩余节点，操作完除法次数后，剩下的部分就是需要保证原有顺序的部分
+*/
+```
+
+没有什么很好的思路
+
+#### 官方
+
+一图胜千言，根据图片看代码，马上就懂了
+
+步骤分解:
+
+![image-20220509001508854](lcof.assets/image-20220509001508854.png)
+
+![k个一组翻转链表.png](lcof.assets/866b404c6b0b52fa02385e301ee907fc015742c3766c80c02e24ef3a8613e5ad-k个一组翻转链表.png)
+
+代码：
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public ListNode reverseKGroup(ListNode head, int k) {
+        if (head == null || head.next == null){
+            return head;
+        }
+        //定义一个假的节点。
+        ListNode dummy=new ListNode(0);
+        //假节点的next指向head。
+        // dummy->1->2->3->4->5
+        dummy.next=head;
+        //初始化pre和end都指向dummy。pre指每次要翻转的链表的头结点的上一个节点。end指每次要翻转的链表的尾节点
+        ListNode pre=dummy;
+        ListNode end=dummy;
+
+        while(end.next!=null){
+            //循环k次，找到需要翻转的链表的结尾,这里每次循环要判断end是否等于空,因为如果为空，end.next会报空指针异常。
+            //dummy->1->2->3->4->5 若k为2，循环2次，end指向2
+            for(int i=0;i<k&&end != null;i++){
+                end=end.next;
+            }
+            //如果end==null，即需要翻转的链表的节点数小于k，不执行翻转。
+            if(end==null){
+                break;
+            }
+            //先记录下end.next,方便后面链接链表
+            ListNode next=end.next;
+            //然后断开链表
+            end.next=null;
+            //记录下要翻转链表的头节点
+            ListNode start=pre.next;
+            //翻转链表,pre.next指向翻转后的链表。1->2 变成2->1。 dummy->2->1
+            pre.next=reverse(start);
+            //翻转后头节点变到最后。通过.next把断开的链表重新链接。
+            start.next=next;
+            //将pre换成下次要翻转的链表的头结点的上一个节点。即start
+            pre=start;
+            //翻转结束，将end置为下次要翻转的链表的头结点的上一个节点。即start
+            end=start;
+        }
+        return dummy.next;
+
+
+    }
+    //链表翻转
+    // 例子：   head： 1->2->3->4
+    public ListNode reverse(ListNode head) {
+         //单链表为空或只有一个节点，直接返回原单链表
+        if (head == null || head.next == null){
+            return head;
+        }
+        //前一个节点指针
+        ListNode preNode = null;
+        //当前节点指针
+        ListNode curNode = head;
+        //下一个节点指针
+        ListNode nextNode = null;
+        while (curNode != null){
+            nextNode = curNode.next;//nextNode 指向下一个节点,保存当前节点后面的链表。
+            curNode.next=preNode;//将当前节点next域指向前一个节点   null<-1<-2<-3<-4
+            preNode = curNode;//preNode 指针向后移动。preNode指向当前节点。
+            curNode = nextNode;//curNode指针向后移动。下一个节点变成当前节点
+        }
+        return preNode;
+
+    }
+
+
+}
+```
+
+- 网友：reverse和dummy绝了。
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode reverseKGroup(ListNode head, int k) {
+        //处理特殊情况
+        if(head==null||head.next==null)return head;
+
+        //构建伪头节点方便翻转
+        ListNode dummyHead=new ListNode(-1);
+        dummyHead.next=head;
+
+        //pre为待翻转段的前一个节点
+        ListNode prev=dummyHead;
+        ListNode end=prev;
+        //分段翻转整个链表。因为要断开end和后续链表部分，所以end.next不能为空才能“断开”
+        while(end.next!=null){
+            //把end移动到当前段的末尾，要防止移动的时候触碰到链表边界导致空指针异常
+            for(int i=0;i<k&&end!=null;i++){
+                end=end.next;
+            }
+
+            //如果for循环结束后，end==null，说明当前链表段的长度不够翻转，那么说明链表处理完了，直接break。
+            //正常情况下，end停留在需要翻转的链表段的最后一个节点，肯定不是null
+            if(end==null)break;
+
+            //保存end后面的链表
+            ListNode next=end.next;
+            //断开end后面的链表，保证reverse函数可以在本翻转段触底null
+            end.next=null;
+            //记录链表段翻转前的第一个节点，这个节点将是链表段翻转后的最后一个节点
+            ListNode cur=prev.next;
+            //翻转prev后面到end的链表段
+            prev.next=reverse(cur);
+            //翻转完毕的链表段的末尾重新接上整体的大链表
+            cur.next=next;
+
+            //移动pre和end，准备下一链表段的翻转
+            prev=cur;
+            end=prev;
+        }
+
+        //跳出while的时候说明,已经处理完了，返回
+        return dummyHead.next;
+    }
+
+    //翻转以head为头的链表片段（链表末尾截断，所以是null）
+    public ListNode reverse(ListNode head){
+        ListNode prev=null;
+        ListNode cur=head;
+
+        while(cur!=null){
+            //因为是单向链表，cur的指向变了后，就会遗失next，所以要先把next保存下来
+            ListNode next=cur.next;
+            //倒转cur和prev的关系
+            cur.next=prev;
+            //移动pre和cur
+            prev=cur;
+            cur=next;
+        }
+
+        //返回链表段翻转后的头节点。此时prev是头节点，cur是空（cur为空才能跳出while循环）
+        return prev;
+    }
+}
+```
+
+
+
+## 111111字符串(简单)
 
 ### [剑指 Offer 05. 替换空格](https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/)
 
@@ -918,10 +2339,9 @@ class Solution {
 ```
 
 - 注意：字符串判断内容相等要用equals
-
 - charAt可以得到字符串某位置的字符；String.valueOf()可以把字符转化为字符串存入堆中的字符串常量池。
 
-----
+
 
 #### 官方1-遍历添加
 
@@ -1051,7 +2471,7 @@ class Solution {
 
 - 应用字符串切片函数，可方便实现左旋转字符串。
 
-- 获取字符串 s[n:]s[n:] 切片和 s[:n]s[:n] 切片，使用 "++" 运算符拼接并返回即可。
+- 获取字符串 s[n:] 切片和 s[:n] 切片，使用 "++" 运算符拼接并返回即可。
 
 复杂度分析：
 
@@ -1069,7 +2489,7 @@ class Solution {
 
 ```
 
-- substring左包右不包
+- 注意substring左闭右开！！
 
 
 
@@ -1147,11 +2567,267 @@ class Solution {
 
 ![Picture4.png](lcof.assets/ef68413b3366b97af3ed76037c6a9d1e40ac09c74fd6e5cb6d5173cbd7116beb-Picture4.png)
 
+### [20. 有效的括号](https://leetcode.cn/problems/valid-parentheses/)
+
+#### 首战告捷
+
+```java
+class Solution {
+    public boolean isValid(String s) {
+        /**
+        右半括号要和左半括号抵消
+        
+        更早出现的左半括号要和更晚出现的对应的右半括号抵消，这符合栈的后进先出的特点
+         */
+        
+        //使用deque实现栈。从last进行存取
+        Deque<Character> stack=new LinkedList<>();
+
+        //把字符串转化为字符数组(分析字符串元素时的经典操作)
+        char[] chs=s.toCharArray();
+        //对字符数组处理
+        for(char ch:chs){
+            //如果是左半边括号，直接送入栈中
+            if(ch=='('||ch=='['||ch=='{'){
+                stack.offerLast(ch);
+            }else{//如果是右半边括号，从栈顶拿出元素，和右半边括号对比看看匹配与否；如果匹配就继续遍历字符数组，如果不匹配就直接返回false；
+                //!!!!别忽略一个条件，当输入右括号时，栈为空，则说明也不匹配。而且pollLast()返回的null会导致空指针异常；我猜测这个异常是因为尝试把null赋值给char，char不是对象，它类似int是有默认值的。
+                if(stack.isEmpty())return false;
+
+                //能走到这步说明stack不为空
+                char curTop=stack.pollLast();
+                if(ch==')'&&curTop!='(')return false;
+                else if(ch==']'&&curTop!='[') return false;
+                else if(ch=='}'&&curTop!='{') return false;
+                else{
+                    //当前匹配没问题，继续遍历。else什么都不做
+                }
+
+            }
+        }
+
+        //如果处理完字符数组后，stack为空说明所有左半边括号都被匹配了，那么说明是合格字符串，就返回true
+        return stack.isEmpty();
+
+    }
+}
+```
+
+- 我：尝试把null赋值给char会导致编译时报错`java: 不兼容的类型: <nulltype>无法转换为char`
+
 ### 相关题目
 
 - 剑指 Offer 37. 序列化二叉树：解法有蛮多字符串的知识，尤其是StringBuilder的使用。
 
-## 查找算法（简单）
+
+
+## 字符串(中等)
+
+### [剑指 Offer 20. 表示数值的字符串](https://leetcode-cn.com/problems/biao-shi-shu-zhi-de-zi-fu-chuan-lcof/)
+
+codetop==2
+
+#### 首战寄
+
+没有啥很好的思路：
+
+- `s.trim().toCharArray();`，把字符串收尾空格去掉，然后转化成char数组处理 
+
+- 分段递归判断
+
+网友评价：
+
+- 关键是题目中给的示例不详尽，提交一次，修改一次代码，修改的全是细节 做一次恶心一次
+- 这题是个典型的面向测试用例编程的题目
+
+#### 大佬-常规思路
+
+个人感觉还是常规思路好理解= =，直接逐位遍历一遍，并做好标记。
+
+代码：
+
+```java
+class Solution {
+    public boolean isNumber(String s) {
+        if(s == null || s.length() == 0) return false; // s为空对象或 s长度为0(空字符串)时, 不能表示数值
+        boolean isNum = false, isDot = false, ise_or_E = false; // 标记是否遇到数位、小数点、‘e’或'E'
+        char[] str = s.trim().toCharArray();  // 删除字符串头尾的空格，转为字符数组，方便遍历判断每个字符
+        for(int i=0; i<str.length; i++) {
+            if(str[i] >= '0' && str[i] <= '9') isNum = true; // 判断当前字符是否为 0~9 的数位
+            else if(str[i] == '.') { // 遇到小数点
+                if(isDot || ise_or_E) return false; // 小数点之前可以没有整数，但是不能重复出现小数点、或出现‘e’、'E'
+                isDot = true; // 标记已经遇到小数点
+            }
+            else if(str[i] == 'e' || str[i] == 'E') { // 遇到‘e’或'E'
+                if(!isNum || ise_or_E) return false; // ‘e’或'E'前面必须有整数，且前面不能重复出现‘e’或'E'
+                ise_or_E = true; // 标记已经遇到‘e’或'E'
+                isNum = false; // 重置isNum，因为‘e’或'E'之后也必须接上整数，防止出现 123e或者123e+的非法情况
+            }
+            else if(str[i] == '-' ||str[i] == '+') { 
+                if(i!=0 && str[i-1] != 'e' && str[i-1] != 'E') return false; // 正负号只可能出现在第一个位置，或者出现在‘e’或'E'的后面一个位置
+            }
+            else return false; // 其它情况均为不合法字符
+        }
+        return isNum;
+    }
+}
+```
+
+#### 即时再战
+
+题目不是啥好题，就不再战了。
+
+### [剑指 Offer 67. 把字符串转换成整数](https://leetcode-cn.com/problems/ba-zi-fu-chuan-zhuan-huan-cheng-zheng-shu-lcof/)
+
+codetop 1
+
+#### 首战半寄
+
+过了1025 / 1079个测试案例，会有一些奇怪的判例出现，总是得修改代码，没考虑到哪些奇怪的情况，就不继续完善了。
+
+字符串的题以后出现率不高的就不要太花时间了，感觉不值。。
+
+```java
+class Solution {
+    public int strToInt(String str) {
+        //特殊处理：如果字符串为空，直接返回0
+        if(str==null)return 0;
+        char[] chs=str.trim().toCharArray();
+        //特殊处理：如果字符串只有空格，直接返回0
+        if(chs.length==0)return 0;
+
+        //lr夹住值
+        int l=0,r=0;
+        boolean alwaysZero=true;
+        //只要出现不合法的情况就break，这样break时i的位置及之前的数都是合法的。由于不合法的情况比较多，抓住合法的来判断放行
+        while(r<chs.length){
+            if(chs[r]=='0'&&alwaysZero){//只有从头开始的连贯的0才能进入本if
+                r++;
+                l++;
+            }else if(isInt(chs[r])){
+                alwaysZero=false;
+                r++;
+            }else if(isSig(chs[r])&&r==0&&chs.length!=1){//chs.length!=1是为了防止'+'和'-'通过过滤
+                r++;
+            }else{
+                break;
+            }
+
+            //特殊值处理，防止字符连long都超过
+            if(r-l+1>11){//最大整数有10位，加上-+一位
+                if(chs[0]=='-')return Integer.MIN_VALUE;
+                else return Integer.MAX_VALUE;
+            }
+        }
+
+        //System.out.println("截取到的结果为："+str.substring(0,i));
+        //得到的整数范围为0~i-1，把字符数组处理成整数。
+        int tens=1;
+        //用long记录结果，在结果超过整数范围的时候直接返回对应的整数边界
+        long result=0;
+        //针对正数和负数做不同处理，避免对每个字节判断-
+        if(chs[0]=='-'){
+            //处理到1为止
+            for(int j=r-1;j>=1;j--){
+                // System.out.print("当前处理的字符为：");
+                // System.out.println(chs[j]);
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                //System.out.println("temp为："+temp);
+                result+=temp;
+                if(-result<(long)Integer.MIN_VALUE)return Integer.MIN_VALUE;
+
+                tens*=10;
+            }
+            return (int)-result;
+        }else if(chs[0]=='+'){
+            //处理到1为止
+            for(int j=r-1;j>=1;j--){
+                // System.out.print("当前处理的字符为：");
+                // System.out.println(chs[j]);
+                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                //System.out.println("temp为："+temp);
+                result+=temp;
+                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
+
+                tens*=10;
+            }
+            return (int)result;
+
+        }else{
+            //处理到0为止
+            for(int j=r-1;j>=0;j--){
+                System.out.print("当前处理的字符为：");
+                System.out.println(chs[j]);
+                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
+                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
+                System.out.println("temp为："+temp);
+                result+=temp;
+                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
+
+                tens*=10;
+            }
+            return (int)result;
+        }
+
+    }
+    public boolean isInt(char ch){//可以用switch
+        if(ch=='0'||ch=='1'||ch=='2'||ch=='3'||ch=='4'||ch=='5'||ch=='6'||ch=='7'||ch=='8'||ch=='9')return true;
+
+        return false;
+    }
+    public boolean isSig(char ch){
+        if(ch=='+'||ch=='-')return true;
+
+        return false;
+    }
+}
+```
+
+#### 官方-数字越界处理
+
+解题思路：
+
+![image-20220416204636792](lcof.assets/image-20220416204636792.png)
+
+![Picture1.png](lcof.assets/0be9098b13047fe3e07f3c4e51c612244ace01a023ed010bce43940408334f2a-Picture1.png)
+
+数字越界处理：
+
+![image-20220416204705051](lcof.assets/image-20220416204705051.png)
+
+![Picture2.png](lcof.assets/d1b06a91801868af63f6e309da31bcfa01c7b6c385529fb974389a61e454cd12-Picture2.png)
+
+复杂度分析：
+
+![image-20220416204732055](lcof.assets/image-20220416204732055.png)
+
+代码：
+
+```java
+class Solution {
+    public int strToInt(String str) {
+        char[] c = str.trim().toCharArray();
+        if(c.length == 0) return 0;
+        int res = 0, bndry = Integer.MAX_VALUE / 10;
+        int i = 1, sign = 1;
+        if(c[0] == '-') sign = -1;
+        else if(c[0] != '+') i = 0;
+        for(int j = i; j < c.length; j++) {
+            if(c[j] < '0' || c[j] > '9') break;
+            if(res > bndry || res == bndry && c[j] > '7') return sign == 1 ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+            res = res * 10 + (c[j] - '0');
+        }
+        return sign * res;
+    }
+}
+```
+
+- 我：字符相减，可以得到数字字符的差值
+
+
+
+## 查找算法(简单)
 
 ### [剑指 Offer 03. 数组中重复的数字](https://leetcode-cn.com/problems/shu-zu-zhong-zhong-fu-de-shu-zi-lcof/)
 
@@ -1218,6 +2894,10 @@ class Solution {
 ```
 
 - **利用了hashSet判断重复；同理可以利用hashmap判断个数**。
+- 我：
+  - 基本数据类型的包装类构成的集合set，可以放心使用`contains()`来判断数据是否已经存在，因为equals和hashcode都已经重写了；[参考](http://t.csdn.cn/b9Pbu)
+  - 如果是非基本数据类型，就注意重写equals()后要重写hashcode()。[参考](https://blog.csdn.net/violet_echo_0908/article/details/50152915)
+
 
 复杂性分析：
 
@@ -1228,6 +2908,8 @@ class Solution {
 
 
 ### [剑指 Offer 53 - I. 在排序数组中查找数字 I](https://leetcode-cn.com/problems/zai-pai-xu-shu-zu-zhong-cha-zhao-shu-zi-lcof/)
+
+codetop==16
 
 #### 首战告捷-hash法
 
@@ -1361,9 +3043,15 @@ class Solution {
 
 - 可将 nums[m] = targetnums[m]=target 情况合并至其他两种情况中。
 
+- 我：这里可以参考二分查找的模板，模板的写法可以定位到最左边的可重复数字，晒微改下便能定位到最右边的可重复数字。
 
+#### 再战-二分法
+
+问问问：其实没有问题，只是有时间重写下本题的二分法，比较有意义
 
 ### [剑指 Offer 53 - II. 0～n-1中缺失的数字](https://leetcode-cn.com/problems/que-shi-de-shu-zi-lcof/)
+
+codetop==5
 
 #### 首战告捷
 
@@ -1401,6 +3089,8 @@ class Solution {
 
 ![image-20220327155156544](lcof.assets/image-20220327155156544.png)
 
+- 注意：这里说了排序数组就想到二分！
+
 算法解析：
 
 ![image-20220327155218162](lcof.assets/image-20220327155218162.png)
@@ -1430,11 +3120,40 @@ class Solution {
 - 我：本题解的视频不错，很清晰，可以看看
 - 我：官方算法在l==r的时候不退出，让它两再移动一步从而交叉夹住目标值，不错！
 
+#### 再战成功-二分法
+
+20220428：
+
+```java
+class Solution {
+    public int missingNumber(int[] nums) {
+        /**
+        排序数组就用二分法，使用左闭右开模板
+         */
+        int left=0,right=nums.length;
+
+        while(left<right){
+            int mid=left+(right-left)/2;
+            if(nums[mid]==mid){//缺失值在mid右边
+                left=mid+1;//加一体现左闭右开
+            }else {
+                right=mid;//不加一也体现了左闭右开
+            }
+        }
+
+        //退出时，left和right重合在空缺数字的后一个数字,两者的坐标正好就是空缺的数字本身
+        return left;
+    }
+}
+```
 
 
-## 查找算法（中等）
+
+## 查找算法(中等)
 
 ### [剑指 Offer 04. 二维数组中的查找](https://leetcode-cn.com/problems/er-wei-shu-zu-zhong-de-cha-zhao-lcof/)
+
+codetop==21
 
 #### 首战寄
 
@@ -1524,6 +3243,8 @@ class Solution {
 
 ### [剑指 Offer 11. 旋转数组的最小数字](https://leetcode-cn.com/problems/xuan-zhuan-shu-zu-de-zui-xiao-shu-zi-lcof/)
 
+codetop==15
+
 #### 首战半寄
 
 ```java
@@ -1562,13 +3283,14 @@ class Solution {
 
 - 我：j=j-1后，最小值还在ij之间，因为：
   - 如果j是最小值，那么原本numsm==numsj，让j--后，至少m位置有最小值
-  - j--相当于是为重复元素去重。
+  - **j--相当于是为重复元素去重**。
+- 网友点评j--：你的方法比剑指offer上的还要好！太赞了！`numbers[m] == numbers[j] `的情况一直就想不到点上。`j=j−1 只需证明每次执行此操作后，旋转点 x 仍在 [i, j]区间内即可` 这句话醍醐灌顶
 
 正确性证明：
 
 ![image-20220327224758158](lcof.assets/image-20220327224758158.png)
 
-补充思考： 为什么本题二分法不用 nums[m]*n**u**m**s*[*m*] 和 nums[i]*n**u**m**s*[*i*] 作比较？
+补充思考： 为什么本题二分法不用 nums[m]和 nums[i]作比较？
 
 ![image-20220327224829837](lcof.assets/image-20220327224829837.png)
 
@@ -1595,8 +3317,15 @@ class Solution {
 
 - 网友：为什么官方的二分法的题解很多都是写的`low + (high - low) / 2 `而不是 `(high + low) / 2`
   - 网友答：防止溢出吧。
+- 我：感觉剑指的查找算法，基本都是用二分解决。
+
+#### 再战-二分法
+
+问问问：有空用左开右闭模板重写下本二分法。
 
 ### [剑指 Offer 50. 第一个只出现一次的字符](https://leetcode-cn.com/problems/di-yi-ge-zhi-chu-xian-yi-ci-de-zi-fu-lcof/)
+
+codetop==7
 
 #### 首战告捷
 
@@ -1731,11 +3460,321 @@ class Solution {
 
 - [为什么要使用Map.Entry](https://www.cnblogs.com/a198720/articles/4212034.html)
 
+### [215. 数组中的第K个最大元素](https://leetcode-cn.com/problems/kth-largest-element-in-an-array/)
 
+#### 首战告捷
+
+使用了java的快排工具，对数组进行了快速排序。
+
+```java
+class Solution {
+    public int findKthLargest(int[] nums, int k) {
+
+        Arrays.sort(nums);
+        for(int i=nums.length-1;i>=0;i--){
+            if(k==1){
+                return nums[i];
+            }
+            k--;
+        }
+
+        //这个return永远不会被执行
+        return -1;
+    }
+}
+```
+
+#### 官方1-暴力
+
+说明：本题解于 2021 年 8 月 6 日重写。
+
+这道题据说是面试的高频考题，同时也是基础排序算法的应用。因为篇幅的原因，没有办法把每一个知识点都介绍得很详细，大家可以自行学习相关知识点以理解题解中的内容。
+
+本题解分为四个部分：
+
+- 理解题意，做任何一道算法问题都需要搞清楚题目的意思，这部分是很重要的，只有搞清楚题目的意思，才能找到解决问题的算法与数据结构；
+- 方法一：暴力解法，这是根据题目意思能得到的最直接的解法，时间复杂度较高；
+- 方法二：通过 partition 减治，这是快速排序 partition 的应用；
+- 方法三：动态求出最值元素，是「优先队列」的应用。
+
+方法二必须把所有的数据读入内存中，方法三在数据量很大的时候，可以实现「在线算法」，不用一下子把所有数据读入内存。
+
+![image.png](lcof.assets/97186c31a9c3a4af8654c52e5e15e1073d623a57fb4d7fc04b32cc914b906c12-image.png)
+
+题意分析：
+
+![image-20220508205159104](lcof.assets/image-20220508205159104.png)
+
+暴力解法代码：
+
+```java
+import java.util.Arrays;
+
+public class Solution {
+
+    public int findKthLargest(int[] nums, int k) {
+        int len = nums.length;
+        Arrays.sort(nums);
+        return nums[len - k];
+    }
+}
+```
+
+- 我：
+
+复杂度分析：
+
+![image-20220508205309036](lcof.assets/image-20220508205309036.png)
+
+其实这道问题考察了「快速排序」的 `partition` 操作和数据结构「堆」的应用，方法二和方法三分别介绍了这两种方法。
+
+#### 官方2-减而治之
+
+（逐渐缩小问题规模）
+
+注意：
+
+![image-20220508205602643](lcof.assets/image-20220508205602643.png)
+
+不随机化pivot的代码：
+
+```java
+public class Solution {
+
+    public int findKthLargest(int[] nums, int k) {
+        int len = nums.length;
+        int left = 0;
+        int right = len - 1;
+
+        // 转换一下，第 k 大元素的下标是 len - k
+        int target = len - k;
+
+        while (true) {
+            int index = partition(nums, left, right);
+            if (index == target) {
+                return nums[index];
+            } else if (index < target) {
+                left = index + 1;
+            } else {
+                right = index - 1;
+            }
+        }
+    }
+
+    /**
+     * 对数组 nums 的子区间 [left..right] 执行 partition 操作，返回 nums[left] 排序以后应该在的位置
+     * 在遍历过程中保持循环不变量的定义：
+     * nums[left + 1..j] < nums[left]
+     * nums(j..i) >= nums[left]
+     *
+     * @param nums
+     * @param left
+     * @param right
+     * @return
+     */
+    public int partition(int[] nums, int left, int right) {
+        int pivot = nums[left];
+        int j = left;
+        for (int i = left + 1; i <= right; i++) {
+            if (nums[i] < pivot) {
+                // j 的初值为 left，先右移，再交换，小于 pivot 的元素都被交换到前面
+                j++;
+                swap(nums, j, i);
+            }
+        }
+        // 在之前遍历的过程中，满足 nums[left + 1..j] < pivot，并且 nums(j..i) >= pivot
+        swap(nums, j, left);
+        // 交换以后 nums[left..j - 1] < pivot, nums[j] = pivot, nums[j + 1..right] >= pivot
+        return j;
+    }
+
+    private void swap(int[] nums, int index1, int index2) {
+        int temp = nums[index1];
+        nums[index1] = nums[index2];
+        nums[index2] = temp;
+    }
+}
+```
+
+- 注意：本题必须随机初始化 pivot 元素，否则通过时间会很慢，因为测试用例中有极端测试用例。为了应对极端测试用例，使得递归树加深，可以在循环一开始的时候，随机交换第 1个元素与它后面的任意 1 个元素的位置；
+
+随机化pivot的代码：
+
+```java
+import java.util.Random;
+
+public class Solution {
+
+    private static Random random = new Random(System.currentTimeMillis());
+
+    public int findKthLargest(int[] nums, int k) {
+        int len = nums.length;
+        int target = len - k;
+        int left = 0;
+        int right = len - 1;
+        while (true) {
+            int index = partition(nums, left, right);
+            if (index < target) {
+                left = index + 1;
+            } else if (index > target) {
+                right = index - 1;
+            } else {
+                return nums[index];
+            }
+        }
+    }
+
+    // 在区间 nums[left..right] 区间执行 partition 操作
+    private int partition(int[] nums, int left, int right) {
+        // 在区间随机选择一个元素作为标定点
+        if (right > left) {
+            int randomIndex = left + 1 + random.nextInt(right - left);
+            swap(nums, left, randomIndex);
+        }
+
+        int pivot = nums[left];
+        int j = left;
+        for (int i = left + 1; i <= right; i++) {
+            if (nums[i] < pivot) {
+                j++;
+                swap(nums, j, i);
+            }
+        }
+        swap(nums, left, j);
+        return j;
+    }
+
+    private void swap(int[] nums, int index1, int index2) {
+        int temp = nums[index1];
+        nums[index1] = nums[index2];
+        nums[index2] = temp;
+    }
+} 
+```
+
+- 网友：很详细，感谢，补充一点：partition的pivot选择，有一个更好办法。就是选择 nums[i], nums[j], nums[(i+j)/2] 的中位数，这样比随机要靠谱一点。
+  - 大佬：这种方法叫做med_of_3，也是GCC内置非稳定排序的快排的一个部分。partition的做法我也是这样做的，不过最难受的就是这样做的标准做法是把中位数换到j-1的位置，然后对i+1~j-2所有元素做"划分"，这里的做法是双指针对撞，然后把pivot送到i的位置。这个过程看上去简单，但是细节，边界，数组越界情况简直比二分查找的边界还魔鬼。
+
+复杂度分析：
+
+![image-20220508205914329](lcof.assets/image-20220508205914329.png)
+
+> 说明：可能有一部分朋友看到这道题有「递归」的写法，但是本题解采用的是在 while (true) 循环中，通过 left 与 right 向中间靠拢的方式逐步缩小搜索区间，因此没有使用递归调用栈（也无须使用递归调用栈），因此空间复杂度是 O(1)。
+>
+
+#### 官方3-优先队列
+
+优先队列的思路是很朴素的。由于找第 K 大元素，其实就是整个数组排序以后后半部分最小的那个元素。因此，我们可以维护一个有 K 个元素的最小堆：
+
+- 如果当前堆不满，直接添加；
+- 堆满的时候，如果新读到的数小于等于堆顶，肯定不是我们要找的元素，只有新遍历到的数大于堆顶的时候，才将堆顶拿出，然后放入新读到的数，进而让堆自己去调整内部结构。
+
+说明：这里最合适的操作其实是 replace()，即直接把新读进来的元素放在堆顶，然后执行下沉（siftDown()）操作。Java 当中的 PriorityQueue 没有提供这个操作，只好先 poll() 再 offer()。
+
+优先队列的写法就很多了，这里只例举一个有代表性的，其它的写法大同小异，没有本质差别。
+
+代码：
+
+```java
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
+public class Solution {
+
+    public int findKthLargest(int[] nums, int k) {
+        int len = nums.length;
+        // 使用一个含有 k 个元素的最小堆，PriorityQueue 底层是动态数组，为了防止数组扩容产生消耗，可以先指定数组的长度
+        PriorityQueue<Integer> minHeap = new PriorityQueue<>(k, Comparator.comparingInt(a -> a));
+        // Java 里没有 heapify ，因此我们逐个将前 k 个元素添加到 minHeap 里
+        for (int i = 0; i < k; i++) {
+            minHeap.offer(nums[i]);
+        }
+
+        for (int i = k; i < len; i++) {
+            // 看一眼，不拿出，因为有可能没有必要替换
+            Integer topElement = minHeap.peek();
+            // 只要当前遍历的元素比堆顶元素大，堆顶弹出，遍历的元素进去
+            if (nums[i] > topElement) {
+                // Java 没有 replace()，所以得先 poll() 出来，然后再放回去
+                minHeap.poll();
+                minHeap.offer(nums[i]);
+            }
+        }
+        return minHeap.peek();
+    }
+}
+```
+
+复杂度分析：
+
+![image-20220508210229493](lcof.assets/image-20220508210229493.png)
+
+#### 再战成功
+
+```java
+class Solution {
+    public int findKthLargest(int[] nums, int k) {
+        /**
+        使用快排的partition，减少排序操作
+
+        目标是排序后的倒数第k个元素，正好用上了快排的性质，快排每次getMid都会固定一个元素的位置
+
+        时间复杂度on
+         */
+        int left=0,right=nums.length-1;
+        while(true){
+            int mid=getMid(nums,left,right);
+            if(mid<nums.length-k){
+                left=mid+1;
+            }else if(mid>nums.length-k){
+                right=mid-1;
+            }else{
+                return nums[mid];
+            }
+        }
+
+    }
+
+    //交换i和j位置元素
+    public void swap(int[]nums,int i,int j){
+        int temp=nums[i];
+        nums[i]=nums[j];
+        nums[j]=temp;
+    }
+
+    //把nums在left和right之间元素排序，使得pivot左边的都小于pivot，pivot右边的都大于pivot；返回pivot
+    public int getMid(int[]nums,int left,int right){
+        //为了避免极端案例（升序或降序），要随机化选取位置作为pivot。创建random的方法：https://cloud.tencent.com/developer/article/1332907
+        Random random=new Random();
+        int randomIndex=random.nextInt(right-left+1)+left;
+        swap(nums,left,randomIndex);
+
+        //让pivot的左边小于pivot，pivot的右边大于pivot。target即为pivot处的值
+        int target=nums[left];
+        while(left<right){
+            //注意！！！while(target<=nums[right])可能会在移动left和right的时候超过边界
+            while(left<right&&target<=nums[right])right--;
+            swap(nums,left,right);
+            while(left<right&&target>=nums[left])left++;
+            swap(nums,left,right);
+        }
+
+        //离开循环后，left==right，且left左边的数都小于left处的位置，left右边的数都大于left处的位置
+        return left;
+
+    }
+}
+```
+
+- 反思：
+  - 快排在while交换位置时，要记住逼近要比较taregt，还要防止left right交叉。
+  - random的用法不熟练。[参考](https://cloud.tencent.com/developer/article/1332907)，`java.util.Random`下的，`random.nextInt(x)`可以获取`[0,x-1]`的整数，范围相当于是[0,x)。
 
 ## 搜索与回溯算法(简单)
 
 ### [剑指 Offer 32 - I. 从上到下打印二叉树](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-lcof/)
+
+codetop==2
 
 #### 首战半寄
 
@@ -1787,9 +3826,9 @@ class Solution {
 ```
 
 - 思路有，但是queue的使用，arraylist转array都是借助网络了，中间运行了几次。
-
 - 我推测：单个int Integer互相转换可以自动装箱拆箱；但是int[]和Integer[]互相转换就不能直接装箱拆箱，而要对一个个元素手动/自动装箱拆箱；
   - 如本题目所示`result[i]=arrayList.get(i).intValue();`是手动拆箱，`result[i]=arrayList.get(i);`是自动拆箱，亲测都可以提交成功。
+- 我：不要用Queue和Stack，直接用Deque实现两者。
 
 #### 官方-bfs
 
@@ -1840,6 +3879,8 @@ class Solution {
 - 我：和我的代码基本一样。
 
 ### [剑指 Offer 32 - II. 从上到下打印二叉树 II](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-ii-lcof/)
+
+codetop==2
 
 #### 首战告捷
 
@@ -1955,6 +3996,8 @@ class Solution {
 
 
 ### [剑指 Offer 32 - III. 从上到下打印二叉树 III](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-iii-lcof/)
+
+codetop==13
 
 #### 首战半寄
 
@@ -2074,9 +4117,11 @@ class Solution {
 
 - Java 中将链表 LinkedList 作为双端队列使用，LinkedList 可以用addLast和addFirst从链状列表的两端插入。
 - 注意：我` for(int i = 0; i <queue.size(); i++) `，会导致往队列加元素后队列长度变化，导致的无法按层输出。但是题解中` for(int i = queue.size(); i > 0; i--)`的写法，就保证一层级的节点数不会被后续加入队列的节点所影响。
+  - 求size的时间复杂度，[参考](https://blog.csdn.net/Kevin___________/article/details/108681594)
+
 
 #### 官方2-层序遍历 + 双端队列（奇偶层逻辑分离）
-- 方法一代码简短、容易实现；但需要判断每个节点的所在层奇偶性，即冗余了 NN 次判断。
+- 方法一代码简短、容易实现；但需要判断每个节点的所在层奇偶性，即冗余了 N 次判断。
 - 通过将奇偶层逻辑拆分，可以消除冗余的判断。
 
 算法流程：
@@ -2143,6 +4188,8 @@ class Solution {
 
 ### [剑指 Offer 26. 树的子结构](https://leetcode-cn.com/problems/shu-de-zi-jie-gou-lcof/)
 
+codetop==12
+
 #### 首战寄
 
 - 思路比较混乱，担心自己的算法会造成节点的反复判断，就放弃了
@@ -2208,10 +4255,13 @@ class Solution {
 ```
 
 - helper专门用来判断左右子树。
+- 我：root2==null，则root1不管是不是null，都表示这条遍历成功；root2！=null，但root1为null，说明两个子树在此位置不匹配，返回false。
 
 
 
 ### [剑指 Offer 27. 二叉树的镜像](https://leetcode-cn.com/problems/er-cha-shu-de-jing-xiang-lcof/)
+
+codetop==25
 
 #### 首战告捷
 
@@ -2279,6 +4329,7 @@ class Solution {
 ```
 
 - 官方思路和我一样，不过我自建了一个recur函数，让recur专门负责子节点的处理，让逻辑更清晰。
+- 我：交换二叉树每个节点的左右子树，即可得到二叉树的镜像。
 
 复杂度分析:
 
@@ -2287,6 +4338,8 @@ class Solution {
 - 空间复杂度：O(N) 。使用的空间由递归栈的深度决定，它等于当前节点在二叉树中的高度。在平均情况下，二叉树的高度与节点个数为对数关系，即 O(logN)。而在最坏情况下，树形成链状，空间复杂度为 O(N)。
 
 ### [剑指 Offer 28. 对称的二叉树](https://leetcode-cn.com/problems/dui-cheng-de-er-cha-shu-lcof/)
+
+codetop==2
 
 #### 首战寄
 
@@ -2418,1468 +4471,83 @@ class Solution {
 
 }
 ```
+### [102. 二叉树的层序遍历](https://leetcode.cn/problems/binary-tree-level-order-traversal/)
 
-## 动态规划(简单)
-
-### [剑指 Offer 10- I. 斐波那契数列](https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/)
-
-#### 首战寄
-
-先尝试直接递归，n==43时会超时，因为执行每一个fib都会一直递归到0或1，但是比如`return (fib(n-1)+fib(n-2))%1000000007;`计算了左边的fib(49)后，计算右边的fib(48)时还递归到底，所以最好把计算过的结果保存！保存计算结果应该是动态规划区别于递归的一个特征。
-
-```java
-class Solution {
-    public int fib(int n) {
-        //设定返回条件
-        if(n==0) {
-            return 0;
-        }else if(n==1) {
-            return 1;
-        }
-
-        return (fib(n-1)+fib(n-2))%1000000007;
-    }
-}
-```
-
-- 但是想不起来怎么保存结果了
-
-#### 官方-动态规划
-
-解题思路：
-
-![image-20220330174419199](lcof.assets/image-20220330174419199.png)
-
-![image-20220330174432153](lcof.assets/image-20220330174432153.png)
-
-动态规划解析：
-
-![image-20220330174451619](lcof.assets/image-20220330174451619.png)
-
-空间复杂度优化：
-
-![image-20220330174517988](lcof.assets/image-20220330174517988.png)
-
-循环求余法 处理大数：
-
-![image-20220330174550027](lcof.assets/image-20220330174550027.png)
-
-复杂度分析：
-
-![image-20220330174615495](lcof.assets/image-20220330174615495.png)
-
-代码：
-
-```java
-class Solution {
-    public int fib(int n) {
-        int a = 0, b = 1, sum;
-        for(int i = 0; i < n; i++){
-            sum = (a + b) % 1000000007;
-            a = b;
-            b = sum;
-        }
-        return a;
-    }
-}
-```
-
-#### 即时再战半寄
-
-```java
-class Solution {
-    public int fib(int n) {
-        /*
-        动态规划，当前值只与前两个值有关；让值从小往大加即可
-         */
-
-        //先返回特殊值；这样下面的for循环才能安全地只接收n>=2的情况
-        if(n==0||n==1)return n;
-
-        int pre2=0,pre1=1;
-
-        //循环当前的i为谁，执行完当前循环，得到的sum即为fib(i)
-        for(int i=2;i<=n;i++){
-
-            int tempSum=(pre2%1000000007+pre1%1000000007)%1000000007;
-            pre2=pre1;
-            pre1=tempSum;
-        }
-
-        //最后一次循环得到的sum即为fib(n)，这个sum被复制给pre1了
-        return pre1;
-
-    }
-}
-```
-
-- 第一次提交的时候，忽略了处理n==1和0的情况；for循环无法处理n<2的情况，所以要做面对n==1和0的情况时的特殊处理。如上处理后就提交成功了。
-
-
-
-### [剑指 Offer 10- II. 青蛙跳台阶问题](https://leetcode-cn.com/problems/qing-wa-tiao-tai-jie-wen-ti-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int numWays(int n) {
-        /*
-        跳上台阶的跳法，至只与前两步有关系:跳到当前台阶的方法数==跳到prev1（前一个台阶）的方法数+跳到prev2的方法数。
-        因为跳到当前台阶只有两种可能：从prev1跳1个台阶上来，或从prev2一跃跳两个台阶上来
-         */
-
-         if(n==0||n==1)return 1;
-         if(n==2)return 2;
-
-        //从第三级台阶开始动态规划
-         int prev1=2,prev2=1;
-         //当前循环为i，则执行完当前循环时的sum为跳到第i级台阶的跳法数
-         for(int i=3;i<=n;i++){
-             int tempSum=(prev1%1000000007+prev2%1000000007)%1000000007;
-             prev2=prev1;
-             prev1=tempSum;
-         }
-
-         return prev1;
-
-    }
-}
-```
-
-#### 官方-动态规划
-
-解题思路：
-
-![image-20220330180140749](lcof.assets/image-20220330180140749.png)
-
-- 本题和斐波那契数列问题基本一模一样。
-- 注意大佬评语：此类求 ***多少种可能性*** 的题目一般都有 **递推性质** ，即 f(n)*f*(*n*) 和 f(n-1)*f*(*n*−1)…f(1)*f*(1) 之间是有联系的。
-
-复杂度分析：
-
-![image-20220330180256791](lcof.assets/image-20220330180256791.png)
-
-代码：
-
-```java
-class Solution {
-    public int numWays(int n) {
-        int a = 1, b = 1, sum;
-        for(int i = 0; i < n; i++){
-            sum = (a + b) % 1000000007;
-            a = b;
-            b = sum;
-        }
-        return a;
-    }
-}
-```
-
-
-
-### [剑指 Offer 63. 股票的最大利润](https://leetcode-cn.com/problems/gu-piao-de-zui-da-li-run-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int maxProfit(int[] prices) {
-        /*记录历史最大利润，和最低价格的股票 */
-        
-        //处理特殊情况
-        if(prices.length==0)return 0;
-        
-        int lowP=prices[0];
-        int benefit=0;
-        for(int i=0;i<prices.length;i++){
-            //时刻更新最大收益
-            if((prices[i]-lowP)>benefit){
-                benefit=prices[i]-lowP;
-            }
-            //只要碰见更小的price就保存，因为未来碰见相同的高值时，记录下更小的lowP可以带来更大的收入。
-            if(prices[i]<lowP){
-                lowP=prices[i];
-            }
-        }
-        
-        return benefit;
-
-    }
-}
-```
-
-#### 官方-动态规划
-
-解题思路：
-
-![image-20220330192323464](lcof.assets/image-20220330192323464.png)
-
-动态规划解析：
-
-![image-20220330192357464](lcof.assets/image-20220330192357464.png)
-
-效率优化：
-
-![image-20220330192427858](lcof.assets/image-20220330192427858.png)
-
-复杂度分析：
-
-![image-20220330192446488](lcof.assets/image-20220330192446488.png)
-
-代码：
-
-```java
-class Solution {
-    public int maxProfit(int[] prices) {
-        int cost = Integer.MAX_VALUE, profit = 0;
-        for(int price : prices) {
-            cost = Math.min(cost, price);
-            profit =Math.min(profit, price - cost);
-        }
-        return profit;
-    }
-}
-```
-
-- 注意这里java工具类方法`Math.min`和`Math.min`的用法。
-
-
-
-## 动态规划(中等)
-
-### [剑指 Offer 42. 连续子数组的最大和](https://leetcode-cn.com/problems/lian-xu-zi-shu-zu-de-zui-da-he-lcof/)
-
-#### 首战寄
-
-#### 官方-动态规划
-
-解题思路：
-
-![image-20220331195848158](lcof.assets/image-20220331195848158.png)
-
-动态规划解析：
-
-![image-20220331195938823](lcof.assets/image-20220331195938823.png)
-
-空间复杂度降低：
-
-![image-20220331200048428](lcof.assets/image-20220331200048428.png)
-
-复杂度分析：
-
-![image-20220331200117017](lcof.assets/image-20220331200117017.png)
-
-代码：
-
-```java
-class Solution {
-    public int maxSubArray(int[] nums) {
-        int res = nums[0];
-        for(int i = 1; i < nums.length; i++) {
-            nums[i] += Math.max(nums[i - 1], 0);
-            res = Math.max(res, nums[i]);
-        }
-        return res;
-    }
-}
-```
-
-网友补充：感谢分享，思路很清晰，只是有一点建议。 因为有的时候，题目要求可能不能修改原有数组，考虑到在dp列表中，dp[i]只和dp[i-1]有关,所以用两个参数存储循环过程中的dp[i]和dp[i-1]的值即可，空间复杂度也为O(1)。 代码如下：
-
-```java
-class Solution {
-    public int maxSubArray(int[] nums) {
-        int max = nums[0];
-        int former = 0;//用于记录dp[i-1]的值，对于dp[0]而言，其前面的dp[-1]=0
-        int cur = nums[0];//用于记录dp[i]的值
-        for(int num:nums){
-            cur = num;
-            if(former>0) cur +=former;
-            if(cur>max) max = cur;
-            former=cur;
-        }
-        return max;
-    }
-}
-```
-
-
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int maxSubArray(int[] nums) {
-        /* 
-        dpi表示已i号元素结尾的最大子数组，那么dpi=Max(dp[i-1]+numsi,numsi),所以dp[i-1]<0的话只能拖后腿就截掉
-        因为最长子数组是连续的，所以要以i为结尾的数组做dp数组
-        */
-        //处理特殊情况
-        if(nums.length==0)return 0;
-        if(nums.length==1)return nums[0];
-
-        //从数组第二个元素开始就dpi
-        int curMaxSum=nums[0],historyMaxSum=curMaxSum;
-        for(int i=1;i<nums.length;i++){
-            if(curMaxSum<0){
-                curMaxSum=nums[i];
-            }else{
-                curMaxSum+=nums[i];
-            }
-
-            //判断当前的最大值是否比之前所有记载过的最大值都大，都大的话更新历史最大值
-            if(curMaxSum>historyMaxSum){
-                historyMaxSum=curMaxSum;
-            }
-        }
-
-        return historyMaxSum;
-
-    }
-}
-```
-
-
-
-### [剑指 Offer 47. 礼物的最大价值](https://leetcode-cn.com/problems/li-wu-de-zui-da-jie-zhi-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int maxValue(int[][] grid) {
-        /*
-        覆写二维数组，在相应位置写上“以左上角出发到当前位置能拿到的最大礼物”，这个礼物值只与上一节点和左一节点有关。
-
-        为了空间复杂度，直接在二维数组上记录
-         */
-         //处理特殊情况;注意要先判断行不为0，否则先判断列不为0的话可能出现空指针异常
-         if(grid.length==0||grid[0].length==0)return 0;
-
-         //先处理二维数组的行
-         for(int i=0;i<grid.length;i++){
-             //再在二维数组的某个行中依次处理各个列元素
-             for(int j=0;j<grid[0].length;j++){
-                 //获得数组当前元素，从左or从上来，哪个拿更多礼物
-                 int tempLeft=0,tempUp=0;
-                if(i>0){//如果i大于0，说明不在第一行，那么可以获得grid[i-1][j]位置存放的最大礼物
-                    tempUp=grid[i-1][j];
-                }
-                if(j>0){//如果j大于0，说明不在第一列，那么可以获得grid[i][j-1]位置存放的最大礼物
-                    tempLeft=grid[i][j-1];
-                }
-
-                //把grid[i][j]覆盖写为走当当前位置能拿到得最多礼物。
-                grid[i][j]=Math.max(tempLeft,tempUp)+grid[i][j];
-             }
-
-         }
-
-         return grid[grid.length-1][grid[0].length-1];
-
-    }
-}
-```
-
-- 看了官方解析，我得解法就是官方的待优化版，可以先初始化“第一行 第一列”，这样就避免每次判断当前元素是不是在二维数组的边缘。
-
-#### 官方-动态规划
-
-解题思路：
-
-![image-20220401152228155](lcof.assets/image-20220401152228155.png)
-
-动态规划解析：
-
-![image-20220401152255940](lcof.assets/image-20220401152255940.png)
-
-空间复杂度优化：
-
-![image-20220401152320811](lcof.assets/image-20220401152320811.png)
-
-复杂度分析：
-
-![image-20220401152346735](lcof.assets/image-20220401152346735.png)
-
-代码：
-
-```java
-class Solution {
-    public int maxValue(int[][] grid) {
-        int m = grid.length, n = grid[0].length;
-        for(int i = 0; i < m; i++) {
-            for(int j = 0; j < n; j++) {
-                if(i == 0 && j == 0) continue;
-                if(i == 0) grid[i][j] += grid[i][j - 1] ;
-                else if(j == 0) grid[i][j] += grid[i - 1][j];
-                else grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
-            }
-        }
-        return grid[m - 1][n - 1];
-    }
-}
-```
-
-以上代码逻辑清晰，和转移方程直接对应，但仍可提升效率：当 gridgrid 矩阵很大时， i = 0i=0 或 j = 0j=0 的情况仅占极少数，相当循环每轮都冗余了一次判断。因此，可先初始化矩阵第一行和第一列，再开始遍历递推:
-
-```java
-class Solution {
-    public int maxValue(int[][] grid) {
-        int m = grid.length, n = grid[0].length;
-        for(int j = 1; j < n; j++) // 初始化第一行
-            grid[0][j] += grid[0][j - 1];
-        for(int i = 1; i < m; i++) // 初始化第一列
-            grid[i][0] += grid[i - 1][0];
-        for(int i = 1; i < m; i++)
-            for(int j = 1; j < n; j++) 
-                grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
-        return grid[m - 1][n - 1];
-    }
-}
-
-```
-
-
-
-### [剑指 Offer 46. 把数字翻译成字符串](https://leetcode-cn.com/problems/ba-shu-zi-fan-yi-cheng-zi-fu-chuan-lcof/)
-
-#### 首战寄
-
-#### 大佬-适合新手理解
-
-思路：
-
-此题总结规律和青蛙跳台阶有点相似（没刷到的可以先刷青蛙跳台阶），青蛙跳台阶是只能跳一步或者两步，所以最后只有两种情况：
-
-
-    1. 跳到n-1阶，然后再跳1
-    2. 跳到n-2阶,然后再跳2
-    所以f(n) = f(n-1)+f(n-2)
-此题关注的是最大能翻译的数字为25，说明情况为要不一次性翻译一个数字，要不一次性翻译两个数字（不可能三个数字，三个数字肯定大于25了），和青蛙跳只能跳一步或两步类似
-
-
-    假设dp(i)为长度为i的数字的翻译总数
-        a.如果最后两位数字大于10且小于25，他才能翻译两个数字，他就和青蛙跳类似有两种情况：
-             1.dp(i-1),然后最后一个数字单独翻译
-             2.dp(i-2),然后最后两个数字一起翻译
-             所以dp(i) = dp(i-1) + dp(i-2);
-        b.如果最后两位数字比10小，比25大，那么他最后一个数字只能单独翻译，所以只有一种情况：
-             1.dp(i-1),然后最后一个数字单独翻译,所以dp(i) = dp(i-1);
-代码(最好理解的写法)
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        //dp[i-2]
-        int a = 1;
-        //dp[i-1]
-        int b = 1;
-        //dp[i]
-        int c = 1;
-        String s = String.valueOf(num);
-        for (int i = 1; i < s.length(); i++) {
-            //最后两个数字大于10小于25
-            if ((s.charAt(i-1) == '1') || ( s.charAt(i-1) == '2' && s.charAt(i) <= '5')) {
-                c = b + a;
-                //更新新的dp[i-2]
-                a = b;
-                //更新新的dp[i-1]
-                b = c;
-            }else {
-                c = b;
-                //由于新的dp[i-1]值没变，所以只更新新的dp[i-2]
-                a = b;
-            }
-        }
-        return c;
-
-    }
-}
-```
-
-- 注意：字符‘1’ ‘2’ ‘3’ ‘4’ ‘5’，，也是ascii递增的，他们可以用符号比大小。
-
-#### 官方1-动态规划+字符串遍历
-
-解题思路：
-
-根据题意，可按照下图的思路，总结出 “递推公式” （即转移方程）。
-因此，此题可用动态规划解决，以下按照流程解题。
-
-![Picture1.png](lcof.assets/e231fde16304948251633cfc65d04396f117239ea2d13896b1d2678de9067b42-Picture1.png)
-
-动态规划解析：
-
-![image-20220401172718039](lcof.assets/image-20220401172718039.png)
-
-字符串遍历做法：
-
-![image-20220401172829205](lcof.assets/image-20220401172829205.png)
-
-复杂度分析：
-
-![image-20220401172857171](lcof.assets/image-20220401172857171.png)
-
-代码：
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        String s = String.valueOf(num);
-        int a = 1, b = 1;
-        for(int i = 2; i <= s.length(); i++) {
-            String tmp = s.substring(i - 2, i);
-            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
-            b = a;
-            a = c;
-        }
-        return a;
-    }
-}
-```
-
-高赞网友补充：动态规划思想，按照大佬的思路，使用的数组（感觉使用a和b不太直观）
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        String s = String.valueOf(num);
-        int[] dp = new int[s.length()+1];
-        dp[0] = 1;
-        dp[1] = 1;
-        for(int i = 2; i <= s.length(); i ++){
-            String temp = s.substring(i-2, i);
-            if(temp.compareTo("10") >= 0 && temp.compareTo("25") <= 0)
-                dp[i] = dp[i-1] + dp[i-2];
-            else
-                dp[i] = dp[i-1];
-        }
-        return dp[s.length()];
-    }
-}
-```
-
-![image-20220401173035518](lcof.assets/image-20220401173035518.png)
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        String s = String.valueOf(num);
-        int a = 1, b = 1;
-        for(int i = s.length() - 2; i > -1; i--) {
-            String tmp = s.substring(i, i + 2);
-            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
-            b = a;
-            a = c;
-        }
-        return a;
-    }
-}
-```
-
-#### 官方2-动态规划+数字求余
-
-上述方法1虽然已经节省了 dp列表的空间占用，但字符串 s 仍使用了 O(N)大小的额外空间。
-
-空间复杂度优化：
-
-![image-20220401173303141](lcof.assets/image-20220401173303141.png)
-
-复杂度分析：
-
-![image-20220401173327733](lcof.assets/image-20220401173327733.png)
-
-代码：
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        int a = 1, b = 1, x, y = num % 10;
-        while(num != 0) {
-            num /= 10;
-            x = num % 10;
-            int tmp = 10 * x + y;
-            int c = (tmp >= 10 && tmp <= 25) ? a + b : a;
-            b = a;
-            a = c;
-            y = x;
-        }
-        return a;
-    }
-}
-```
-
-高赞网友补充：大佬，直接对100取余可以简化代码:
-
-```java
-class Solution {
-    public int translateNum(int num) {
-        int m = 1, n = 1;
-        // 至少是一个两位数才需要考虑能不能组合
-        while (num > 9) { 
-            int t = (num % 100 < 26 && num % 100 > 9) ? m + n : n;
-            m = n;
-            n = t;
-            num /= 10;
-        }
-        return n;
-    }
-}
-```
-
-#### 及时再战成功
-
-```java
-class Solution {
-    public int translateNum(int num) {
-
-        /**
-        数字翻译成字符串是对称的，所以从右往左看；以nums[i-1]为首位的数字，可能收到nums[i]和nums[i+1]的影响
-         */
-        //初始化，把num看做nums数组的话，表示以nums[len-1]和nums[len]为终点的的翻译有几种情况，虽然初始情况下dpLater2对应的nums[len]不存在，但是可以通过dp[len-2]和dp[len-1]推出dp[len].
-        int dpLater1=1,dpLater2=1;
-
-        //使用对100求余数，得到最接近左遍历终点的两个数字构成的数
-        while(num>9){
-            int tempFocus=num%100;
-            int dpCur;
-            //数字在[10,25]有两种翻译方法
-            if(tempFocus>=10&&tempFocus<=25){
-                dpCur=dpLater1+dpLater2;
-            }else{
-                dpCur=dpLater1;
-            }
-
-            //往左继续处理
-            dpLater2=dpLater1;
-            dpLater1=dpCur;
-            num/=10;
-        }
-
-        //最后的dpCur给了dpLater1
-        return dpLater1;
-
-    }
-}
-```
-
-自画思路图：
-
-![image-20220401181306013](lcof.assets/image-20220401181306013.png)
-
-- 即最后的12，如果整体翻译，就是以4为左结尾的翻译可能数（12    4，共一种情况）；如果拆开翻译，即是以2为结尾的返回数（1   2   4，1    24，  共两种情况）；又因为既能翻译为1又能翻译为12，所以是两种翻译情况的种数的和。
-  - 比如324，最后分析32，不能作为翻译单元，所以只能拆开3和2；有3   24，3    2    4两种情况，即相当于以2结尾的翻译可能数。
-
-- 其实核心思想就是，从右往左处理时，最后的翻译单元是1 还是12；最后的翻译单元是1则对应一个1xxxx翻译，最后的翻译单元是12则对应一个12xxxx翻译，xxxx区域相当于就是动态规划的子问题，共两种情况。如果数字更长的话，也是同理。
-
-### [剑指 Offer 48. 最长不含重复字符的子字符串](https://leetcode-cn.com/problems/zui-chang-bu-han-zhong-fu-zi-fu-de-zi-zi-fu-chuan-lcof/)
-
-#### 首战寄
-
-#### 官方-解题思路
-
-解题思路：
-
-![image-20220402102952931](lcof.assets/image-20220402102952931.png)
-
-动态规划解析：
-
-![image-20220402103030643](lcof.assets/image-20220402103030643.png)
-
-空间复杂度优化：
-
-![image-20220402103106620](lcof.assets/image-20220402103106620.png)
-
-#### 官方方法1-动态规划 + 哈希表
-
-![image-20220402103323735](lcof.assets/image-20220402103323735.png)
-
-复杂度分析：
-
-![image-20220402103346795](lcof.assets/image-20220402103346795.png)
-
-代码：
-
-```java
-class Solution {
-    public int lengthOfLongestSubstring(String s) {
-        Map<Character, Integer> dic = new HashMap<>();
-        int res = 0, tmp = 0;
-        for(int j = 0; j < s.length(); j++) {
-            int i = dic.getOrDefault(s.charAt(j), -1); // 获取索引 i
-            dic.put(s.charAt(j), j); // 更新哈希表
-            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
-            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
-        }
-        return res;
-    }
-}
-```
-
-- Java 的  getOrDefault(key, default)， 代表当哈希表包含键 key时返回对应 value ，不包含时返回默认值 default 。
-
-- 我：dpj的值由dpj-1和i共同决定；如果i在dpj-1所代表的字符串中，则dpj的长度为j-i；如果i不在dpj-1所代表的字符串中，则dpj的长度为(dpj-1)+1。
-
-#### 官方方法2-动态规划 + 线性遍历
-
-思路：
-
-![image-20220402104704664](lcof.assets/image-20220402104704664.png)
-
-代码：
-
-```java
-class Solution {
-    public int lengthOfLongestSubstring(String s) {
-        Map<Character, Integer> dic = new HashMap<>();
-        int res = 0, tmp = 0;
-        for(int j = 0; j < s.length(); j++) {
-            int i = j - 1;
-            while(i >= 0 && s.charAt(i) != s.charAt(j)) i--; // 线性查找 i
-            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
-            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
-        }
-        return res;
-    }
-}
-
-```
-
-- 这种往左遍历增大了时间复杂度为on2，不可取，不建议
-
-#### 官方方法3-双指针 + 哈希表
-
-思路：
-
-![image-20220402104914233](lcof.assets/image-20220402104914233.png)
-
-代码：
-
-```java
-class Solution {
-    public int lengthOfLongestSubstring(String s) {
-        Map<Character, Integer> dic = new HashMap<>();
-        int i = -1, res = 0;
-        for(int j = 0; j < s.length(); j++) {
-            if(dic.containsKey(s.charAt(j)))
-                i = Math.max(i, dic.get(s.charAt(j))); // 更新左指针 i
-            dic.put(s.charAt(j), j); // 哈希表记录
-            res = Math.max(res, j - i); // 更新结果；j - i即为以i为右指针的最长字符串的长度，其要与历史最大值比较来更新历史最大值。
-        }
-        return res;
-    }
-}
-
-```
-
-- 网友问：left = Math.max(left, hashMap.get(ch) + 1);为什么取最大值
-
-  - 网友答：
-
-  - 因为需要保证的是`[left,right]`没有重复值。而你的left如果不取最大值的话，是有可能往前退，就无法保证这个条件了。
-
-    比如`abba` , 到第二个`a`的时候，这时候上一轮的第二个b完成，此时`left=2` ，而`a`上一次出现的地方是0。
-
-    如果你直接`left = hashMap.get(ch) + 1` ,此时 left = 1 ,范围为`[left,right] = [1,3]` 而此时`[1,2] = bb` ，b已经重复了。本质就是你这个字母上次出现的地方到当前再次出现的位置，这两者间可能存在重复的值
-
-#### 即时再战半寄
-
-```java
-class Solution {
-    public int lengthOfLongestSubstring(String s) {
-        /**
-        从左往右遍历，ij分别为左右重复元素，dpj由dpj-1和i共同决定
-         */
-
-        //存储字符元素-位置
-        Map<Character,Integer> map=new HashMap<>();
-        //j位置为当前元素，i为当前元素之前的重复元素的位置
-        int i=-1,dpPre=0,result=0;
-        for(int j=0;j<s.length();j++){
-            //先获取当前元素的上一个重复元素的index，如果没出现过则返回-1；
-            i=map.getOrDefault(s.charAt(j),-1);
-
-            //当前元素为右尾的子串的长度，由dpPre和ij关系共同决定。注意dpPre==j-i时j的上一个重复元素在dpPre对应的子串的首位，所以在dpPre对应的子串内，所以不能用dpPre+1作为新值。
-            int dpCur=(dpPre>=j-i?j-i:dpPre+1);
-            //比较以当前元素为结尾的子串的最大长度和历史上记录的最大长度，更新历史最大长度
-            result=Math.max(result,dpCur);
-
-            //更新s.charAt(j)字符的位置为当前位置
-            map.put(s.charAt(j),j);
-            //不要忘记更新dpPre，否则dpPre永远是0
-            dpPre=dpCur;
-        }
-
-        return result;
-
-    }
-}
-```
-
-- 能理顺动态规划的思路，但是写代码的时候忘记更新dpPre，且一直没排查出来；最后用idea debug才发现。**涉及到pre的一定要注意pre是否需要被更新**！
-
-## 双指针(简单)
-
-### [剑指 Offer 18. 删除链表的节点](https://leetcode-cn.com/problems/shan-chu-lian-biao-de-jie-dian-lcof/)
+和剑指32相同
 
 #### 首战告捷
 
 ```java
 /**
- * Definition for singly-linked list.
- * public class ListNode {
+ * Definition for a binary tree node.
+ * public class TreeNode {
  *     int val;
- *     ListNode next;
- *     ListNode(int x) { val = x; }
- * }
- */
-class Solution {
-    public ListNode deleteNode(ListNode head, int val) {
-        //处理特殊情况。习惯性的做一下null处理，避免恶心人的案例。
-        if(head==null)return null;
-        
-        //创建引用当前节点的引用
-        ListNode cur=head;
-        
-        //由于总是删除下一节点，所以先处理头节点;因为头节点不能被通过前节点删除。
-        if(head.val==val){
-            head=head.next;
-            return head;
-        }
-
-        //由于总是判断删除下一个节点，所以判断的是next不为空；本while循环不会循环完退出，只会在循环中找到了要删除的节点并退出
-        while(cur.next!=null){
-            //判断当前节点的下一个节点要不要被删掉；由于程序最迟在cur为倒数第二个节点时能判断到倒数第一个节点要被删掉，并且while的条件保证了下一节点不为空，所以其实不用担心cur.next==null即cur为结尾指针造成的空指针异常。
-            if(cur.next.val==val){
-                //即使是删掉最后一个节点，cur为倒数第二个节点，cur.next.next也为null不会空指针异常
-                cur.next=cur.next.next;
-                return head;
-            }
-            //while不要忘记移动cur
-            cur=cur.next;
-        }
-        //正常来说，这个return是永远不会使用的。
-        return null;
-    }
-}
-```
-
-- 没用到双指针，就时间复杂度on解决了
-
-#### 官方-双指针
-
-其实官方的双指针就是我的做法吗，只不过多此一举用了两个指针。
-
-解题思路：
-
-![image-20220403171506936](lcof.assets/image-20220403171506936.png)
-
-算法流程：
-
-![image-20220403171539038](lcof.assets/image-20220403171539038.png)
-
-复杂度分析：
-
-![image-20220403171557465](lcof.assets/image-20220403171557465.png)
-
-代码：
-
-```java
-class Solution {
-    public ListNode deleteNode(ListNode head, int val) {
-        if(head.val == val) return head.next;
-        ListNode pre = head, cur = head.next;
-        while(cur != null && cur.val != val) {
-            pre = cur;
-            cur = cur.next;
-        }
-        if(cur != null) pre.next = cur.next;
-        return head;
-    }
-}
-```
-
-- 我：有个网友评价“单指针”就够了，做法就是我的做法。
-
-
-
-### [剑指 Offer 22. 链表中倒数第k个节点](https://leetcode-cn.com/problems/lian-biao-zhong-dao-shu-di-kge-jie-dian-lcof/)
-
-#### 首战告捷--递归法
-
-```java
-/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode(int x) { val = x; }
- * }
- */
-class Solution {
-    //定义全局变量
-    ListNode result;
-    public ListNode getKthFromEnd(ListNode head, int k) {
-        /*
-        倒数，想到栈：先把节点全部入栈，出栈的时候计数，到指定节点都出栈的时候，返回那个节点。
-        栈可以通过递归实现，计数可以通过全局变量
-         */
-
-        //执行递归，以保存目标节点
-        recur(head,k);
-
-        return result;
-
-    }
-    public int recur(ListNode head,int k){
-        //设定递归触底条件，哪个递归层拿到的return与k相同，则说明应返回当前节点
-        if(head==null) return 1;
-
-        //如果下一层递归返回的当前层的倒数层数为k，说明当前节点就是目标节点；
-        int kthFromEnd=recur(head.next,k);
-        if(kthFromEnd==k){
-            result=head;
-        }
-
-        //给退栈时的各层返回他们的倒数的层数
-        return kthFromEnd+1;
-    }
-}
-```
-
-- 问问问：我n层递归，空间复杂度是不是就是on了，那性能就不如官方的了。
-
-#### 官方--双指针
-
-解题思路：
-
-![image-20220403175326006](lcof.assets/image-20220403175326006.png)
-
-算法流程：
-
-![image-20220403175352955](lcof.assets/image-20220403175352955.png)
-
-复杂度分析：
-
-![image-20220403175419032](lcof.assets/image-20220403175419032.png)
-
-代码：
-
-```java
-class Solution {
-    public ListNode getKthFromEnd(ListNode head, int k) {
-        ListNode former = head, latter = head;
-        for(int i = 0; i < k; i++)
-            former = former.next;
-        while(former != null) {
-            former = former.next;
-            latter = latter.next;
-        }
-        return latter;
-    }
-}
-```
-
-- 本题没有 k*k* 大于链表长度的 case ，因此不用考虑越界问题。
-
-- 我：看来双指针可以这样控制距离，牛逼！
-
-
-
-### [剑指 Offer 25. 合并两个排序的链表](https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/)
-
-#### 首战告捷
-
-```java
-/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode(int x) { val = x; }
- * }
- */
-class Solution {
-    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
-        //处理特殊情况
-        if(l1==null)return l2;
-        if(l2==null)return l1;
-        //能走到这一步说明两个链表的头结点都不为空，不会空指针；保存初始头结点为两个链表头结点里小的那个；必须保存了头结点，后面while中才能有head.next的方式赋值，才能连接起链表。
-        ListNode head;
-        if(l1.val<=l2.val){
-            head=l1;
-            //l1的头结点已经被加入结果链表了，所以往下移动一位看下一个节点
-            l1=l1.next;
-        }else{
-            head=l2;
-            l2=l2.next;
-        }
-        ListNode headCur=head;
-
-        //建立双指针分别指向两个链表，合并
-        ListNode pl1=l1;
-        ListNode pl2=l2;
-        //把两个节点中较小的节点加入结果列表head
-        while(pl1!=null&&pl2!=null){   
-            if(pl1.val<=pl2.val){
-                headCur.next=pl1;
-                headCur=headCur.next;
-                pl1=pl1.next;
-            }else{
-                headCur.next=pl2;
-                headCur=headCur.next;
-                pl2=pl2.next;
-            }
-        }
-
-        //一个队列遍历完毕后，把另一个队列的剩余部分直接加入结果链表
-        if(pl1!=null){
-            headCur.next=pl1;
-        }else{
-            headCur.next=pl2;
-        }
-
-
-        return head;
-    }
-}
-```
-
-- 为了结果链表的第一个节点，我的操作比较复杂，实际上可以像官方答案一样，使用一个伪头节点即可。
-
-#### 官方-双指针+伪头结点
-
-解题思路：
-
-![image-20220403192034915](lcof.assets/image-20220403192034915.png)
-
-算法流程：
-
-![image-20220403192122384](lcof.assets/image-20220403192122384.png)
-
-复杂度分析：
-
-![image-20220403192147988](lcof.assets/image-20220403192147988.png)
-
-代码：
-
-```java
-class Solution {
-    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
-        ListNode dum = new ListNode(0), cur = dum;
-        while(l1 != null && l2 != null) {
-            if(l1.val < l2.val) {
-                cur.next = l1;
-                l1 = l1.next;
-            }
-            else {
-                cur.next = l2;
-                l2 = l2.next;
-            }
-            cur = cur.next;
-        }
-        cur.next = l1 != null ? l1 : l2;
-        return dum.next;
-    }
-}
-
-```
-
-- 这个伪头结点的思路确实不错！
-
-
-
-### [剑指 Offer 52. 两个链表的第一个公共节点](https://leetcode-cn.com/problems/liang-ge-lian-biao-de-di-yi-ge-gong-gong-jie-dian-lcof/)
-
-#### 首战寄
-
-```java
-/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode(int x) {
- *         val = x;
- *         next = null;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
  *     }
  * }
  */
-public class Solution {
-    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+class Solution {
+    public List<List<Integer>> levelOrder(TreeNode root) {
         /**
-         链表判断环，判断相交，就考虑双指针
-         */
-        ListNode la=headA;
-        ListNode lb=headB;
-
-        //使用两个指针分别遍历两个链表，当发现指向同一节点时返回该节点；以节点的地址为判断节点相等的标准，因为节点的值可重复见（示例）
-        while((la!=null)&&(lb!=null)){
-            System.out.println("la:"+la);
-            System.out.println("lb:"+lb);
-            if(la==lb){
-                return la;
-            }
-            //while始终记住要移动指针
-            la=la.next;
-            lb=lb.next;
-        }
-
-        //经过遍历都没找到公共节点，说明无公共节点
-        return null;
-    }
-}
-```
-
-- 忽略了公共节点前，两个链表的前部长度不一致的问题；比如公共部分有c1 c2的话，头部长的链表的指针走到c1，头部短的链表的指针走到c2，两个指针总是有前后差距错开了。
-
-
-
-#### 官方-双指针+浪漫相遇
-
-解题思路：
-
-我们使用两个指针 node1，node2 分别指向两个链表 headA，headB 的头结点，然后同时分别逐结点遍历，当 node1 到达链表 headA 的末尾时，重新定位到链表 headB 的头结点；当 node2 到达链表 headB 的末尾时，重新定位到链表 headA 的头结点。
-
-这样，当它们相遇时，所指向的结点就是第一个公共结点。
-
-复杂度分析：
-
-![image-20220404150150252](lcof.assets/image-20220404150150252.png)
-
-代码：
-
-```java
-public class Solution {
-    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
-        ListNode PA = headA;
-        ListNode PB = headB;
-        while (PA != PB) {
-            PA = PA == null ? headB : PA.next;
-            PB = PB == null ? headA : PB.next;
-        }
-        return PA;
-    }
-}
-```
-
-#### 即时再战成功
-
-```java
-/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode(int x) {
- *         val = x;
- *         next = null;
- *     }
- * }
- */
-public class Solution {
-    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
-
-        /**
-        小心两个链表的头部的长度是不一致的，需要让两个指针都走一遍两个列表；这样要不走完都没相遇，要不在走对方列表的时候相遇
-         */
-
-        ListNode ha=headA;
-        ListNode hb=headB;
-
-        /**
-        遍历情况分类讨论：
-        1，如果两条链表一样长：如果有公共节点说明头部也一样长，那么指针在遍历各自的第一条链表时就能找到交点；如果没有公共节点，则两个指针会同时走到链表末尾都为null，触发while的退出，即可返回null即无交点。
-        2，如果两条链表不一样长：那么要处理节点前后距离差的问题，如果有交点，那么指针会把两个链表都走一遍，走到第二个链表的时候会在交点出相交；如果两个链表没有交点的话，指针也会把两个链表都走一遍，两个指针也会同时从两个链表的尾部退出
-
-        注意由于列表长度可能不等，所以要两个指针都为null即都到了链表结尾（要不数组长度相等一遍过无交点，要不数组长度不等两遍过无交点），才允许退出；只一个指针为null的话，可能另一个指针还在遍历第一个链表，不能允许退出。
-         */
-        while(ha!=hb){
-            //如果当前节点遍历到第一条链表的末尾，另一个节点还在遍历链表时，让他遍历第二条链表；没有交点的话第二条链表的结尾两个指针都会指向null，退出while
-            ha=(ha==null?headB:ha.next);
-            hb=(hb==null?headA:hb.next);
-        }
-
-        //ha==hb且ha!=null退出的话，ha==hb==交点；ha==hb==null退出的话，也返回null
-        return ha;
+        层序遍历就得用到bfs，可以使用deque实现队列
         
-    }
-}
-```
-
-
-
-### [剑指 Offer 21. 调整数组顺序使奇数位于偶数前面](https://leetcode-cn.com/problems/diao-zheng-shu-zu-shun-xu-shi-qi-shu-wei-yu-ou-shu-qian-mian-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int[] exchange(int[] nums) {
-        /**
-        双指针，l指向奇数段的右部右一位，r指向偶数段左部左一位
-        只移动一个指针，本例移动奇指针，发现偶数就给偶指针交换，偶指针再左移动一位，奇指针重新判断；发现奇数则寄指针右移一位；两指针重合时退出，重合位置的奇偶性无所谓，毕竟位于奇数段偶数段的交点，是谁都可以。
+        想知道什么时候一层打印完，就得在打印这一层之前计算本层节点数
          */
+        
+        /*
+        处理特殊情况。
+        
+        ！！！注意之前任务root==null时要返回null，但是其实要返回的是空列表[]。而且root为null时return root返回的是null，但是编译无法通过，说TreeNode类型的root无法作为List<List<Integer>>类型的返回值。
 
-        //处理特殊情况，测试案例[]纯纯乌鱼子
-        if(nums.length==0)
-        return nums;
-
-         int l=0,r=nums.length-1;
-         while(l!=r){
-             //左指针发现偶数
-             if(nums[l]%2==0){
-                 //交换左右指针指向的数组元素
-                 int temp=nums[r];
-                 nums[r]=nums[l];
-                 nums[l]=temp;
-                //移动右指针
-                r--;
-             }else{//左指针发现奇数，左指针右移一位
-                l++;
-             }
-             //如果左指针发现偶数，左右指针指向的数组元素交换后，左指针会再次检查被换来的元素是否为奇数
-         }
-        return nums;
-    }
-}
-```
-
-- 有完整思路和代码框架，但是漏了“左指针移动”，和”空数组处理“；不过自行修改完毕了。
-
-#### 官方-双指针+同时移动
-
-解题思路：
-
-考虑定义双指针 ii , jj 分列数组左右两端，循环执行：
-
-1. 指针 ii 从左向右寻找偶数；
-2. 指针 jj 从右向左寻找奇数；
-3. 将 偶数 nums[i]nums[i] 和 奇数 nums[j]nums[j] 交换。
-
-可始终保证： 指针 ii 左边都是奇数，指针 jj 右边都是偶数 。
-
-![image-20220404161217051](lcof.assets/image-20220404161217051.png)
-
-算法流程：
-
-![image-20220404161240739](lcof.assets/image-20220404161240739.png)
-
-复杂度分析：
-
-![image-20220404161301033](lcof.assets/image-20220404161301033.png)
-
-代码：
-
-![image-20220404161323780](lcof.assets/image-20220404161323780.png)
-
-```java
-class Solution {
-    public int[] exchange(int[] nums) {
-        int i = 0, j = nums.length - 1, tmp;
-        while(i < j) {
-            while(i < j && (nums[i] & 1) == 1) i++;
-            while(i < j && (nums[j] & 1) == 0) j--;
-            tmp = nums[i];
-            nums[i] = nums[j];
-            nums[j] = tmp;
-        }
-        return nums;
-    }
-}
-```
-
-- 我：本代码左右同时动，我是一个去找另一个，时间复杂度一样；我的代码没有双循环，甚至更优雅些。
-
-- 网友：本题蕴含快速排序的思想！
-
-### [剑指 Offer 57. 和为s的两个数字](https://leetcode-cn.com/problems/he-wei-sde-liang-ge-shu-zi-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int[] twoSum(int[] nums, int target) {
-
-        /**
-        尽量用上“递增”这个条件，求和的两个数肯定一大一小；左右两端两个指针，求和，值大了左移右指针，值小了右移左指针
+        所以还是得返回一个空数组
          */
+        if(root==null)return new ArrayList<>();
+        
+        //结果列表，记录每一层的节点情况
+        List<List<Integer>> res=new ArrayList<>();
+        //实施bfs
+        Deque<TreeNode> queue=new LinkedList<>();
+        //从last给节点，从first拿节点
+        queue.offerLast(root);
 
-        //处理空数组
-        if(nums.length==0)return new int[0];
-
-        int left=0,right=nums.length-1;
-        while(left<right){
-            if(nums[left]+nums[right]<target){
-                left++;
-            }else if(nums[left]+nums[right]>target){
-                right--;
-            }else{
-                //注意是输出元素值，而不是输出index
-                return new int[]{nums[left],nums[right]};
+        //尽量使用isEmpty判空，保证o1的时间复杂度；用size==0在juc类下可能会有on的时间复杂度
+        while(!queue.isEmpty()){
+            //记录每一层的元素
+            List<Integer> temp=new ArrayList<>();
+            //i在开始遍历本层之间就记录本层的节点数
+            for(int i=queue.size();i>=1;i--){
+                //从本层中拿到节点
+                TreeNode cur=queue.pollFirst();
+                temp.add(cur.val);
+                if(cur.left!=null)queue.offerLast(cur.left);//linkedlist是可以存入null的（https://www.jianshu.com/p/c32e192e371d），但是本例情景不能往queue中存入null
+                if(cur.right!=null)queue.offerLast(cur.right);
             }
+            //把当前层的节点情况存入结果列表。temp中的元素不会被修改就会重新分配内存，所以这里的temp不需要重新包裹一层ArrayList才给res
+            res.add(temp);
         }
 
-        //如果没找到，返回空
-        return new int[0];
+        return res;
+
+        
+
     }
 }
 ```
-
-#### 官方-对撞双指针
-
-解题思路：
-
-![image-20220404164513158](lcof.assets/image-20220404164513158.png)
-
-算法流程：
-
-![image-20220404164531875](lcof.assets/image-20220404164531875.png)
-
-正确性证明：
-
-![image-20220404164558086](lcof.assets/image-20220404164558086.png)
-
-- 我：意会一下，被排除掉的元素都是不可能构成结果的。
-  - 以初始状态为例，假设nums[left]+nums[right]<target，那么right左移，最右边的元素被排除在可能的结果集之外，
-  - 采用反证法，如果右边的元素不该被排除在结果集之外，那么需要一个比left更小的元素，可是left已经是数组中的最小值了，不会有更小的值，所以反例不存在；
-  - 所以被排除的最右边的元素不会是被误排除的，反证法证毕。
-
-复杂度分析：
-
-![image-20220404164622003](lcof.assets/image-20220404164622003.png)
-
-代码：
-
-```java
-class Solution {
-    public int[] twoSum(int[] nums, int target) {
-        int i = 0, j = nums.length - 1;
-        while(i < j) {
-            int s = nums[i] + nums[j];
-            if(s < target) i++;
-            else if(s > target) j--;
-            else return new int[] { nums[i], nums[j] };
-        }
-        return new int[0];
-    }
-}
-```
-
-- 网友：提醒一下，判断条件最好不要用相加后的结果，应该用target - nums[i] 跟 nums[j]比较，这样保证不会溢出。虽然这题中不会出错。同样的例子还有二分查找，(left + right) / 2 可以用left + ((rigth - left) >> 1))代替。
-
-
-
-### [剑指 Offer 58 - I. 翻转单词顺序](https://leetcode-cn.com/problems/fan-zhuan-dan-ci-shun-xu-lcof/)
-
-#### 首战寄
-
-- 写的时候就感觉要是用一些工具类，看题解果然至少要用StringBuilder。
-
-#### 官方1-双指针
-
-算法解析：
-
-![image-20220404172111604](lcof.assets/image-20220404172111604.png)
-
-复杂度分析：
-
-![image-20220404172131469](lcof.assets/image-20220404172131469.png)
-
-代码：
-
-```java
-class Solution {
-    public String reverseWords(String s) {
-        s = s.trim(); // 删除首尾空格
-        int j = s.length() - 1, i = j;
-        StringBuilder res = new StringBuilder();
-        while(i >= 0) {
-            while(i >= 0 && s.charAt(i) != ' ') i--; // 搜索首个空格
-            res.append(s.substring(i + 1, j + 1) + " "); // 添加单词
-            while(i >= 0 && s.charAt(i) == ' ') i--; // 跳过单词间空格
-            j = i; // j 指向下个单词的尾字符
-        }
-        return res.toString().trim(); // 转化为字符串并返回，因为单词尾部会被人为加上空格
-    }
-}
-```
-
-- 注意`str.substing(左闭,右开)`和`StringBuilder`的用法。
-
-#### 官方2-分割 + 倒序（不建议）
-
-利用 “字符串分割”、“列表倒序” 的内置函数 *（**面试时不建议使用**）* ，可简便地实现本题的字符串翻转要求。
-
-算法解析：
-
-![image-20220404172258931](lcof.assets/image-20220404172258931.png)
-
-![Picture0.png](lcof.assets/9ef4a9ea565bf1c2d9209ca94881a77288f90f222476cfd44c418fa3f2d2d7c1-Picture0.png)
-
-复杂度分析：
-
-![image-20220404172508237](lcof.assets/image-20220404172508237.png)
-
-代码：
-
-```java
-class Solution {
-    public String reverseWords(String s) {
-        String[] strs = s.trim().split(" "); // 删除首尾空格，分割字符串
-        StringBuilder res = new StringBuilder();
-        for(int i = strs.length - 1; i >= 0; i--) { // 倒序遍历单词列表
-            if(strs[i].equals("")) continue; // 遇到空单词则跳过
-            res.append(strs[i] + " "); // 将单词拼接至 StringBuilder
-        }
-        return res.toString().trim(); // 转化为字符串，删除尾部空格，并返回
-    }
-}
-```
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public String reverseWords(String s) {
-        /**
-        用双指针的间距定位单词，类似双指针取倒数第n个数一样
-        掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
-         */
-
-        //先剔除首位空格，保证指针初始指向的不是空格
-        s.trim();
-
-        StringBuilder sb= new StringBuilder();
-        //ij想做取单词
-        int j=s.length()-1,i=j;
-        while(i>=0){
-            //取单词；同时注意防止一路i--导致超过字符串边界
-            while(i>=0&&s.charAt(i)!=' ')i--;
-            //单词以空格分开
-            sb.append(s.substring(i+1,j+1)+" ");
-            //剔除单词间的空格；这里也需要担心超过字符串边界，因为一路清除空格到i=-1时，还会继续执行本内存while，导致超过字符串边界；
-            while(i>=0&&s.charAt(i)==' ')i--;
-            //空格剔除完毕后，i停在下一个单词的尾部，把j移动过来
-            j=i;
-        }
-
-        //返回sb，记得去除最后单词后面的空格
-        return sb.toString().trim();
-    }
-}
-```
-
-- 难点坑点：
-  - 内部循环防超过字符串边界
-  - 掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
 
 
 
 ## 搜索与回溯算法(中等)
 
 ### [剑指 Offer 12. 矩阵中的路径](https://leetcode-cn.com/problems/ju-zhen-zhong-de-lu-jing-lcof/)
+
+codetop==7
 
 #### 首战寄
 
@@ -3991,6 +4659,8 @@ class Solution {
 
 
 ### [剑指 Offer 13. 机器人的运动范围](https://leetcode-cn.com/problems/ji-qi-ren-de-yun-dong-fan-wei-lcof/)
+
+codetop==3
 
 #### 首战寄
 
@@ -4410,6 +5080,8 @@ class Solution {
 
 ### [剑指 Offer 34. 二叉树中和为某一值的路径](https://leetcode-cn.com/problems/er-cha-shu-zhong-he-wei-mou-yi-zhi-de-lu-jing-lcof/)
 
+codetop==15
+
 #### 首战告捷
 
 ```java
@@ -4536,6 +5208,8 @@ class Solution {
 
 
 ### [剑指 Offer 36. 二叉搜索树与双向链表](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-yu-shuang-xiang-lian-biao-lcof/)
+
+codetop==39
 
 #### 首战寄
 
@@ -4771,6 +5445,8 @@ class Solution {
 
 ### [剑指 Offer 54. 二叉搜索树的第k大节点](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-di-kda-jie-dian-lcof/)
 
+codetop==36
+
 #### 首战告捷
 
 ```java
@@ -4999,659 +5675,9 @@ class Solution {
 
 - 我：官方代码就用了`if(k == 0) return;`做了提前返回，比“大佬解法”的代码更简洁易读；不过“大佬解法”的优化思路还是很值得借鉴的。
 
-## 排序(简单)
-
-### [剑指 Offer 45. 把数组排成最小的数](https://leetcode-cn.com/problems/ba-shu-zu-pai-cheng-zui-xiao-de-shu-lcof/)
-
-#### 首战寄
-
-应该是按照数字最高位去降序排序，没思路
-
-- 网友评：这道题似乎变成了lambda讨论会，其实我觉得a+b < b+a 真的好难想
-- 网友：我在纸上反复写，找规律，脑子都要炸了，然后突然发现，就是在比较两个字符串不同顺序相加的结果，然后就豁然开朗。
-- 网友：华为机试+第一轮技术面的题，有点高频。
-
-#### 官方-自定义排序
-
-解题思路：
-
-![image-20220407155555720](lcof.assets/image-20220407155555720.png)
-
-排序规则的传递性证明：
-
-- 这里是证明，不然上面的解释太牵强了，此题解作者估计也不真正明白为什么可以这样做，这道题目其实属于很难的题目，不能让人信服为什么那样排序一下就可以，也不是简单的 x +y > y +x 则 x > y 譬如 x=6, y=305 x+y(6305) > y+x(3056) 但是真实数字上x < y
-
-为什么这样排个序就可以了呢？简单证明一下。根据算法，如果a < b，那么a排在b前面，否则b排在a前面。可利用反证法，假设排成的最小数字为xxxxxx，并且至少存在一对字符串满足这个关系：a > b，但是在组成的数字中a排在b前面。根据a和b出现的位置，分三种情况考虑：
-
-```
-  （1）xxxxab，用ba代替ab可以得到xxxxba，这个数字是小于xxxxab，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
-
-  （2）abxxxx，用ba代替ab可以得到baxxxx，这个数字是小于abxxxx，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
-
-  （3）axxxxb，这一步证明麻烦了一点。可以将中间部分看成一个整体ayb，则有ay < ya，yb < by成立。将ay和by表示成10进制数字形式，则有下述关系式，这里a，y，b的位数分别为n，m，k。
-
-    关系1： ay < ya => a * 10^m + y < y * 10^n + a => a * 10^m - a < y * 10^n - y => a( 10^m - 1)/( 10^n - 1) < y
-
-    关系2： yb < by => y * 10^k + b < b * 10^m + y => y * 10^k - y < b * 10^m - b => y < b( 10^m -1)/( 10^k -1) 
-
-    关系3： a( 10^m - 1)/( 10^n - 1) < y < b( 10^m -1)/( 10^k -1)  => a/( 10^n - 1)< b/( 10^k -1) => a*10^k - a < b * 10^n - b =>a*10^k + b < b * 10^n + a => a < b
-
-   这与假设a > b矛盾。因此排成的最小数字中，不存在上述假设的关系。
-
-   综上所述，得出假设不成立，从而得出结论：对于排成的最小数字，不存在满足下述关系的一对字符串：a > b，但是在组成的数字中a出现在b的前面。从而得
-```
-
-- 根据本证明，只要列表排序后为xyz，且保证xy<yx,yz<zy，就可以保证xyz是用【x y z】三个整数能实现的最小的拼接数；所以我们就自定义Comparator把【x y z】按照“若xy<yx，则x必须放y前面”的规则排序好即可。
-
-算法流程：
-
-![image-20220407155615917](lcof.assets/image-20220407155615917.png)
-
-复杂度分析：
-
-![image-20220407155640803](lcof.assets/image-20220407155640803.png)
-
-代码：
-
-本文列举 快速排序 和 内置函数 两种排序方法，其他排序方法也可实现。
-
-快速排序：
-
-- 需修改快速排序函数中的排序判断规则。字符串大小（字典序）对比的实现方法：
-  - Java 中使用函数 A.compareTo(B)；
-
-```java
-public String minNumber(int[] nums) {
-    String[] strs = new String[nums.length];
-    for (int i = 0; i < nums.length; i++) {
-        strs[i] = String.valueOf(nums[i]);
-    }
-    quickSort(strs, 0, strs.length - 1);
-    StringBuilder res = new StringBuilder();
-    for (String s : strs)
-        res.append(s);
-    return res.toString();
-}
-
-public void quickSort(String[] strs, int low, int high) {
-    if (low < high) {
-        int middle = getMiddle(strs, low, high);
-        quickSort(strs, low, middle - 1);
-        quickSort(strs, middle + 1, high);
-    }
-}
-
-public int getMiddle(String[] strs, int low, int high) {
-    //数组的第一个数为基准元素
-    String temp = strs[low];
-    while (low < high) {
-        //从后向前找比基准小的数
-        while (low < high && (strs[high] + temp).compareTo(temp + strs[high]) >= 0)
-            high--;
-        //把比基准小的数移到低端
-        strs[low] = strs[high];
-        //从前向后找比基准大的数
-        while (low < high && (strs[low] + temp).compareTo(temp + strs[low]) <= 0)
-            low++;
-        //把比基准大的数移到高端
-        strs[high] = strs[low];
-    }
-    strs[low] = temp;
-    return low;
-}
-```
-
-- 网友评：你这个写法像左神。
-
-内置函数：
-
-- 需定义排序规则：
-  - Java 定义为 (x, y) -> (x + y).compareTo(y + x) ；
-
-```java
-class Solution {
-    public String minNumber(int[] nums) {
-        //构建字符串数组
-        String[] strs = new String[nums.length];
-        for(int i = 0; i < nums.length; i++)
-            strs[i] = String.valueOf(nums[i]);
-        //排序字符串数组
-        Arrays.sort(strs, (x, y) -> (x + y).compareTo(y + x));
-        //合并字符串数组
-        StringBuilder res = new StringBuilder();
-        for(String s : strs)
-            res.append(s);
-        return res.toString();
-    }
-}
-```
-
-- Arrays.sort方法使用，[参考](https://blog.csdn.net/ted_cs/article/details/82713706)；本例用的 Compareable接口，而不是Compartor接口。
-  - 但是我看官方的sort接口是传入Comparator接口的实现类，我还是安装java官方的来吧，即自己传Comparator。
-
-- [Java中java.util.Comparator用法](https://www.cnblogs.com/XDU-Lakers/p/13985258.html)
-  - 重写方法`public int compare(String o1, String o2) `，凡是返回1或者大于0的正数的时候就要交换位置
-  - Comparator是一个函数式接口，所以能用lamda表达式表示。
-
-#### 即时再战半寄
-
-```java
-class Solution {
-    public String minNumber(int[] nums) {
-        /**
-        核心就是要把数组，按照首位排序（升序）；首位一样的比较第二位。但是有一种简单的算法：
-        1. 把整数数组转化为字符串数组
-        2. 把字符串数组排序。例如x=="1"且y=="45"，若x+y<y+x，即认为x<y
-        3. 把字符串数组排好升序，就意味着
-         */
-        //整数数组转换为字符串数组。新建数组列表的末尾不需要括号，别写成new String[nums.length]()
-        String [] nstr=new String[nums.length];
-        for(int i=0;i<nums.length;i++){
-            nstr[i]=nums[i]+"";
-        }
-        //排序数组，使用sort+Comparator接口。注意匿名内部类的写法，要把重写方法写在花括号{}里。
-        Arrays.sort(nstr,new Comparator<String>(){
-            //重写public compare方法，指示元素间大小关系的判断。注解首字母大写，参照@Autowired
-            @Override
-            public int compare(String s1,String s2){
-                //防止超过整数边界
-                long s1s2= Long.valueOf(s1+s2).longValue();
-                long s2s1= Long.valueOf(s2+s1).longValue();
-                if(s1s2<s2s1){//返回-1，表示不交换s1和s2的值，因为此时s1本来就小于s2
-                    return -1;
-                }else if(s1s2==s2s1){
-                    return 0;
-                }else{
-                    return 1;//返回1表示交换s1和s2的值
-                }
-            }
-        });
-        //把排序后的数组转换成字符串,StringBuilder线程不安全，但是效率高些
-        StringBuilder sb=new StringBuilder();
-        for(int i=0;i<nstr.length;i++){
-            sb.append(nstr[i]);
-        }
-        return sb.toString();
-    }
-}
-```
-
-- 思路和代码主题没问题，但是有几个知识点没记牢，靠百度和debug解决的：
-  - 新建字符数组用`String [] nstr=new String[nums.length];`，而不是String [] nstr=new String[nums.length]\();就是注意不应该有小括号。
-  - Comparator.compare()方法是public的；并且此方法要重写在匿名内部类的花括号中，用lamda表达式也可以，但是个人感觉可读性差。
-  - 理解“若x+y<y+x，即认为x<y，按照此规则排序完数组后为什么就能让拼接成的”字符串值最小
-
-- 自我表扬：
-  - 记住了注解首字母大写
-  - 用`long`避免超过整数边界，用`Long.valueOf(obj)`把字符串转化为Long(long的包装类)，用`Long.longValue();`把Long转化成基本数据类型long。
-  - 基本能自主写出Arrays.sort自定义排序。
-
-### [剑指 Offer 61. 扑克牌中的顺子](https://leetcode-cn.com/problems/bu-ke-pai-zhong-de-shun-zi-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public boolean isStraight(int[] nums) {
-        /**
-        排序，查gap和0的关系
-         */
-
-        //题目说抽5张牌，所以不需要处理特殊情况
-
-        //排序数组，默认升序
-        Arrays.sort(nums);
-
-        //遍历排序后的数组，记录gap和0
-        int zNum=0,lastNum=-1,gapNum=0,i=0;
-        //记录0的个数
-        while(nums[i]==0){
-            zNum++;
-            i++;
-        }
-        //记录gap的总长度
-        lastNum=nums[i];//保存第一个非0的数，作为lastNum
-        i++;
-        while(i<nums.length){
-            if(nums[i]-lastNum>1){//侦查到gap
-                gapNum+=(nums[i]-lastNum-1);
-            }else if(nums[i]==lastNum){//考虑数目相同的情况，只要出现非0数目相同，即不是扑克牌的顺子，直接返回false。之前以为根据题意，不用考虑非0数多次出现。。失策了
-                return false;
-            }
-
-            //不管有没有侦查到gap，都更新lastNum和i
-            lastNum=nums[i];
-            i++;
-        }
-
-        return gapNum<=zNum;
-
-    }
-}
-```
-
-- 初始思路：升序排序数组；遍历数组，碰到0记录下总数，碰到gap区记录下长度。遍历完毕后，如果gap的总长度<=0的个数，即顺子。
-- 注意：虽然题目没有说明白“牌连续”的概念，但是扑克牌里，手牌中有非0重复的牌的话，不算顺子。
-
-#### 官方1-set集合+遍历
-
-解题思路：
-
-![image-20220408165259162](lcof.assets/image-20220408165259162.png)
-
-集合 Set + 遍历，做法：
-
-- 遍历五张牌，遇到大小王（即 0 ）直接跳过。
-- **判别重复**： 利用 Set 实现遍历判重， Set 的查找方法的时间复杂度为 O(1)；
-- **获取最大 / 最小的牌**： 借助辅助变量 ma 和 mi，遍历统计即可。
-
-复杂度分析：
-
-![image-20220408165525298](lcof.assets/image-20220408165525298.png)
-
-代码：
-
-```java
-class Solution {
-    public boolean isStraight(int[] nums) {
-        Set<Integer> repeat = new HashSet<>();
-        int max = 0, min = 14;
-        for(int num : nums) {
-            if(num == 0) continue; // 跳过大小王
-            max = Math.max(max, num); // 最大牌
-            min = Math.min(min, num); // 最小牌
-            if(repeat.contains(num)) return false; // 若有重复，提前返回 false
-            repeat.add(num); // 添加此牌至 Set
-        }
-        return max - min < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
-    }
-}
-```
-
-#### 官方2-排序 + 遍历
-
-![image-20220408165708980](lcof.assets/image-20220408165708980.png)
-
-复杂度分析：
-
-![image-20220408165727381](lcof.assets/image-20220408165727381.png)
-
-代码：
-
-```java
-class Solution {
-    public boolean isStraight(int[] nums) {
-        int joker = 0;
-        Arrays.sort(nums); // 数组排序
-        for(int i = 0; i < 4; i++) {
-            if(nums[i] == 0) joker++; // 统计大小王数量
-            else if(nums[i] == nums[i + 1]) return false; // 若有重复，提前返回 false
-        }
-        return nums[4] - nums[joker] < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
-    }
-}
-```
-
-- 我和网友：max - min < 5的思路很赞！这样效率就比我硬执行高。
-
-### [剑指 Offer 40. 最小的k个数](https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/)
-
-#### 首战告捷
-
-```java
-class Solution {
-    public int[] getLeastNumbers(int[] arr, int k) {
-        /** 
-        数组splice(闭,开)表示切数组；类似的有String用substring切
-        */
-        //快排
-        Arrays.sort(arr);
-        
-        //return arr.splice(0,k);这个函数怎么用？
-        int[] result=new int[k];
-        for(int i=0;i<k;i++){
-            result[i]=arr[i];
-        }
-
-        return result;
-    }
-}
-```
-
-- 反省：忘记了数组切割的函数
-
-#### 官方-单纯快速排序
-
-本题使用排序算法解决最直观，对数组 arr 执行排序，再返回前 k个元素即可。使用任意排序算法皆可，本文采用并介绍 快速排序 ，为下文 方法二 做铺垫。
-
-快速排序原理：
-
-- 快速排序算法有两个核心点，分别为 “哨兵划分” 和 “递归” 。
-
-哨兵划分操作： 
-
-- 以数组某个元素（一般选取首元素）为 基准数 ，将所有小于基准数的元素移动至其左边，大于基准数的元素移动至其右边。
-
-> 如下图所示，为哨兵划分操作流程。通过一轮 哨兵划分 ，可将数组排序问题拆分为 两个较短数组的排序问题 （本文称之为左（右）子数组）。
-
-![image-20220408174558724](lcof.assets/image-20220408174558724.png)
-
-- 原版的这个动图不错
-
-递归： 对 左子数组 和 右子数组 递归执行 哨兵划分，直至子数组长度为 1 时终止递归，即可完成对整个数组的排序。
-
-> 如下图所示，为示例数组 [2,4,1,0,3,5] 的快速排序流程。观察发现，快速排序和 二分法 的原理类似，都是以 \loglog 时间复杂度实现搜索区间缩小。
-
-![Picture1.png](lcof.assets/1612615552-rifQwI-Picture1.png)
-
-复杂度分析：
-
-![image-20220408174755183](lcof.assets/image-20220408174755183.png)
-
-- [参考：快排时间复杂度分析](https://zhuanlan.zhihu.com/p/341201904)
-
-代码：
-
-```java
-class Solution {
-    public int[] getLeastNumbers(int[] arr, int k) {
-        quickSort(arr, 0, arr.length - 1);
-        return Arrays.copyOf(arr, k);
-    }
-    private void quickSort(int[] arr, int l, int r) {
-        // 子数组长度为 1 时终止递归
-        if (l >= r) return;
-        // 哨兵划分操作（以 arr[l] 作为基准数）
-        int i = l, j = r;
-        while (i < j) {
-            while (i < j && arr[j] >= arr[l]) j--;
-            while (i < j && arr[i] <= arr[l]) i++;
-            swap(arr, i, j);
-        }
-        swap(arr, i, l);
-        // 递归左（右）子数组执行哨兵划分
-        quickSort(arr, l, i - 1);
-        quickSort(arr, i + 1, r);
-    }
-    private void swap(int[] arr, int i, int j) {
-        int tmp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = tmp;
-    }
-}
-```
-
-- 在选最左边的数为哨兵的前提下，因为先whilej--，再whilei++，导致了最后一步总是j早就停在了一个比哨兵小的数，而i主动靠过来导致ij重合；所以重合的地方应该归左边，即交换哨兵和重合位置的元素。（看动图看的更清晰）
-- 注意：这里Arrays.copyOf(arr, k)有截取数组的功能，k表示截取前k个数。
-
-#### 官方-基于快速排序的数组划分
-
-优化思路：
-
-![image-20220408175159330](lcof.assets/image-20220408175159330.png)
-
-算法流程：
-
-![image-20220408175449452](lcof.assets/image-20220408175449452.png)
-
-复杂度分析：
-
-![image-20220408175517282](lcof.assets/image-20220408175517282.png)
-
-代码：
-
-```java
-class Solution {
-    public int[] getLeastNumbers(int[] arr, int k) {
-        if (k >= arr.length) return arr;
-        return quickSort(arr, k, 0, arr.length - 1);
-    }
-    private int[] quickSort(int[] arr, int k, int l, int r) {
-        int i = l, j = r;
-        while (i < j) {
-            while (i < j && arr[j] >= arr[l]) j--;
-            while (i < j && arr[i] <= arr[l]) i++;
-            swap(arr, i, j);
-        }
-        swap(arr, i, l);
-        if (i > k) return quickSort(arr, k, l, i - 1);
-        if (i < k) return quickSort(arr, k, i + 1, r);
-        return Arrays.copyOf(arr, k);
-    }
-    private void swap(int[] arr, int i, int j) {
-        int tmp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = tmp;
-    }
-}
-```
-
-### [剑指 Offer 41. 数据流中的中位数](https://leetcode-cn.com/problems/shu-ju-liu-zhong-de-zhong-wei-shu-lcof/)
-
-#### 首战半寄
-
-思路对，有人用我这种暴力法也过了，可能我这暴力中间有些多余步骤，导致超时；不超时的暴力可以在下面看到。
-
-```java
-class MedianFinder {
-
-    /** initialize your data structure here. */
-    //使用列表存储数据，每次取中位数之前排序一下
-    List<Integer> list=null; 
-    int lsSize=0;//自己保存列表大小，省的每次都on查找列表大小
-    public MedianFinder() {
-        list=new ArrayList<>();
-    }
-    
-    public void addNum(int num) {
-        list.add(num);
-        lsSize++;
-    }
-    
-    public double findMedian() {
-        //排序；列表
-        list.sort(new Comparator<Integer>(){
-            @Override
-            public int compare(Integer o1,Integer o2){
-                if(o1<=o2){//本身升序的话，不交换位置
-                    return -1;
-                }else{
-                    return 1;//1表示交换位置
-                }
-            }
-        });
-
-        //拿中位数
-        if(lsSize%2==0){
-            //拿出数，并把数转为double
-            double templ=(double)list.get(lsSize/2-1).intValue();
-            double tempr=(double)list.get(lsSize/2).intValue();
-            return templ/2+tempr/2;//防止超过边界
-        }else{
-            return (double)list.get(lsSize/2).intValue();
-        }
-    }
-}
-
-/**
- * Your MedianFinder object will be instantiated and called as such:
- * MedianFinder obj = new MedianFinder();
- * obj.addNum(num);
- * double param_2 = obj.findMedian();
- */
-```
-
-- 失败原因：超时。我的算法对于输入不多的时候都ok，但是对于长输入会有超时；估计是因为长列表排序太消耗时间了。
-
-- 注意：
-
-  - 我这方法每次插入都得排序列表。像Arrays.sort()只能排序数组而不能排序list，想排序列表ls就可以用ls.sort(new Comparator\<T>(){})；或者用`Collections.sort(List<T> list, Comparator<? super T> c)`。
-    - 注意本匿名内部类Comparator，”尖括号，小括号，花括号“都不能少。
-    - 我：还是喜欢**Collections的静态方法sort**一点，因为这个方法和Arrays.sort的样式统一；java暴力算法过的老哥也是用这个方法。
-
-  - 官方解法用来堆排序，[堆排序实战参考](https://blog.csdn.net/qq_41682302/article/details/95910651)，这里介绍的堆排序实战和官方使用的PriorityQueue一致！
-
-  - 官方用的堆排序，和我自己用的快速排序的[对比](https://www.cnblogs.com/gzshan/p/10904254.html)，为什么使用堆排序？
-    - 我理解：
-      - 使用插入排序的话，虽然每次插入耗时间但是取数据节省时间；数组实现插入排序的时间复杂度是on2，取数据实现复杂度是o1；但是链表实现插入排序的时间复杂度是on（链表插入数据不用移动后续数据），取数据时间复杂度是o1。。于此同时使用链表+快速排序的话，查找的时候（包含排序）时间复杂度是onlogn，插入的时候时间复杂度是o1。所以n比较大时，“链表+快速排序”的综合性能，弱于“链表+插入排序”，所以首先排除用的这种“每次查询时快排”的方式
-      - 现在再看堆排序，但是使用堆排序的话，可以实现ologn的插入，和o1的查找，综合性能比“链表+插入排序”更高。
-
-有老哥就用java暴力法过了，方法和我类似，但是少了“自定义排序，手动装箱拆箱，类型强转“。
-
-```java
-class MedianFinder { 
-List<Integer> list = new ArrayList<Integer>();
-/** initialize your data structure here. */
-public MedianFinder() {
-}
-
-public void addNum(int num) {
-    list.add(num);
-}
-
-public double findMedian() {
-    Collections.sort(list);
-    int len = list.size();
-    if (len == 0) {
-        return 0.0;
-    }
-    if (len%2 == 1) {
-        return list.get(len/2);
-    } else {
-        return (list.get(len/2-1) + list.get(len/2))/2.0;
-    }
-}
-}
-```
-
-#### 官方-优先队列/堆
-
-解题思路：
-
-![image-20220408204404242](lcof.assets/image-20220408204404242.png)
-
-- billibili堆排序[教学](https://www.bilibili.com/video/BV1Eb41147dK?from=search&seid=8087900261957567930&spm_id_from=333.337.0.0)
-
-![Picture1.png](lcof.assets/25837f1b195e56de20587a4ed97d9571463aa611789e768914638902add351f4-Picture1.png)
-
-算法流程：
-
-![image-20220408204443165](lcof.assets/image-20220408204443165.png)
-
-- 我：之所以要先插入别人那，是因为要让对方堆也能根据新到数据排序，更新对方的堆；并且拿回来的数据，可能在对方堆的数据中间，导致拿回来的数据和插入对方堆的数据是不一样的。
-
-复杂度分析：
-
-![image-20220408204754191](lcof.assets/image-20220408204754191.png)
-
-代码：
-
-Java 使用 `PriorityQueue<>((x, y) -> (y - x))` 可方便实现大顶堆。
-
-```java
-class MedianFinder {
-    Queue<Integer> A, B;
-    public MedianFinder() {
-        A = new PriorityQueue<>(); // 小顶堆，保存较大的一半
-        B = new PriorityQueue<>((x, y) -> (y - x)); // 大顶堆，保存较小的一半
-    }
-    public void addNum(int num) {
-        if(A.size() != B.size()) {
-            A.add(num);
-            B.add(A.poll());
-        } else {
-            B.add(num);
-            A.add(B.poll());
-        }
-    }
-    public double findMedian() {
-        return A.size() != B.size() ? A.peek() : (A.peek() + B.peek()) / 2.0;
-    }
-}
-```
-
-- `/2.0`会自动把“integer自动拆箱得到的int”转化为double。
-- [PriorityQueue详解](https://www.jianshu.com/p/f1fd9b82cb72):
-  - 利用堆排序，保证树里总是最大/最小的元素在父节点；并且除顶部是最大值/最小值外，集合的其余部分是不保证有序的。
-  - Comparator自定义排序的话，返回-1表示o1和o2的顺序是默认的升序，即o1<o2，所以不用交换两者顺序。
-
-#### 即时再战半寄
-
-```java
-class MedianFinder {
-
-    /** initialize your data structure here. */
-    /**
-    smaller是较小的一半集合，用大顶堆处理这个集合，让较小集合里的最大值始终在堆顶部，即在中位数附近；允许smaller比bigger多一个元素
-    bigger是较大的一半集合，用小顶堆处理这个集合，让较大集合里的最小值始终在堆顶部，即在中位数附近
-     */
-    PriorityQueue<Integer> smaller=null;
-    PriorityQueue<Integer> bigger=null;
-    public MedianFinder() {
-        smaller=new PriorityQueue<>(new Comparator<Integer>(){//大顶堆递减，不是默认的，要自定义比较规则
-            @Override
-            public int compare(Integer o1,Integer o2){
-                if(o1<o2){//如果前面的更小，返回1表示交换两者顺序，即为了让前面的更大（即实现降序）
-                    return 1;
-                }else if(o1>o2){
-                    return -1;
-                }else{
-                    return 0;
-                }
-            }
-        });
-        //smaller=new PriorityQueue<>((x, y) -> (y - x));
-        bigger=new PriorityQueue<>();//小顶堆递增
-    }
-    
-    public void addNum(int num) {
-        //因为待插入值可能属于对面堆，所以每个值都要先填入对面堆，再从对面堆顶部拿值；
-        if(smaller.size()==bigger.size()){//如果两个堆数目相同，往smaller中插入；但是先插入bigger保证smaller是总集合的较小一半数的集合
-            bigger.offer(num);
-            smaller.offer(bigger.poll());
-        }else{//如果smaller数目多1，就往bigger堆插入；但是先插入smaller,才能保证bigger是总集合的较大一半数的集合
-            smaller.offer(num);
-            bigger.offer(smaller.poll());
-        }
-    }
-    
-    public double findMedian() {
-        if(smaller.size()==bigger.size()){//如果两个堆的元素数目相同，那么各取堆顶计算中位数
-            return (smaller.peek()+bigger.peek())/2.0;//2.0自动把整个式子转化为float；返回类型是double，我估计就自动转化了。注意查找中位数不能执行poll，poll会移除元素，要用peek
-        }else{//如果smaller的元素多1，说明共奇数个元素，直接拿smaller堆的堆顶返回即可
-            return smaller.peek();
-        }
-    }
-}
-
-/**
- * Your MedianFinder object will be instantiated and called as such:
- * MedianFinder obj = new MedianFinder();
- * obj.addNum(num);
- * double param_2 = obj.findMedian();
- */
-```
-
-- 关于[`size()`时间复杂度](https://blog.csdn.net/Kevin___________/article/details/108681594)
-
-- 错误点：
-
-  - 求中位数时，误用poll取数，导致更改了堆影响后续操作；应该用peek。
-  - poll的是堆顶，小顶堆是递增，那么poll出的就是最小值；反之大顶堆poll出来的就是最大值。
-
-- 问答问：为什么都用了堆排序，我的效率比官方低这么多？（红框是我，绿框是官方）
-
-  <img src="lcof.assets/image-20220409010404047.png" alt="image-20220409010404047" style="zoom:50%;" />
-
-  - 经过使用官方的lamda表达式决定大顶堆，但是线效率没变，说明是其他部位导致的。
-
-  - 自答：发现代码遗留了debug时设置的System.out.println()，删掉之后效率和官方一致；看来输出很耗时啊！
-
-    <img src="lcof.assets/image-20220409010830512.png" alt="image-20220409010830512" style="zoom:50%;" />
-
-## 搜索与回溯算法(中等)
-
 ### [剑指 Offer 55 - I. 二叉树的深度](https://leetcode-cn.com/problems/er-cha-shu-de-shen-du-lcof/)
+
+codetop==3
 
 #### 首战告捷
 
@@ -5758,6 +5784,8 @@ public int maxDepth(TreeNode root) {
 
 ### [剑指 Offer 55 - II. 平衡二叉树](https://leetcode-cn.com/problems/ping-heng-er-cha-shu-lcof/)
 
+codetop==67+2
+
 #### 首战告捷
 
 ```java
@@ -5832,6 +5860,7 @@ class Solution {
 
 - 学习剪枝思想。用返回值为-1剪枝是没想到的；自己写的时候一直想在树节点处记录信息，在递归查询的时候查询节点的历史记录来剪枝。
 - 我认为思想：求深度的函数，不单单是求深度了，在求每个节点的深度时，还会求已本节点为顶点的二叉树是否为完全二叉树。
+- java.lang.Math包的常用函数：`max,min,abs`
 
 #### 官方2-先序遍历 + 判断深度 （从顶至底）
 
@@ -5864,6 +5893,8 @@ class Solution {
 ```
 
 ### [剑指 Offer 64. 求1+2+…+n](https://leetcode-cn.com/problems/qiu-12n-lcof/)
+
+codetop==2
 
 #### 首战寄
 
@@ -5927,6 +5958,8 @@ class Solution {
 ```
 
 ### [剑指 Offer 68 - I. 二叉搜索树的最近公共祖先](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-zui-jin-gong-gong-zu-xian-lcof/)
+
+codetop==2
 
 #### 首战告捷
 
@@ -5994,6 +6027,8 @@ class Solution {
   3. 再放一种情况都不出现的（此时甚至都不需要做判断）
 - 反思：
   - 没认真看题目，，没用上“二叉搜索树”的条件，当普通树处理了。
+  - 得在`right=recur(root.right,p,q);`之前也加个剪枝，避免在left找到目标后还进入right。本来想其实进入right的瞬间就是执行`if(root==null)return false;`，也就返回了，所以可以不加剪枝；但是不加剪枝的话，总归是有一次函数的瞬间入栈出栈，还是消耗了资源的，所以最好加上本剪枝。
+  - 后序遍历+剪枝，是树的常见优化dfs方案。
 
 #### 官方1-迭代
 
@@ -6080,84 +6115,11 @@ class Solution {
 
 ### [剑指 Offer 68 - II. 二叉树的最近公共祖先](https://leetcode-cn.com/problems/er-cha-shu-de-zui-jin-gong-gong-zu-xian-lcof/)
 
+codetop==162+1
+
 #### 首战告捷
 
-直接使用“剑指 Offer 68 - I. 二叉搜索树的最近公共祖先”中“首战告捷”的方法即可
-
-## 分治算法(中等)
-
-### [剑指 Offer 07. 重建二叉树](https://leetcode-cn.com/problems/zhong-jian-er-cha-shu-lcof/)
-
-#### 首战寄
-
-能用笔实现出来，但是用算法实现没有思路。
-
-#### 官方-分治
-
-[文字看不懂的话，可以看这个讲解视频](https://www.bilibili.com/video/BV1LJ411y7Xa?from=search&seid=7337447768713066113&spm_id_from=333.337.0.0)，看完视频后再看下面的解析和代码。
-
-解题思路：
-
-![image-20220411200426772](lcof.assets/image-20220411200426772.png)
-
-![image-20220411200437879](lcof.assets/image-20220411200437879.png)
-
-分治算法解析：
-
-![image-20220411200501485](lcof.assets/image-20220411200501485.png)
-
-复杂度分析：
-
-![image-20220411200517480](lcof.assets/image-20220411200517480.png)
-
-代码：
-
-> 注意：本文方法只适用于 “无重复节点值” 的二叉树。
-
-```java
- //利用原理,先序遍历的第一个节点就是根。在中序遍历中通过根 区分哪些是左子树的，哪些是右子树的
-    //左右子树，递归
-    HashMap<Integer, Integer> map = new HashMap<>();//标记中序遍历
-    int[] preorder;//保留的先序遍历
-
-    public TreeNode buildTree(int[] preorder, int[] inorder) {
-        this.preorder = preorder;
-        for (int i = 0; i < preorder.length; i++) {
-            map.put(inorder[i], i);
-        }
-        return recursive(0,0,inorder.length-1);
-    }
-
-    /**
-     * @param pre_root_idx  先序遍历的索引
-     * @param in_left_idx  中序遍历的索引
-     * @param in_right_idx 中序遍历的索引
-     */
-    public TreeNode recursive(int pre_root_idx, int in_left_idx, int in_right_idx) {
-        //相等就是自己
-        if (in_left_idx > in_right_idx) {
-            return null;
-        }
-        //root_idx是在先序里面的
-        TreeNode root = new TreeNode(preorder[pre_root_idx]);
-        // 有了先序的,再根据先序的，在中序中获 当前根的索引
-        int idx = map.get(preorder[pre_root_idx]);
-
-        //左子树的根节点就是 左子树的(前序遍历）第一个，就是+1,左边边界就是left，右边边界是中间区分的idx-1
-        root.left = recursive(pre_root_idx + 1, in_left_idx, idx - 1);
-
-        //由根节点在中序遍历的idx 区分成2段,idx 就是根
-
-        //右子树的根，就是右子树（前序遍历）的第一个,就是当前根节点 加上左子树的数量
-        // pre_root_idx 当前的根  左子树的长度 = 左子树的左边-右边 (idx-1 - in_left_idx +1) 。最后+1就是右子树的根了
-        root.right = recursive(pre_root_idx + (idx-1 - in_left_idx +1)  + 1, idx + 1, in_right_idx);
-        return root;
-    }
-```
-
-- 我理解：用hash关联中序的值和index，是为了根据先序的root值，求得root在中序中的index；进而根据中序中root的index，得到root的左右子树元素的个数。因为无论是中序还是先序数组，左/右子树的所有节点都是紧贴在一起的；而中序遍历的特点就是root能分割左右子树，特别适合用来判断数组中左/右子树的元素的个数。
-
-#### 即时再战成功
+直接使用“剑指 Offer 68 - I. 二叉搜索树的最近公共祖先”中“首战告捷”的方法即可：
 
 ```java
 /**
@@ -6170,1965 +6132,109 @@ class Solution {
  * }
  */
 class Solution {
-    int[] pre;
-    Map<Integer,Integer> in=new HashMap<>();
-    public TreeNode buildTree(int[] preorder, int[] inorder) {
+//全局变量保存结果
+    TreeNode result=null;
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
         /**
-        利用特性：
-        1.先序遍历的第一个节点为当前树的root；
-        2.中序中root分割左右子树，可以求得左or右子树分别有多少个元素
-        
-        本解法的前提是树中元素都不唯一
+        后序遍历，先拿到左右子树是否有给定节点；再看本节点是否有给定节点；然后剪枝返回
          */
-
         //处理特殊情况
-        if(preorder.length==0)return null;
-
-        //为了在递归中使用preorder数组，并且不必往方法传入preorder数组，这里用全局变量保存preorder数组
-        pre=preorder;
-        //把inorder中元素和index用hash关联起来；便于后续根据root值求得左右子树的元素数目
-        for(int i=0;i<inorder.length;i++){
-            in.put(inorder[i],i);
-        }
-
-        //递归， 根据pre中root的index 和 in中树的左右边界，构建树并返回根节点
-        return recur(0,0,inorder.length-1);
-    }
-    public TreeNode recur(int pre_root_idx, int in_left_idx, int in_right_idx){
-        //设置递归返回条件，in_left_idx和in_right_idx交叉时说明子树是空节点了，直接返回null
-        if(in_left_idx>in_right_idx)return null;
-
-        //先利用pre_root_index拿到root的值
-        int rootValue=pre[pre_root_idx];
-        //再根据root的值得到中序遍历数组中，root的位置
-        int in_root_index=in.get(rootValue);
-
-        //创建当前节点
-        TreeNode cur=new TreeNode(rootValue);
-
-        /*
-        递归创建当前节点的左右子节点：
-        1.根据先序遍历数组的特点可知，左子节点的pre_root_idx即为当前pre_root_idx+1，右子节点的pre_root_idx即为当前pre_root_idx+左子树节点个数+1(加1是为了越过左子树而到达右子树)
-        2.根据中序遍历数组的特点可知，中序遍历中，左子树的左边界为in_left_idx，左子树的右边界为in_root_index-1;
-                                                  右子树的左边界为in_root_index+1，右子树的右边界为in_right_idx
-         */
-        cur.left=recur(pre_root_idx+1,in_left_idx,in_root_index-1);
-        cur.right=recur(pre_root_idx+(in_root_index-in_left_idx)+1,in_root_index+1,in_right_idx);
-
-        return cur;
-    }
-}
-```
-
-- 我：我感觉我这个代码的命名和编写，搭配注释，比官方还要容易理解。
-
-- 注意：可以如本例`pre=preorder;`，直接对数组增加引用。
-
-### [剑指 Offer 16. 数值的整数次方](https://leetcode-cn.com/problems/shu-zhi-de-zheng-shu-ci-fang-lcof/)
-
-#### 首战半寄
-
-```java
-class Solution {
-    public double myPow(double x, int n) {
-        /**
-        对n分类讨论，同时注意分母为0的情况
-         */
-        //针对x处理特殊情况，减少计算
-        if(x==1)return 1;
-        if(x==0)return 0;
+        if(root==null)return null;
         
-        if(n>0){
-            double stordX=x;//注意x是double类型，保存的x也得是声明为double
-            for(int i=0;i<n-1;i++){//指数是n的话，x自乘n-1次。注意是n-1次！！！！
-                //但是不能使用x*=x;这回导致：第一次计算是n*n，第二次计算实际上是(n的平方)*(n的平方)了
-                x*=stordX;
-            }
-            return x;
-        }else if(n<0){
-            if(x==0){//0不能做分母
-                return 0;
-            }
-            double stordX=x;
-            for(int i=n;i<0;i++){//指数是-n的话，用1除以x进行n次
-                //x=1/x;不能直接1/x，因为第一次除后为1/x，再用1/(1/x)那么又得到了x。。
-                if(i==n){//第一次是1/x，其他的都是之前的结果除以x
-                    x=1/x;
-                }else{
-                    x=x/stordX;
-                } 
-            }
-            return x;
-        }else{//指数n==0，直接返回1即可
-            return 1;
+        //深度递归，查找公共祖先
+        recur(root,p,q);
+
+        //recur过后目标节点保存在result中，直接返回
+        return result;
+    }
+    public boolean recur(TreeNode root, TreeNode p, TreeNode q){
+        //处理返回条件。只要本节点包含目标节点，就给上层递归返回true；注意root==p或q的时候不能直接返回true，因为要对他做公共祖先的判断
+        if(root==null)return false;
+        // else if(root==p)return true;
+        // else if(root==q)return true;
+
+        if(result!=null){//剪枝。防止得到结果后还不停递归。这种一个if没else的剪枝判断感觉可读性较好
+            return false;
         }
 
+        //后序遍历
+        boolean left=recur(root.left,p,q);
+        boolean right=recur(root.right,p,q);
+        
+        //如果左右子树+本节点中包含了两个目标节点，说明当前节点就是公共祖先，保存当前节点
+        if((left&&right)||(left&&root==p)||(left&&root==q)||(right&&root==p)||(right&&root==q)){
+            //System.out.println("找到root为："+root.val);
+            result=root;
+            return false;
+        }
+
+        //如果左右子树+本节点中包含了一个目标节点，返回true。如果包含了两个，在上面一个判断就会返回了
+        if(left||right||root==p||root==q)return true;
+
+        //如果左右子树都不包含目标节点，当前节点也不是目标节点，返回false。如果包含两个或1个，在上面的两个判断之一就会返回了
+        return false;
     }
 }
 ```
 
-- 用常规思路做的，通过了301/303个测试案例，但是2.00000的 -2147483648次方计算超时了。
-- 反思：
-  - n>0时，没用心，最开始做成了指数为n就自乘n次，实际上是自乘n-1次。
-  - n<0时，没用心，最开始做成了指数为n就不停让x=1/x，但是这样相当于总是把1放在分子，而实际上应该把除后的结果放在分子。
-  - 之前计算时，没把x保留下来，导致每次都会把计算后的x当成原x，导致错误。
-
-#### 大佬-快速幂
-
-官方的解释的不清楚，就用大佬的。
+#### 官方-dfs
 
 解题思路：
 
-![image-20220411180036705](lcof.assets/image-20220411180036705.png)
+![image-20220430173329452](lcof.assets/image-20220430173329452.png)
 
-[知乎快速幂](https://zhuanlan.zhihu.com/p/95902286)：
-
-- 我理解：就不让cpu每次乘一个小数，而是先乘得一个大数，然后两个大数相乘，这样就减少了乘法的次数。
-
-位运算使用：
-
-![image-20220411184903746](lcof.assets/image-20220411184903746.png)
-
-我理解：
-
-![image-20220411183243537](lcof.assets/image-20220411183243537.png)
-
-代码：
-
-```java
-class Solution {
-    public double myPow(double x, int n) {
-        if(x == 0) return 0;
-        long b = n;
-        double res = 1.0;
-        //如果幂是负数，就把它转化为正数来处理
-        if(b < 0) {
-            x = 1 / x;
-            b = -b;
-        }
-        while(b > 0){
-            // 最后一位为1，需要乘上该位上的权重
-            if((b & 1) == 1){
-                res *= x;
-            }
-            x *= x;
-            b >>= 1;
-        }
-        return res;
-    }
-}
-```
-
-- 网友问：为什么要把其中的n换成long类型？
-  - 网友答：因为32位int是补码形式，正数是和原码相同，范围是0到2的31次方-1，但是对于负数，需要反码+1，范围是负2的31次方到0，负数要比正数多一个数字。如果传进来的int刚好是负2的32次方，取相反数之后就超过int32类型的取值范围了，所以需要用long来扩大取值范围。不好意思啊，评论区数学公式不太好打。
-  - 注意：有符号的话有个符号站位，就级数是2的31次方；如果没有正负号，就所有位都用来保存数字，级数就为2的32次方。
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public double myPow(double x, int n) {
-        /**
-        使用快速幂，尽量让大数相乘，不要让小数相乘占用CPU
-         */
-        //特殊情况处理
-        if(x==0)return 0;
-        
-        //用于返回结果，需要的自乘的x的结果会被乘入res
-        double res=1;
-        
-        //n为负数的时候，把它转换为正数的问题来处理
-        long b=n;//因为负数的绝对值更大，为了防止负数变成正数问题时超过证书边界，得用long来处理n
-        if(b<0){
-            b=-b;
-            x=1/x;//因为x为0的情况排除了，所以可以安心把x放在分母
-        }
-        
-        //开始快速幂运算，让x不断自己平方，当幂的二进制的对应位为1时，则说明需要把自乘x的当前结果往结果中乘
-        //处理幂转化为二进制后的每个二进制位
-        while(b>0){
-            if((b&1)==1){//如果当前处理而二进制幂的位置为1，说明x自乘的当前结果要乘入结果
-                res*=x;
-            }
-            x*=x;//x不断自己平方，是快速幂节省cpu运算的关键
-            b=b>>1;//把幂的二进制右移一位（即从低位砍掉一位），下一次循环就会处理的是更高一位
-        }
-
-        return res;
-    }
-}
-```
-
-- 反思：
-  - 位运算>>后会得到一个结果，所以必须要用等号来赋值。` b=b>>1;`等价于` b>>=1;`
-  - 与运算符&的优先级没有==高，所以要用括号包裹`b&1`
-    - 运算符优先级容易记混，总是用括号包裹好了；可读性还蛮好。
-
-
-
-### [剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
-
-#### 首战半寄
-
-```java
-class Solution {
-    int[] postorder;
-    boolean falseFound;//默认是false
-    public boolean verifyPostorder(int[] postorder) {
-        /**
-        二叉搜索树中左子树的所有值小于rootval，右子树的所有值大于rootval。
-        后续遍历的话，数组末尾就是树的根节点。根节点的左边是【左子树】【右子树】黏连而成。分割左右子树的方法：
-        遍历【左子树】【右子树】区域，第一次发现节点大于rootval的时候，说明前一步遍历完了左子树，现在在遍历右子树的第一个节点；因为不知道什么时候节点变大，所以用hash没用
-         */
-        this.postorder=postorder;//把传入的数组赋值给全局数组，使得在递归中也能访问到数组
-        int root_index=postorder.length-1;
-        int left_index=0,right_index=postorder.length-2;
-        return recur(root_index,left_index,right_index);
-    }
-    public boolean recur(int root_index,int left_index,int right_index){
-        //如果分治到最后lr交叉都没发现问题，说明至少本段分治符合二叉搜索树
-        if(left_index>right_index){
-            return true;
-        }
-
-        
-        //遍历数组，找到第一个比root大的，即为右子树的第一个节点；如果没遍历到，说明右子树为空
-        int firstRight=-1;
-        for(int i=left_index;i<=right_index;i++){
-            System.out.println("正在寻找右子树的首节点，当前节点值为："+postorder[i]);
-            if(postorder[i]>postorder[root_index]){
-                firstRight=i;
-                System.out.println("找到了右子树的首节点，节点值为："+postorder[i]);
-                //找到了右子树的首节点后要及时break，不然首节点会右移
-                break;
-            }
-        }
-        
-        //右子树为空的话，右子树的首节点设置在数组范围外。这样下一轮递归的话，left是firstRight，right是right-1，就会形成交叉，直接返回true而不会进一步处理
-        if(firstRight==-1){
-            System.out.println("右子树为空");
-            firstRight=right_index+1;
-        }
-        
-        
-        //由于是用节点是否比rootval小找到右子树第一个节点，所以左子树的合法性不需要验证，是已成立的。
-        //检查右子树合法性，右子树中出现比root大的数的话，直接返回false
-        for(int i=firstRight;i<=right_index;i++){
-            System.out.println("正在校验右子树的合法性，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
-            if(postorder[i]<postorder[root_index]){
-                System.out.println("右子树不合法，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
-                falseFound=true;
-                return false;
-            }
-        }
-
-        //剪枝
-        if(falseFound)return false;
-
-        System.out.println("进入更深层次递归");
-        //如果没看出什么问题，递归查看当前root的左右子树的情况；左边函数是左子树，右边函数是右子树。两个都为true才返回true。
-        return recur(firstRight-1,left_index,firstRight-2)&&recur(right_index,firstRight,right_index-1);
-    }
-}
-```
-
-- 思路完整，框架完整，但是有一些小细节是debug才发现的。
-
-- 注意把代码中的sout注释掉后，代码的执行速度更快。
-
-- 解题debug反思：
-
-  - 用` if(postorder[i]>postorder[root_index])`找到右子树首节点后，忘记退出for循环，导致循环可能继续右移。
-
-  - firstRight初始值设置为0，然后用`if(firstRight==0)`判断得firstRight在找右子树首节点的过程中没被修改过，便手动给右子树首节点赋值；但是忽视了一种情况，就是左子树为空，那么firstRight本身就是==0的，反而被我手动赋值了。所以应该如提交代码中似的，把firstRight初始值设置为-1，并且针对firstRight在寻找完右子树后有没有变化来判断（没变化说明右子树为空）是否需要手动赋值。
-
-#### 官方-递归分治
-
-思想就是我写代码的思想
-
-解题思路：
-
-![image-20220412195804787](lcof.assets/image-20220412195804787.png)
-
-递归分支思路：
-
-- 根据二叉搜索树的定义，可以通过递归，判断所有子树的 **正确性** （即其后序遍历是否满足二叉搜索树的定义） ，若所有子树都正确，则此序列为二叉搜索树的后序遍历。
+![image-20220430173340903](lcof.assets/image-20220430173340903.png)
 
 递归解析：
 
-![image-20220412195901552](lcof.assets/image-20220412195901552.png)
-
-- 注意：划分左右子树的时候，寻找的**第一个**大于根节点的节点；我写代码就漏了这点，虽然思考的时候肯定是知道要找第一个。
+![image-20220430173409116](lcof.assets/image-20220430173409116.png)
 
 复杂度分析：
 
-![image-20220412200013412](lcof.assets/image-20220412200013412.png)
-
-- 时间复杂度“每轮递归都需要遍历树所有节点”解释：从left到firstRight，从firstRight到right，正好遍历完当前root对应的子树，也就是on的遍历。递归节点又有on，所以综合来看时间复杂度是on2。
+![image-20220430173443681](lcof.assets/image-20220430173443681.png)
 
 代码：
 
 ```java
 class Solution {
-    public boolean verifyPostorder(int[] postorder) {
-        return recur(postorder, 0, postorder.length - 1);
-    }
-    boolean recur(int[] postorder, int i, int j) {
-        if(i >= j) return true;
-        int p = i;
-        while(postorder[p] < postorder[j]) p++;
-        int m = p;
-        while(postorder[p] > postorder[j]) p++;
-        return p == j && recur(postorder, i, m - 1) && recur(postorder, m, j - 1);
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        if(root == null || root == p || root == q) return root;
+        TreeNode left = lowestCommonAncestor(root.left, p, q);
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
+        if(left == null && right == null) return null; // 1.
+        if(left == null) return right; // 3.
+        if(right == null) return left; // 4.
+        return root; // 2. if(left != null and right != null)
     }
 }
 ```
 
-## 位运算(简单)
+- 我：官方也是后续遍历+剪枝的思路，先拿到左右子树的结果，在做本节点的处理。
 
-### [剑指 Offer 15. 二进制中1的个数](https://leetcode-cn.com/problems/er-jin-zhi-zhong-1de-ge-shu-lcof/)
-
-####  首战寄
-
-有思路，但是代码运行结果不符合预期。
-
-```java
-public class Solution {
-    // you need to treat n as an unsigned value
-    public int hammingWeight(int n) {
-        /**
-        使用位运算，总是&最小位，为1的话则计数；计数完毕后右移，直到没有位了
-         */
-        System.out.println("输入的n:"+n);
-        int count=0;
-        while(n>0){
-            System.out.println("当前n:"+n);
-            if((n&1)==1){//计算数的二进制表示的末尾是否为1，是的话计数
-                System.out.println("当前n的末尾为1");
-                count++;
-            }
-            //不管末尾是否为1，都右移，即二进制末尾截掉一位
-            n>>=n;
-            System.out.println("右移1位后n:"+n);
-        }
-
-        return count;
-        
-    }
-}
-```
-
-![image-20220413155221429](lcof.assets/image-20220413155221429.png)
-
-- 问答问：打印出来的是输入了11右移一位后不是5，而直接为0退出了，不懂了。就算是以十进制为单位右移（除法），那也还有1啊。
-  - 自答：我这应该是`n>>>=1;`，原因有两个：
-    1. 源代码`n>>=n;`表示一下右移11位，肯定一下就移完了
-    2. java中无符号位运算用`>>>`。注意区别`>>`和`>>>`，`>>>`是对int32和int64才有用的无符号右移,[参考](https://www.cnblogs.com/SunArmy/p/9837348.html)
-- 看完官方解析后的反思，错误：
-  - `while(n>0)`导致输入n<0的数话，会不进入while。应该写成`while(n!=0)`
-  - ` n>>=n;`会一下子有符号右移n位，直接为0；并且对负数有符号位移的话补1，会导致计算错误。应该写成`n>>>=1;`。
-
-#### 网友热门
-
-java居然有这个方法:
-
-```java
-public class Solution {
-    // you need to treat n as an unsigned value
-    public int hammingWeight(int n) {
-        return Integer.bitCount(n);
-    }
-}
-```
-
-#### 官方1-位运算+逐位判断
-
-思路：
-
-![image-20220413161839865](lcof.assets/image-20220413161839865.png)
-
-算法流程：
-
-![image-20220413161858902](lcof.assets/image-20220413161858902.png)
-
-
-
-复杂度分析：
-
-![image-20220413161917124](lcof.assets/image-20220413161917124.png)
-
-代码：
-
-```java
-public class Solution {
-    public int hammingWeight(int n) {
-        int res = 0;
-        while(n != 0) {
-            res += n & 1;
-            n >>>= 1;
-        }
-        return res;
-    }
-}
-```
-
-- 我：思路就是我首战寄的思路
-
-#### 官方2-位运算+巧用 n \& (n - 1)
-
-思路：
-
-![image-20220413162127582](lcof.assets/image-20220413162127582.png)
-
-算法流程：
-
-![image-20220413162143982](lcof.assets/image-20220413162143982.png)
-
-复杂度分析：
-
-![image-20220413162204749](lcof.assets/image-20220413162204749.png)
-
-- 官方1中，哪怕当前很多位是0也要一个一个地位移，浪费时间复杂度。本方法2直接采取“消去1”的策略，每次消去末尾的1都可以给res加一，只需要做1的个数次操作即可，而不是像官方方法1中做多位次运算。
-
-代码：
-
-```java
-public class Solution {
-    public int hammingWeight(int n) {
-        int res = 0;
-        while(n != 0) {
-            res++;
-            n &= n - 1;
-        }
-        return res;
-    }
-}
-```
-
-### [剑指 Offer 65. 不用加减乘除做加法](https://leetcode-cn.com/problems/bu-yong-jia-jian-cheng-chu-zuo-jia-fa-lcof/)
-
-#### 首战寄
-
-无思路。
-
-建议熟悉java位运算：[参考](https://zhuanlan.zhihu.com/p/106893096)
-
-#### 官方-位运算
-
-解题思路：
-
-![image-20220413165208729](lcof.assets/image-20220413165208729.png)
-
-- 异或：不同为1，相同为0；与：都为1才为1，有一个是0都为0。
-
-- 我：比如`1111+1111`=`0000+11110`=30，无进位跳出
-
-![Picture1.png](lcof.assets/56d56524d8d2b1318f78e209fffe0e266f97631178f6bfd627db85fcd2503205-Picture1.png)
-
-> Q ： 若数字 aa 和 bb 中有负数，则变成了减法，如何处理？
-> A ： 在计算机系统中，数值一律用 补码 来表示和存储。补码的优势： 加法、减法可以统一处理（CPU只有加法器）。因此，以上方法 同时适用于正数和负数的加法 。
->
-
-复杂度分析：
-
-![image-20220413165358375](lcof.assets/image-20220413165358375.png)
-
-代码：
+高赞网友评论版：
 
 ```java
 class Solution {
-    public int add(int a, int b) {
-        while(b != 0) { // 当进位为 0 时跳出
-            int c = (a & b) << 1;  // c = 进位
-            a ^= b; // a = 非进位和
-            b = c; // b = 进位
-        }
-        return a;
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        //1.如果找不到p或q就返回null,如果找的到就返回该点 ps:我觉得return root设计的很巧妙
+        if(root == null || root == p || root == q) return root; 
+        //2.如果左子树中有p或q,那么就会返回找到的点。或者p和q都有，就返回pq的公共点。或者p或q都没有就返回null。
+        TreeNode left = lowestCommonAncestor(root.left, p, q);
+        //3.如果右子树中有p||q,那么就会返回找到的点。或者p和q都有，就返回pq的公共点。或者p或q都没有就返回null。
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
+        //4.left==null 说明：左子树中没有p或q(往上看最开始的判断语句：找不到就返回null)
+        // 5.直接返回right的原因，需要结合递归的思想多方面思考。
+        if(left == null) return right;
+        //6.运行到此处说明左子树中找到了p或q点。
+        if(right == null) return left;
+        //7.运行到此处说明p和q都找到了，root为最近的公共祖先。(该语句只会运行一次)
+        return root;
     }
 }
 ```
 
-#### 即时再战成功
-
-```java
-class Solution {
-    public int add(int a, int b) {
-        /**
-        加法=异或+与<<
-         */
-        
-        //求进位；求进位要放在求非进位之前，因为“求非进位”时会修改a的值。注意<<1的移动位数1别忘记！！
-        int c=(a&b)<<1;
-        //求非进位
-        a^=b;
-        //要记住把c赋值给b，这样才能让进位和非进位继续相加
-        b=c;
-
-        //进位为0的时候，求和结果即为a。
-        while(b!=0){
-            //求进位
-            c=(a&b)<<1;
-            //求非进位
-            a^=b;
-            //要记住把c赋值给b，这样才能让进位和非进位继续相加
-            b=c;
-        }
-
-        return a;
-
-    }
-}
-```
-
-- 注意：<<1的移动位数1别忘记！！
-
-## 位运算(中等)
-
-### [剑指 Offer 56 - I. 数组中数字出现的次数](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-lcof/)
-
-#### 首战寄 
-
-没思路
-
-#### 官方-位运算异或
-
-解题思路：
-
-![image-20220414142917210](lcof.assets/image-20220414142917210.png)
-
-```java
-public int[] singleNumber(int[] nums) {
-    int x = 0;
-    for(int num : nums)  // 1. 遍历 nums 执行异或运算
-        x ^= num;
-    return x;            // 2. 返回出现一次的数字 x
-}
-```
-
-异或符合交换律解析如下：
-
-![image-20220414142641610](lcof.assets/image-20220414142641610.png)
-
-难点：
-
-![image-20220414145633625](lcof.assets/image-20220414145633625.png)
-
-- 异或两个数，那么原数不同的地方会在异或后表示为1，我们侦测异或后的1的位置，就可以把两个不同的数区分开来；两个数可能有多个位不一样，任意抓住一位都能区分开原来的两个数，这里去找不同的最低位。
-- 用mask不仅可以区分出两个目标数，还能把剩余的所有数分两队；在“mask为1的位” 为1的数被分到一队，在“mask为1的那位” 为0的数被分到另一队，因为前者和mask异或得0，后者和mask异或不得0。
-
-代码：
-
-```java
-class Solution {
-    public int[] singleNumbers(int[] nums) {
-        //用于将所有的数异或起来。最后的k即为两个只出现一次的数的异或结果
-        int k = 0;
-        for(int num: nums) {
-            k ^= num;
-        }
-        
-        //获得k中最低位的1。这个1标记了“两个只出现一次的数”从低位往高位比，第一次出现不同的位置
-        int mask = 1;
-        //mask = k & (-k) 这种方法也可以得到mask，具体原因百度 哈哈哈哈哈
-        while((k & mask) == 0) {//异或结果k和mask再进行“与操作”得0，表示在mask为1的位置 k在此位置不为1，即两个只出现一次的数在这位是相同的（这样异或后 此位才为0）
-            mask <<= 1;
-        }
-        
-        //对数组用mask做分组的同时，用a和b分别异或处理属于不同类的数据，得到的a b结果即为两个只出现一次的数
-        int a = 0;
-        int b = 0;
-        for(int num: nums) {
-            if((num & mask) == 0) {
-                a ^= num;
-            } else {
-                b ^= num;
-            }
-        }
-        
-        return new int[]{a, b};
-    }
-}
-```
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int[] singleNumbers(int[] nums) {
-        /**
-        使用异或^从出现两次的数中找到只出现一次的数
-        使用与&把两个只出现一次的数，利用他两的异或结果，把它们分成2组
-         */
-        
-        //数组全体异或，假设只出现一次的数为a b，那么得到的结果是a^b
-        int c=0;
-        for(int i=0;i<nums.length;i++){
-            c^=nums[i];
-        }
-
-        //用探针pin把两个只出现一次的数分开
-        int pin=1;
-        while((c&pin)==0){//a和b在pin中1的位置相同。注意按位与&的优先级低，每次使用必须用括号包裹！！！
-            pin=pin<<1;
-        }
-
-        //根据pin把nums分两队；两队内自行异或，即得到a和b
-        int a=0,b=0;
-        for(int i=0;i<nums.length;i++){
-            if((nums[i]&pin)==0){
-                a^=nums[i];
-            }else{
-                b^=nums[i];
-            }
-        }
-
-        return new int[]{a,b};
-    }
-}
-```
-
-- 注意：
-  - 按位与&的优先级低，每次使用必须用括号包裹
-  - pin用&操作把数组分两组，因为一组与pin为0，另一组不是；num & pin得0，是因为num在pin为1的那一位为0，0&1==0,1&1==1。
-
-### [剑指 Offer 56 - II. 数组中数字出现的次数 II](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-ii-lcof/)
-
-#### 首战寄
-
-#### 官方-位运算+有限状态自动机
-
-如下图所示，考虑数字的二进制形式，对于出现三次的数字，各 **二进制位** 出现的次数都是 3 的倍数。
-因此，统计所有数字的各二进制位中 1 的出现次数，并对 3求余，结果则为只出现一次的数字。
-
-![Picture1.png](lcof.assets/28f2379be5beccb877c8f1586d8673a256594e0fc45422b03773b8d4c8418825-Picture1.png)
-
-略。。题目出现率不高
-
-#### 大佬-hashMap法
-
-```java
-// 使用 HashMap 记录各个数字出现的次数
-    public int singleNumber(int[] nums) {
-        Map<Integer, Integer> map = new HashMap();
-
-        for(int i = nums.length - 1; i >= 0; --i){
-            int key = nums[i];
-            if(!map.containsKey(key)){
-                // 如果之前没有遇到这一数字，则放入 map 中
-                map.put(key, 1);
-            }else{
-                // 如果之前遇到过这一数字，则出现次数加 1
-                map.put(key, map.get(key) + 1);
-            }
-        }
-
-        for(Map.Entry<Integer, Integer> entry: map.entrySet()){
-            if(entry.getValue() == 1){
-                return entry.getKey();
-            }
-        }
-
-        return -1;
-    }
-```
-
-- 网友评：可以再优化一下，已经记过一次的数再放进来直接置值为-1就好，少一次get操作。
-
-  ```
-          for (int i = 0; i < nums.length; i++) {
-              Integer obj = map.get(nums[i]);
-              if(obj == null){
-                  map.put(nums[i],1);
-              }else if(obj == 1){
-                  map.put(nums[i],-1);
-              }
-          }
-  ```
-
-#### 即时再战
-
-用hashmap的话，就不需要再战了。
-
-## 数学(简单)
-
-### [剑指 Offer 39. 数组中出现次数超过一半的数字](https://leetcode-cn.com/problems/shu-zu-zhong-chu-xian-ci-shu-chao-guo-yi-ban-de-shu-zi-lcof/)
-
-#### 首战寄
-
-有正负电荷抵消的思想，但是想不出来怎么实施。能实施的只有hashmap计数算法，性能不算好。
-
-#### 官方-摩尔投票法
-
-我个人更愿意称之为正负电荷抵消法,关注抵消的时刻。
-
-解题思路：
-
-![image-20220414164157239](lcof.assets/image-20220414164157239.png)
-
-摩尔投票法：
-
-![image-20220414164224802](lcof.assets/image-20220414164224802.png)
-
-![Picture1.png](lcof.assets/1603612327-bOQxzq-Picture1.png)
-
-![image-20220414164246112](lcof.assets/image-20220414164246112.png)
-
-算法流程：
-
-![image-20220414164259764](lcof.assets/image-20220414164259764.png)
-
-复杂度分析：
-
-![image-20220414164332148](lcof.assets/image-20220414164332148.png)
-
-代码：
-
-```java
-class Solution {
-    public int majorityElement(int[] nums) {
-        int x = 0, votes = 0;
-        for(int num : nums){
-            if(votes == 0) x = num;
-            votes += num == x ? 1 : -1;
-        }
-        return x;
-    }
-}
-```
-
-![image-20220414164717570](lcof.assets/image-20220414164717570.png)
-
-```java
-class Solution {
-    public int majorityElement(int[] nums) {
-        int x = 0, votes = 0, count = 0;
-        for(int num : nums){
-            if(votes == 0) x = num;
-            votes += num == x ? 1 : -1;
-        }
-        // 验证 x 是否为众数
-        for(int num : nums)
-            if(num == x) count++;
-        return count > nums.length / 2 ? x : 0; // 当无众数时返回 0
-    }
-}
-```
-
-- 本题众数指数目超过一般的数，但是一般指[出现次数最多的数](https://baike.baidu.com/item/%E4%BC%97%E6%95%B0/44796)
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int majorityElement(int[] nums) {
-        /**
-        正负电荷抵消
-         */
-
-        int major=0;
-        int count=0;
-        for(int i=0;i<nums.length;i++){
-            //在计数为0时，把当前节点设置为众数,重设置计数为1
-            if(count==0){
-                major=nums[i];
-                count=1;
-            }else{//如果计数不为0，比较当前数和众数是否相同，相同则给计数+1，不同则给计数-1
-                if(nums[i]==major){
-                    count++;
-                }else{
-                    count--;
-                }
-            }
-        }
-
-        //退出for循环后，留下的众数必定是目标众数
-        return major;
-    }
-}
-```
-
-### [剑指 Offer 66. 构建乘积数组](https://leetcode-cn.com/problems/gou-jian-cheng-ji-shu-zu-lcof/)
-
-解题思路：
-
-![image-20220414172126126](lcof.assets/image-20220414172126126.png)
-
-![Picture1.png](lcof.assets/1624619180-vpyyqh-Picture1.png)
-
-算法流程：
-
-![image-20220414172154862](lcof.assets/image-20220414172154862.png)
-
-复杂度分析：
-
-![image-20220414172212852](lcof.assets/image-20220414172212852.png)
-
-代码：
-
-```java
-class Solution {
-    public int[] constructArr(int[] a) {
-        int len = a.length;
-        if(len == 0) return new int[0];
-        int[] b = new int[len];
-        b[0] = 1;
-        int tmp = 1;
-        for(int i = 1; i < len; i++) {
-            b[i] = b[i - 1] * a[i - 1];
-        }
-        for(int i = len - 2; i >= 0; i--) {
-            tmp *= a[i + 1];
-            b[i] *= tmp;
-        }
-        return b;
-    }
-}
-```
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int[] constructArr(int[] a) {
-        /**
-        用两个dp乘法
-         */
-        //处理特殊情况。我认为是不用处理的，但是系统还是会输入空数组,空数组如下设置
-        if(a.length==0||a.length==1)return new int[0];
-
-        //把对角线下半的乘积先放入结果数组。新建数组要new int[length],别忘了new
-        int[] res=new int[a.length];
-        int temp=1;
-        res[0]=1;
-        for(int i=1;i<a.length;i++){
-            temp*=a[i-1];
-            res[i]=temp;
-        }
-
-        //把对角线上半的成绩放入结果数组
-        temp=1;
-        for(int i=a.length-2;i>=0;i--){
-            temp*=a[i+1];
-            res[i]*=temp;
-        }
-
-        return res;
-
-    }
-}
-```
-
-- 注意：
-  - 新建空数组的方式:`new int[0];`
-  - 新建数组不要忘记new关键字
-
-## 数学(中等)
-
-### [剑指 Offer 14- I. 剪绳子](https://leetcode-cn.com/problems/jian-sheng-zi-lcof/)
-
-#### 没思路
-
-#### 官方1-贪心
-
-我：贪心的数学要求高，普适性不大
-
-![image-20220415170356783](lcof.assets/image-20220415170356783.png)
-
-```java
-class Solution {
-    public int cuttingRope(int n) {
-        if(n <= 3) return n - 1;
-        int a = n / 3, b = n % 3;
-        if(b == 0) return (int)Math.pow(3, a);
-        if(b == 1) return (int)Math.pow(3, a - 1) * 4;
-        return (int)Math.pow(3, a) * 2;
-    }
-}
-```
-
-#### 官方2-动态规划
-
-思路：
-
-![image-20220423205556605](lcof.assets/image-20220423205556605.png)
-
-代码：
-
-```java
-class Solution {
-    public int cuttingRope(int n) {
-        int[] dp = new int[n + 1];
-        dp[2] = 1;
-        for(int i = 3; i < n + 1; i++){
-            for(int j = 2; j < i; j++){
-                dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j]));
-            }
-        }
-        return dp[n];
-    }
-}
-```
-
-- 网友问：dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j])); 动态规划dp[i] 为什么依赖于自己呢
-  - 网友答：想了一会才反应过来，对于同一个i，内层循环对不同的j都还会拿到一个max，所以每次内层循环都要更新max
-  - 网友答：不是依赖自己，是不同的j都会有一个dp[i]，这是在取不同的j情况下dp[i]的最大值。dp[i]就是更新储存最大值的，不是依赖自己，还是那两种情况, 感觉还是写成两段更容易理解一点` int tmp=max(j*(i-j),j*dp[i-j]); dp[i]=max(dp[i],tmp);`
-
-复杂度分析：
-
-![image-20220423210349090](lcof.assets/image-20220423210349090.png)
-
-#### 即时重做成功
-
-```java
-class Solution {
-    public int cuttingRope(int n) {
-        /**
-        绳子可以剪成两端，左边这段固定，右边这段剪不剪使用动态规划判断
-         */
-        //dpi表示绳子长度为i时的最大乘积;因为要记录dpn，所以dp数组的长度设置为n+1
-        int []dp=new int[n+1];
-
-        //初始化。长度为1的绳子没法剪，从长度为3的绳子开始考虑
-        dp[2]=1;
-
-        //从短绳子到长绳子，根据短绳子的最大乘积得到长绳子的最大乘积
-        for(int i=3;i<=n;i++){
-            //针对每个长度的绳子，取不同长度的左边段，求他的最大乘积。i表示绳子全长，j表示绳子的左边的长度
-            for(int j=1;j<i;j++){
-                //右半部继续剪短，和右半部不继续剪短，两种情况求得一个较大值；使用到dp(i-j)就体现了动态规划由小得到大的思想
-                int temp=Math.max(j*(i-j),j*dp[i-j]);
-                //该较大值和其他j的情况下记载的较大值做比较，保留下大的那个
-                dp[i]=Math.max(dp[i],temp);
-            }
-        }
-
-        //处理完数组后，返回dpn即为剪短长度为n的数组可能得到的最大乘积
-        return dp[n];
-
-
-    }
-}
-```
-
-
-
-### [剑指 Offer 57 - II. 和为s的连续正数序列](https://leetcode-cn.com/problems/he-wei-sde-lian-xu-zheng-shu-xu-lie-lcof/)
-
-#### 首战半寄
-
-能通过23/32个测试案例，但是在大数上超时了；至少有思路，不过不够优化。
-
-```java
-class Solution {
-    public int[][] findContinuousSequence(int target) {
-        /**
-        等差数列求和公式+while双指针
-         */
-        List<List<Integer>> resultList =new ArrayList<>();
-        List<Integer> oneTempInstance=null;
-        //以每个整数为left开始做双指针
-        for(int i=1;i<target;i++){
-            long left=i,right=target;
-            //做双指针
-            while(left<right){
-                long temp1=(left+right)*(right-left+1),temp2=target*2;//避免反复计算.除法默认向下取整，尽量避免。用long防止超过整数边界
-                if(temp1==temp2){//找到目标时。不会再在本基础上缩小范围了，用break跳出while避免无效计算
-                    oneTempInstance=new ArrayList<>();
-                    for(int j=(int)left;j<=right;j++){
-                        oneTempInstance.add(j);
-                    }
-                    resultList.add(new ArrayList<>(oneTempInstance));//为了避免oneInstance的操作影响resultList中已存入的结果，根据oneTempInstance的内容新分配一块内存作为resultList的元素
-                    break;
-                }else if(temp1<temp2){
-                    left++;
-                }else{
-                    right--;
-                }
-            }
-        }
-
-        //把列表转化为2维数组返回。转换成数组是真傻比，直接返回链表不就行了！
-        int[][] result=new int[resultList.size()][];//第一个方括号表示行，应该在这个括号限定行数
-        for(int i=0;i<resultList.size();i++){
-            //复用oneTempInstance
-            oneTempInstance=resultList.get(i);
-            int tempSize=oneTempInstance.size();
-            //对二维数组不等长的情况分配内存：https://blog.csdn.net/weixin_30709179/article/details/115082821
-            result[i]=new int[tempSize];
-            for(int j=0;j<tempSize;j++){
-                result[i][j]=oneTempInstance.get(j);
-            }
-        }
-        return result;
-    }
-}
-```
-
-- 注意：
-  - 大数乘法的时候可能会超过整数边界，要用long
-  - long基本类型可以使用`(int) longValue`来强转成int。
-- 我：已经想到左右指针了，相当于是官方解法滑动窗口的两边，但是用for循环暴力导致O(nlogn)的时间复杂度
-
-#### 官方-滑动窗口
-
-什么是滑动窗口：
-
-![image-20220415204353222](lcof.assets/image-20220415204353222.png)
-
-- 注意：官方这里说 滑动窗口一般左闭右开，但是实战中也可以自己实现两个都闭的方法，如本题。
-
-如何用滑动窗口解这道题：
-
-![image-20220415204435385](lcof.assets/image-20220415204435385.png)
-
-![proof](lcof.assets/728c705889a672d5a85709cb3fd157216bb1a41dc377dcc125818d9e18b8dd55.jpg)
-
-![image-20220415204506800](lcof.assets/image-20220415204506800.png)
-
-时间复杂度：
-
-![image-20220415204754472](lcof.assets/image-20220415204754472.png)
-
-代码：
-
-```java
-public int[][] findContinuousSequence(int target) {
-    int i = 1; // 滑动窗口的左边界
-    int j = 1; // 滑动窗口的右边界
-    int sum = 0; // 滑动窗口中数字的和
-    List<int[]> res = new ArrayList<>();
-
-    while (i <= target / 2) {
-        if (sum < target) {
-            // 右边界向右移动
-            sum += j;
-            j++;
-        } else if (sum > target) {
-            // 左边界向右移动
-            sum -= i;
-            i++;
-        } else {
-            // 记录结果
-            int[] arr = new int[j-i];
-            for (int k = i; k < j; k++) {
-                arr[k-i] = k;
-            }
-            res.add(arr);
-            // 左边界向右移动
-            sum -= i;
-            i++;
-        }
-    }
-
-    return res.toArray(new int[res.size()][]);
-}
-```
-
-- 网友：还是有点不太懂为什么i <= target/2？求大佬
-  - 网友答：5最大只可能是2+3，不可能等于3+4
-- 注意：
-  - `list.toArray(new 数组)`，要传入“分配了内存的数组“
-  - 可以先使用`List<int[]>`对结果列表进行初始化，最后把只有一层的list轻松转为数组，即得二维数组。
-  - `int[] arr = new int[j-i];//记录结果`体现了左闭右开，因为i位置的数不会被记录。
-
-网友补充，有左闭右闭的，都闭更利于理解：
-
-```java
-class Solution {
-public int[][] findContinuousSequence(int target) {
-            List<int[]> res = new ArrayList<>();
-            // 滑动窗口,左右指针指向的数
-            // 初始窗口的宽度为1，所有左右都指向1
-            int left = 1;
-            int right = 1;
-            // 窗口内的数字和,左闭右闭
-            int sum = 1;
-            // 只需要遍历到目标值的一般即可，后面加起来肯定大于target
-            while (left <= target / 2){
-                // 如果小了，右指针增大
-                if (sum < target) {
-                    right++;
-                    sum += right;
-                }else if (sum > target){
-                    // 如果大了，左指针增大
-                    sum -= left;
-                    left++;
-                }else {
-                    // 说明匹配上了需要把窗口中的元素放进结果集
-                    int[] level = new int[right - left + 1];
-                    for (int i = left; i <= right; i++) {
-                        level[i - left] = i;
-                    }
-                    res.add(level);
-                    // 加入结果集之后窗口要移动
-                    sum -= left;
-                    left++;
-                }
-            }
-            return res.toArray(new int[res.size()][]);
-        }
-}
-```
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int[][] findContinuousSequence(int target) {
-        /**
-        滑动窗口左闭右闭，on时间复杂度
-        滑动窗口左右都只能右移
-         */
-        List<int[]>resultList=new ArrayList<>();
-        int l=1,r=1,sum=1;
-        while(l<=target/2){//之所以要<=而不是<,是因为target==3的情况
-            if(sum>target){
-                sum-=l;
-                l++;
-            }else if(sum<target){
-                r++;//注意sum 窗沿的处理顺序，在两个if情况是不一样的
-                sum+=r;
-            }else{
-                //找到目标窗口，把数据填入
-                int[] temp=new int[r-l+1];
-                for(int i=l;i<=r;i++){
-                    temp[i-l]=i;
-                }
-                resultList.add(temp);//因为temp只在else的花括号中存活，所以不需要额外给内存，已防止修改temp导致resultList被修改
-                //左窗沿右移
-                sum-=l;
-                l++;
-            }
-        }
-
-        return resultList.toArray(new int[resultList.size()][]);
-    }
-}
-```
-
-- 注意：
-  - 把List<int[]>转化为int\[][]要用：`resultList.toArray(new int[resultList.size()][]);`。第二个中括号的内存是已知的，因为resultList中已经存了每个元素；需要让toArray知道的是resultList有多少个元素，所以要在第一个中括号中设置大小，即二维数组的行数。
-
-### [剑指 Offer 62. 圆圈中最后剩下的数字](https://leetcode-cn.com/problems/yuan-quan-zhong-zui-hou-sheng-xia-de-shu-zi-lcof/)
-
-codetop 27
-
-#### 首战寄
-
-没思路。
-
-[参考约瑟夫环](https://blog.csdn.net/u011500062/article/details/72855826)
-
-- 网友：每杀死一个人，整体往前移动m个数是为了假设下一次开始数m个数是从0开始。
-
-  也就是说f(11,3)=6
-  假设最后存活下来的人在第一轮的坐标为6,杀掉第3个人(i=2)的人，杀掉后下一次从i=3的位置开始计数下一轮，这时候还剩10个人，这时候如果想从0计算最后存活下来的人的坐标，就得从把下一轮开始计数位置(也就是i=3)那个位置的坐标向左移动3，这时候整体向左移3，最后存活下来的坐标也就变成了3，也会是10个人的时候坐标变成了3
-
-#### 官方1-模拟链表
-
-O(n^2)的时间复杂度
-
-![image-20220415235803966](lcof.assets/image-20220415235803966.png)
-
-![image.png](lcof.assets/0a7538f213070b64cac8427d453de6e305fb63c99e9585948f52a116e0558ddc-image.png)
-
-![image-20220415235828058](lcof.assets/image-20220415235828058.png)
-
-```java
-class Solution {
-    public int lastRemaining(int n, int m) {
-        ArrayList<Integer> list = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            list.add(i);
-        }
-        int idx = 0;
-        while (n > 1) {
-            idx = (idx + m - 1) % n;
-            list.remove(idx);
-            n--;
-        }
-        return list.get(0);
-    }
-}
-```
-
-
-
-#### 官方2-约瑟夫环
-
-> 这个问题是以弗拉维奥·约瑟夫命名的，他是1世纪的一名犹太历史学家。他在自己的日记中写道，他和他的40个战友被罗马军队包围在洞中。他们讨论是自杀还是被俘，最终决定自杀，并以抽签的方式决定谁杀掉谁。约瑟夫斯和另外一个人是最后两个留下的人。约瑟夫斯说服了那个人，他们将向罗马军队投降，不再自杀。约瑟夫斯把他的存活归因于运气或天意，他不知道是哪一个。 —— 【约瑟夫问题】维基百科
-
-数学解法，O(n):
-
-这么著名的约瑟夫环问题，是有数学解法的！
-因为数据是放在数组里，所以我在数组后面加上了数组的复制，以体现是环状的。我们先忽略图片里的箭头：
-【第一轮后面的数字应该是[0, 1, 2 ,3 ,4]，手误打错了。。抱歉】
-
-
-![image.png](lcof.assets/9dda886441be8d249abb76e35f53f29fd6e780718d4aca2ee3c78f947fb76e75-image.png)
-
-![image-20220415235554790](lcof.assets/image-20220415235554790.png)
-
-```java
-class Solution {
-    public int lastRemaining(int n, int m) {
-        int ans = 0;
-        // 最后一轮剩下2个人，所以从2开始反推
-        for (int i = 2; i <= n; i++) {
-            ans = (ans + m) % i;
-        }
-        return ans;
-    }
-}
-```
-
-## 模拟(中等)
-
-### [剑指 Offer 29. 顺时针打印矩阵](https://leetcode-cn.com/problems/shun-shi-zhen-da-yin-ju-zhen-lcof/)
-
-codetop 20
-
-#### 首战成功
-
-```java
-class Solution {
-    public int[] spiralOrder(int[][] matrix) {
-        /**
-        每次触及边界，就让该方向能触及的边界内缩一位。top，bottom，left，right；
-        用四个小while控制顺时针打印
-        用一个大while包裹四个小while，每次小while结束都会侦测是否要退出大while（up和buttom交叉，left和right交叉）
-         */
-        //处理特殊情况
-        if(matrix.length==0)return new int[0];
-
-        //限制顺时针访问能到达的边界
-        int top=0,bottom=matrix.length-1,left=0,right=matrix[0].length-1;
-        //保存结果的数组
-        int[] result=new int[matrix.length*matrix[0].length];
-        //ij是二维数组中要打印的当前元素；count是结果数组的待点入坐标，并且起到了计数功能
-        int i=0,j=0,count=0;
-        //大while保持顺时针
-        while(top<=bottom&&left<=right){
-            //四个小while控制顺时针的方向
-            while(j<=right){//先右移动
-                result[count]=matrix[i][j];
-                j++;
-                count++;
-            }
-            //可能走到中途就要break
-            if(count==result.length)break;
-            //退出的时候多做了一次j加法使j超过了right，要减少回来,使j停留在边界right，准备向下移动;count不需要减少，因为它得停留在下一次要存储的位置
-            j--;
-            //向右处理完了，top要++，下次不能再触及这一行了
-            top++;
-            //下一波往下走
-            i++;
-            
-            while(i<=bottom){//再向下移动
-                result[count]=matrix[i][j];
-                i++;
-                count++;
-            }
-            //可能走到中途就要break
-            if(count==result.length)break;
-            //退出的时候多做了一次i加法使i超过了bottom，要减少回来,使i停留在边界bottom，准备向左移动;count不需要减少，因为它得停留在下一次要存储的位置
-            i--;
-            //向右处理完了，right要--，下次不能再触及这一列了
-            right--;
-            //下一波往左走
-            j--;
-            
-            
-            while(j>=left){//再向左移动
-                result[count]=matrix[i][j];
-                j--;
-                count++;
-            }
-            //可能走到中途就要break
-            if(count==result.length)break;
-            //退出的时候多做了一次j减法使j超过了left，要增加回来,使j停留在边界left，准备向上移动;count不需要减少，因为它得停留在下一次要存储的位置
-            j++;
-            //向左处理完了，bottom要--，下次不能再触及这一行了
-            bottom--;
-            //下一波往上走
-            i--;
-            
-            while(i>=top){//再向上移动
-                result[count]=matrix[i][j];
-                i--;
-                count++;
-            }
-            //可能走到中途就要break
-            if(count==result.length)break;
-            //退出的时候多做了一次i减法使i超过了top，要减少回来，使i停留在边界top，准备向右移动;count不需要减少，因为它得停留在下一次要存储的位置
-            i++;
-            //向上处理完了，left要++，下次不能再触及这一列了
-            left++;
-            //下一波往右走
-            j++;
-            
-        }
-
-        return result;
-    }
-}
-```
-
-- 注意：i代表行，j代表列；想要向右移动的话，i不变，j增加。
-
-#### 官方-模拟+设定边界
-
-解题思路：
-
-![image-20220416141340955](lcof.assets/image-20220416141340955.png)
-
-算法流程：
-
-![image-20220416141406403](lcof.assets/image-20220416141406403.png)
-
-复杂度分析：
-
-![image-20220416141422173](lcof.assets/image-20220416141422173.png)
-
-代码：
-
-> Java 代码利用了 ++ 操作的便利性，详情可见 ++i 和 i++ 的区别 ；
->
-> res[x++] 等价于先给 res[x] 赋值，再给 x 自增 11 ；
-> ++t > b 等价于先给 t 自增 11 ，再判断 t > b 逻辑表达式。
-
-```java
-class Solution {
-    public int[] spiralOrder(int[][] matrix) {
-        if(matrix.length == 0) return new int[0];
-        int l = 0, r = matrix[0].length - 1, t = 0, b = matrix.length - 1, x = 0;
-        int[] res = new int[(r + 1) * (b + 1)];
-        while(true) {
-            for(int i = l; i <= r; i++) res[x++] = matrix[t][i]; // left to right.
-            if(++t > b) break;
-            for(int i = t; i <= b; i++) res[x++] = matrix[i][r]; // top to bottom.
-            if(l > --r) break;
-            for(int i = r; i >= l; i--) res[x++] = matrix[b][i]; // right to left.
-            if(t > --b) break;
-            for(int i = b; i >= t; i--) res[x++] = matrix[i][l]; // bottom to top.
-            if(++l > r) break;
-        }
-        return res;
-    }
-}
-```
-
-- 网友问：有一个疑惑，什么叫模拟？
-  - 网友答：就是代码的思路是跟着实际要求的顺时针的思路来走的
-
-- 我：自己写的版本和官方思路一致。
-
-### [剑指 Offer 31. 栈的压入、弹出序列](https://leetcode-cn.com/problems/zhan-de-ya-ru-dan-chu-xu-lie-lcof/)
-
-#### 首战寄 
-
-没什么思路
-
-#### 官方-模拟
-
-解题思路：
-
-如下图所示，给定一个压入序列 pushed和弹出序列 popped，则压入 / 弹出操作的顺序（即排列）是 **唯一确定** 的。
-
-![Picture1.png](lcof.assets/c880f045c03a8e03b7908b2d49b658a9a32ba8f5d40cb19da62db32c7eb58830-Picture1.png)
-
-如下图所示，栈的数据操作具有 **先入后出** 的特性，因此某些弹出序列是无法实现的。
-
-![Picture2.png](lcof.assets/4397f5b44038603d70568147824877cacdaa76cef22371c2c80ff55f915092fd-Picture2.png)
-
-考虑借用一个辅助栈 stackstack ，模拟 压入 / 弹出操作的排列。根据是否模拟成功，即可得到结果。
-
-- 入栈操作： 按照压栈序列的顺序执行。
-- 出栈操作： 每次入栈后，循环判断 “栈顶元素 == 弹出序列的当前元素” 是否成立，将符合弹出序列顺序的栈顶元素全部弹出。
-
-> 由于题目规定 "栈的所有数字均不相等" ，因此在循环入栈中，每个元素出栈的位置的可能性是唯一的（若有重复数字，则具有多个可出栈的位置）。因而，在遇到 “栈顶元素 == 弹出序列的当前元素” 就应立即执行出栈。
-
-算法流程：
-
-![image-20220416152859724](lcof.assets/image-20220416152859724.png)
-
-- 不停按照入栈数组入栈，等到入栈的节点和出栈数组的顶部相同时，才有出栈的资格，这是很好理解的。使用模拟可以侦测到不合理的出入栈顺序。
-
-复杂度分析：
-
-![image-20220416152918099](lcof.assets/image-20220416152918099.png)
-
-代码：
-
-> 题目指出 pushed 是 popped 的排列 。因此，无需考虑 pushedpushed 和 poppedpopped 长度不同 或 包含元素不同 的情况。
->
-
-```java
-class Solution {
-    public boolean validateStackSequences(int[] pushed, int[] popped) {
-        Stack<Integer> stack = new Stack<>();
-        int i = 0;
-        for(int num : pushed) {
-            stack.push(num); // num 入栈
-            while(!stack.isEmpty() && stack.peek() == popped[i]) { // 循环判断与出栈
-                stack.pop();
-                i++;
-            }
-        }
-        return stack.isEmpty();
-    }
-}
-```
-
-- 网友：不过Stack不建议使用，可以使用Deque，Deque也包含了栈的push和pop方法
-
-  - 网友问：为什么建议用 Deque 代替 Stack呢
-    - 网友答：这个是Java历史遗留问题，Stack继承了Vector且是Vector的唯一子类，Vector逐渐被Java抛弃了，且Stack是实体类，Deque是一个通用接口，使用起来更灵活，你查Java api中java.util.Stack中官方文档也给出了使用Deque来代替Stack的建议。Deque一般用LinkedList实现
-
-  - 网友追问： stack的方法，deque都可以用吗？
-    - 网友答：可以的，你就把它当成个stack就行，方法通用
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public boolean validateStackSequences(int[] pushed, int[] popped) {
-        /**
-        1. 一个节点只有先入栈才能出栈，所以根据入栈数组不停入栈。
-        2. 入栈后，当入栈的元素是出栈数组的顶部时，不停出栈
-        3. 出栈完毕后，继续入栈，看看能否继续有与出栈数组顶部相同的元素入栈
-
-        使用deque实现栈，而不是过时的stack
-         */
-        Deque<Integer> stack=new LinkedList<>();
-        int pophead=0;
-        for(int i=0;i<pushed.length;i++){
-            //不停入栈
-            stack.push(pushed[i]);
-            //每次push后检查是否可以开始pop。注意要先保证stack不为空，再做peek等操作，否则可能出现空指针异常。integer在较小时是在常量池里，不过本题不碍事。
-            while(!stack.isEmpty()&&stack.peek()==popped[pophead]){//退栈至不可再退为止，即栈顶元素和poped数组的当前元素不一致
-                stack.pop();
-                pophead++;
-            }
-        }
-        
-        //如果执行完入栈出栈后，stack不为空，说明poped[]是不合法的
-        return stack.isEmpty();
-    }
-}
-```
-
-
-
-## 字符串(中等)
-
-### [剑指 Offer 20. 表示数值的字符串](https://leetcode-cn.com/problems/biao-shi-shu-zhi-de-zi-fu-chuan-lcof/)
-
-codetop 1
-
-#### 首战寄
-
-没有啥很好的思路：
-
-- `s.trim().toCharArray();`，把字符串收尾空格去掉，然后转化成char数组处理 
-
-- 分段递归判断
-
-网友评价：
-
-- 关键是题目中给的示例不详尽，提交一次，修改一次代码，修改的全是细节 做一次恶心一次
--  这题是个典型的面向测试用例编程的题目
-
-#### 大佬-常规思路
-
-个人感觉还是常规思路好理解= =，直接逐位遍历一遍，并做好标记。
-
-代码：
-
-```java
-class Solution {
-    public boolean isNumber(String s) {
-        if(s == null || s.length() == 0) return false; // s为空对象或 s长度为0(空字符串)时, 不能表示数值
-        boolean isNum = false, isDot = false, ise_or_E = false; // 标记是否遇到数位、小数点、‘e’或'E'
-        char[] str = s.trim().toCharArray();  // 删除字符串头尾的空格，转为字符数组，方便遍历判断每个字符
-        for(int i=0; i<str.length; i++) {
-            if(str[i] >= '0' && str[i] <= '9') isNum = true; // 判断当前字符是否为 0~9 的数位
-            else if(str[i] == '.') { // 遇到小数点
-                if(isDot || ise_or_E) return false; // 小数点之前可以没有整数，但是不能重复出现小数点、或出现‘e’、'E'
-                isDot = true; // 标记已经遇到小数点
-            }
-            else if(str[i] == 'e' || str[i] == 'E') { // 遇到‘e’或'E'
-                if(!isNum || ise_or_E) return false; // ‘e’或'E'前面必须有整数，且前面不能重复出现‘e’或'E'
-                ise_or_E = true; // 标记已经遇到‘e’或'E'
-                isNum = false; // 重置isNum，因为‘e’或'E'之后也必须接上整数，防止出现 123e或者123e+的非法情况
-            }
-            else if(str[i] == '-' ||str[i] == '+') { 
-                if(i!=0 && str[i-1] != 'e' && str[i-1] != 'E') return false; // 正负号只可能出现在第一个位置，或者出现在‘e’或'E'的后面一个位置
-            }
-            else return false; // 其它情况均为不合法字符
-        }
-        return isNum;
-    }
-}
-```
-
-#### 即时再战
-
-题目不是啥好题，就不再战了。
-
-### [剑指 Offer 67. 把字符串转换成整数](https://leetcode-cn.com/problems/ba-zi-fu-chuan-zhuan-huan-cheng-zheng-shu-lcof/)
-
-codetop 1
-
-#### 首战半寄
-
-过了1025 / 1079个测试案例，会有一些奇怪的判例出现，总是得修改代码，没考虑到哪些奇怪的情况，就不继续完善了。
-
-字符串的题以后出现率不高的就不要太花时间了，感觉不值。。
-
-```java
-class Solution {
-    public int strToInt(String str) {
-        //特殊处理：如果字符串为空，直接返回0
-        if(str==null)return 0;
-        char[] chs=str.trim().toCharArray();
-        //特殊处理：如果字符串只有空格，直接返回0
-        if(chs.length==0)return 0;
-
-        //lr夹住值
-        int l=0,r=0;
-        boolean alwaysZero=true;
-        //只要出现不合法的情况就break，这样break时i的位置及之前的数都是合法的。由于不合法的情况比较多，抓住合法的来判断放行
-        while(r<chs.length){
-            if(chs[r]=='0'&&alwaysZero){//只有从头开始的连贯的0才能进入本if
-                r++;
-                l++;
-            }else if(isInt(chs[r])){
-                alwaysZero=false;
-                r++;
-            }else if(isSig(chs[r])&&r==0&&chs.length!=1){//chs.length!=1是为了防止'+'和'-'通过过滤
-                r++;
-            }else{
-                break;
-            }
-
-            //特殊值处理，防止字符连long都超过
-            if(r-l+1>11){//最大整数有10位，加上-+一位
-                if(chs[0]=='-')return Integer.MIN_VALUE;
-                else return Integer.MAX_VALUE;
-            }
-        }
-
-        //System.out.println("截取到的结果为："+str.substring(0,i));
-        //得到的整数范围为0~i-1，把字符数组处理成整数。
-        int tens=1;
-        //用long记录结果，在结果超过整数范围的时候直接返回对应的整数边界
-        long result=0;
-        //针对正数和负数做不同处理，避免对每个字节判断-
-        if(chs[0]=='-'){
-            //处理到1为止
-            for(int j=r-1;j>=1;j--){
-                // System.out.print("当前处理的字符为：");
-                // System.out.println(chs[j]);
-                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
-                //System.out.println("temp为："+temp);
-                result+=temp;
-                if(-result<(long)Integer.MIN_VALUE)return Integer.MIN_VALUE;
-
-                tens*=10;
-            }
-            return (int)-result;
-        }else if(chs[0]=='+'){
-            //处理到1为止
-            for(int j=r-1;j>=1;j--){
-                // System.out.print("当前处理的字符为：");
-                // System.out.println(chs[j]);
-                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
-                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
-                //System.out.println("temp为："+temp);
-                result+=temp;
-                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
-
-                tens*=10;
-            }
-            return (int)result;
-
-        }else{
-            //处理到0为止
-            for(int j=r-1;j>=0;j--){
-                System.out.print("当前处理的字符为：");
-                System.out.println(chs[j]);
-                //System.out.println("Integer.valueOf(chs[j])："+Integer.valueOf(chs[j]));直接使用Integer.valueOf('2')会得到50，要先把字符转化为字符串处理
-                long temp=Long.valueOf(String.valueOf(chs[j]))*tens;
-                System.out.println("temp为："+temp);
-                result+=temp;
-                if(result>(long)Integer.MAX_VALUE)return Integer.MAX_VALUE;
-
-                tens*=10;
-            }
-            return (int)result;
-        }
-
-    }
-    public boolean isInt(char ch){//可以用switch
-        if(ch=='0'||ch=='1'||ch=='2'||ch=='3'||ch=='4'||ch=='5'||ch=='6'||ch=='7'||ch=='8'||ch=='9')return true;
-
-        return false;
-    }
-    public boolean isSig(char ch){
-        if(ch=='+'||ch=='-')return true;
-
-        return false;
-    }
-}
-```
-
-#### 官方-数字越界处理
-
-解题思路：
-
-![image-20220416204636792](lcof.assets/image-20220416204636792.png)
-
-![Picture1.png](lcof.assets/0be9098b13047fe3e07f3c4e51c612244ace01a023ed010bce43940408334f2a-Picture1.png)
-
-数字越界处理：
-
-![image-20220416204705051](lcof.assets/image-20220416204705051.png)
-
-![Picture2.png](lcof.assets/d1b06a91801868af63f6e309da31bcfa01c7b6c385529fb974389a61e454cd12-Picture2.png)
-
-复杂度分析：
-
-![image-20220416204732055](lcof.assets/image-20220416204732055.png)
-
-代码：
-
-```java
-class Solution {
-    public int strToInt(String str) {
-        char[] c = str.trim().toCharArray();
-        if(c.length == 0) return 0;
-        int res = 0, bndry = Integer.MAX_VALUE / 10;
-        int i = 1, sign = 1;
-        if(c[0] == '-') sign = -1;
-        else if(c[0] != '+') i = 0;
-        for(int j = i; j < c.length; j++) {
-            if(c[j] < '0' || c[j] > '9') break;
-            if(res > bndry || res == bndry && c[j] > '7') return sign == 1 ? Integer.MAX_VALUE : Integer.MIN_VALUE;
-            res = res * 10 + (c[j] - '0');
-        }
-        return sign * res;
-    }
-}
-```
-
-## 栈与队列(困难)
-
-### [剑指 Offer 59 - I. 滑动窗口的最大值](https://leetcode-cn.com/problems/hua-dong-chuang-kou-de-zui-da-zhi-lcof/)
-
-codetop 7
-
-#### 首战寄
-
-没有好思路，只想到：遍历时没到达一个数，就遍历窗口内部拿到最大值，这么写没什么意义
-
-#### 大佬-priorityQueue
-
-优先队列秒了没有超时， 不能该是困难题吧
-
-```java
-class Solution {
-    public int[] maxSlidingWindow(int[] nums, int k) {
-        if(nums.length==0) return new int[0];
-        PriorityQueue<Integer> queue = new PriorityQueue<Integer>((o1,o2)->{return o2-o1;});
-        int[] res = new int[nums.length-k+1];
-        for(int i = 0;i<k-1;++i) queue.offer(nums[i]);
-        for(int i = 0;i<res.length;++i){
-            queue.offer(nums[i+k-1]);
-            res[i] = queue.peek();
-            queue.remove(nums[i]);
-        }
-        return res;
-    }
-}
-```
-
-- 网友评价：虽然时间复杂度是 nlogk ，但胜在思想和编写都简单。
-
-- [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)
-
-#### 官方-单调队列
-
-解题思路：
-
-![image-20220418193659791](lcof.assets/image-20220418193659791.png)
-
-![Picture1.png](lcof.assets/1600878237-pBiBdf-Picture1.png)
-
-![image-20220418193737505](lcof.assets/image-20220418193737505.png)
-
-- 问答问：获取窗口中最大值的时间复杂度是降到o1了，但是每次元素添加进deque，都需要遍历删除所有值比新加进来的元素小的元素，这我感觉也是ok的时间复杂度，那么总的时间复杂度是不是没变？
-  - 自答：就像分析时间复杂度处说的，deque中每个元素最多只会入队一次和出队一次，并且元素出队时removelast的时间复杂度是o1；所以就算是批量一次性删除多个元素，那么后续需要删除的元素就少了（总数最多会有n个元素入队），所以这块不构成on中嵌套ok的时间复杂度，而是on+on==o2n==on的时间复杂度。
-
-算法流程：
-
-![image-20220418194145067](lcof.assets/image-20220418194145067.png)
-
-复杂度分析：
-
-![image-20220418194228120](lcof.assets/image-20220418194228120.png)
-
-代码：
-
-```java
-class Solution {
-    public int[] maxSlidingWindow(int[] nums, int k) {
-        //单调队列
-        //下面是要注意的点：
-        //队列按从大到小放入
-        //如果首位值（即最大值）不在窗口区间，删除首位
-        //如果新增的值小于队列尾部值，加到队列尾部
-        //如果新增值大于队列尾部值，删除队列中比新增值小的值，如果在把新增值加入到队列中
-        //如果新增值大于队列中所有值，删除所有，然后把新增值放到队列首位，保证队列一直是从大到小
-        if (nums.length == 0)   return nums;
-
-        Deque<Integer> deque = new LinkedList<>();
-        int[] arr = new int[nums.length - k + 1];
-        int index = 0;  //arr数组的下标
-        //未形成窗口区间
-        for (int i = 0; i < k; i++) {
-            //队列不为空时，当前值与队列尾部值比较，如果大于，删除队列尾部值
-            //一直循环删除到队列中的值都大于当前值，或者删到队列为空
-            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
-            //执行完上面的循环后，队列中要么为空，要么值都比当前值大，然后就把当前值添加到队列中
-            deque.addLast(nums[i]);
-        }
-        //窗口区间刚形成后，把队列首位值添加到队列中
-        //因为窗口形成后，就需要把队列首位添加到数组中，而下面的循环是直接跳过这一步的，所以需要我们直接添加
-        arr[index++] = deque.peekFirst();
-        //窗口区间形成
-        for (int i = k; i < nums.length; i++) {
-            //i-k是已经在区间外了，如果首位等于nums[i-k]，那么说明此时首位值已经不再区间内了，需要删除
-            if (deque.peekFirst() == nums[i - k])   deque.removeFirst();
-            //删除队列中比当前值小的值
-            while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
-            //把当前值添加到队列中
-            deque.addLast(nums[i]);
-            //把队列的首位值添加到arr数组中
-            arr[index++] = deque.peekFirst();
-        }
-        return arr;
-    }
-}
-```
-
-#### 即时再战成功
-
-```java
-class Solution {
-    public int[] maxSlidingWindow(int[] nums, int k) {
-        /**
-        使用单调队列
-         */
-
-        //处理特殊情况
-        if(nums.length==0)return new int[0];
-
-        //新建单调队列和存结果的数组
-        Deque<Integer> queue=new LinkedList<>();
-        int[] res=new int[nums.length-k+1];
-
-        //处理窗口未完全覆盖数组前的情况,即没有元素从窗口左边滑出的情况。i表示窗口未完全展现时的右边缘,0~k-1。删除和增加都是从last做，这样保证first总是最大元素。
-        for(int i=0;i<k;i++){
-            //把队列中比当前元素小的数都删掉，由于每个元素只会入栈出栈一次，所以这个while不会造成嵌套而成的乘法时间复杂度。
-            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){//!!!!while要确保queue不为空，否则会做peeklast会有空指针异常
-                queue.pollLast();
-            }
-            //把当前元素加入单调队列末尾，此时保证了队列中不会有比它还小的元素
-            queue.offerLast(nums[i]);
-        }
-
-        //此时窗子的左边缘正好在nums[0]，把此时窗口中的最大值记录下来
-        res[0]=queue.peekFirst();
-
-        //此时窗子的左边缘正好在nums[0]，接下来的滑动窗口就会有元素从窗户左边滑出了。这里的i还是以滑动窗口的右边缘为准
-        for(int i=k;i<nums.length;i++){
-            //先处理出队，再处理入队，这样可以保证队列单调递减
-            //如果出队的元素是queue的最大元素，就把它从queue中移除
-            if(nums[i-k]==queue.peekFirst()){
-                queue.pollFirst();
-            }
-            //窗口有边缘要往queue中进元素时，老规矩，先把queue中比要进的元素小的元素删除，再进元素
-            while(!queue.isEmpty()&&queue.peekLast()<nums[i]){
-                queue.pollLast();
-            }
-            queue.offerLast(nums[i]);
-
-            //把queue的头部元素放入res，因为它就是此时窗口中最大的元素；第一次添加时窗口左侧在nums[1]
-            res[i-k+1]=queue.peekFirst();
-        }
-
-        return res;
-
-    }
-}
-```
-
-### [剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
-
-codetop 5
-
-#### 首战半寄
-
-代码都写出来了，但是花了很多时间debug阿里手册提过的integer用equals比较的问题，所以算”半寄“
-
-```java
-class MaxQueue {
-    /**
-    pushback和popfront用队列实现，都天然是o1的时间复杂度
-    maxvalue就得用一个额外的单调队列，来记载此时存储队列中的最大值
-     */
-    //单调队列，用于保存当前deque的（潜在）最大值
-    Deque<Integer> monotonousQueue=null;
-    //当前deque，用于存储数据
-    Deque<Integer> queue=null;
-
-    //构造函数为本对象分配内存
-    public MaxQueue() {
-        monotonousQueue=new LinkedList<>();
-        queue=new LinkedList<>();
-    }
-    
-    //monotonousQueue的头部总是当前队列的最大值；如果队列为空则返回-1；
-    public int max_value() {
-        //printQueues();
-        if(monotonousQueue.isEmpty()){
-            return -1;
-        }else{
-            return monotonousQueue.peekFirst();
-        }
-    }
-    
-    public void push_back(int value) {
-        //数据直接往queue中放；
-        queue.offerLast(value);
-
-        //把monotonousQueue中比value小的节点删掉后，把value放入monotonousQueue的尾部，保证monotonousQueue单调递减
-        while(!monotonousQueue.isEmpty()&&monotonousQueue.peekLast()<value) monotonousQueue.pollLast();
-        monotonousQueue.offerLast(value);
-    }
-    
-    public int pop_front() {
-        //如果队列为空，不需要实际pop，直接返回-1
-        if(queue.isEmpty())return -1;
-
-        //队列不为空，查看要pop的是不是monotonousQueue的头节点，即queue中的最大节点；如果是的话，则删掉monotonousQueue中的头结点。注意queue.peekFirst().equals(monotonousQueue.peekFirst())不能写成用==比较，因为返回的是Integer对象会出现无法判等于的情况，原因见（https://blog.csdn.net/qq_39677544/article/details/78849988），这是阿里手册提过的大坑！！
-        if(queue.peekFirst().equals(monotonousQueue.peekFirst()))monotonousQueue.pollFirst();
-        //处理完monotonousQueue后，直接把queue的头节点即要出队的节点返回
-        return queue.pollFirst();
-    }
-
-    //debug测试时用的，提交时可以注释掉
-    public void printQueues(){
-        System.out.println("====================当前queue为：");
-        Iterator<Integer> iterator1 = queue.iterator();
-        while(iterator1.hasNext()){
-            System.out.print(iterator1.next()+" ");
-        }
-        System.out.println("====================当前queue结束");
-
-        System.out.println("=====================当前monotonousQueue为：");
-        Iterator<Integer> iterator2 = monotonousQueue.iterator();
-        while(iterator2.hasNext()){
-            System.out.print(iterator2.next()+" ");
-        }
-        System.out.println("=====================当前monotonousQueue结束");
-
-    }
-}
-
-/**
- * Your MaxQueue object will be instantiated and called as such:
- * MaxQueue obj = new MaxQueue();
- * int param_1 = obj.max_value();
- * obj.push_back(value);
- * int param_3 = obj.pop_front();
- */
-```
-
-- 注意： 大坑，Integer和String在比较内容值大小时，要使用equals，而不是使用比较地址的`==`。[原因](https://blog.csdn.net/qq_39677544/article/details/78849988)
-
-#### 官方-单调双向队列
-
-解题思路：
-
-![image-20220419161423045](lcof.assets/image-20220419161423045.png)
-
-
-
-![Picture1.png](lcof.assets/1609261470-WanZuG-Picture1.png)
-
-![image-20220419161504057](lcof.assets/image-20220419161504057.png)
-
-![Picture2.png](lcof.assets/1609261470-gMTEAf-Picture2.png)
-
-![image-20220419161545885](lcof.assets/image-20220419161545885.png)
-
-函数设计：
-
-![image-20220419161614034](lcof.assets/image-20220419161614034.png)
-
-复杂度分析：
-
-![image-20220419161638177](lcof.assets/image-20220419161638177.png)
-
-代码：
-
-```java
-class MaxQueue {
-    Queue<Integer> queue;
-    Deque<Integer> deque;
-    public MaxQueue() {
-        queue = new LinkedList<>();
-        deque = new LinkedList<>();
-    }
-    public int max_value() {
-        return deque.isEmpty() ? -1 : deque.peekFirst();
-    }
-    public void push_back(int value) {
-        queue.offer(value);
-        while(!deque.isEmpty() && deque.peekLast() < value)
-            deque.pollLast();
-        deque.offerLast(value);
-    }
-    public int pop_front() {
-        if(queue.isEmpty()) return -1;
-        if(queue.peek().equals(deque.peekFirst()))
-            deque.pollFirst();
-        return queue.poll();
-    }
-}
-
-```
-
-- 网友问（和我栽进一个坑了）：`queue.peek().equals(deque.peekFirst())`，询问个问题，为何==的时候就会不对，能讲下区别吗？
-  - 网友答：queue 里面保存的是 Integer 而非 int ，peek() 返回的是 Integer 类型，没有自动拆箱，因此需要用 equals() 来比~
-  - 网友答：比如Integer i1 = new Integer(1); Integer i2 = new Integer(1) 这样子比较i1 == i2是返回false的，因为比较的是对象， 同理 Integer i1 = 1; Integer i2 = new Integer(1);这样i1==i2也是返回false的，因为i1自动装箱了。 但是Integer i1 = 1; Integer i2 =1;这样i1==i2，返回是true， 因为自动装箱缓存机制，返回的同一个对象给i1和i2。在-128~127（比较常用？）的整数范围内都会存在自动拆装箱的缓存，所以126 和 900 的区别就在这里（126两个都是返回的同一个对象，900超过范围了返回的不是同一个对象）。 你也可以自己设定缓存的整数范围。 两个都是包装类最好用.equals()方法比较，这样比较的是值。 如果一个是int类型，一个是包装类，那么可以直接用==，因为包装类自动拆箱为int类型了，所以这时候比较的也是值，而不会存在一个是基本类型，一个是引用类型不能比较，这就是自动拆装箱。
-
-- 优先队列vs单调队列：
-
-  - 我思考：
-
-    - 之前有点迷糊，单调队列和优先队列都能保障队列头为当前输入(窗口)的最大值，优先队列的时间复杂度还更高，那为什么不总是使用单调队列?
-
-    - 后面我想了下，优先队列能保证存储所有元素，但是单调队列为了保证单调会删掉众多元素，所以有存储所有节点的场景需要的话，只用单调队列是不行的。
-
-  - 网友：这俩使用场景区别还挺大的吧，单调队列经典题接雨水，用优先队列不行吧
-
-  - 网友：你只考虑最大为什么要优先队列和单调队列，直接maxx遍历取max就好了
-    用到这俩也是结束遍历的时候两个队列存的东西不一样
-    大家不要带偏了啊，你只关系当前最大用变量存max就好了
-
+- 我：他这个省掉了官方的`if(left == null && right == null) return null;`，其实也合理，因为right不为空left为空返回right，right为空left为空返回的null也正是right的值。
+- 我：感觉不如我首战告捷的好理解，全局变量yyds！！！
 
 ## 搜索与回溯算法(困难)
 
@@ -8305,8 +6411,8 @@ class Solution {
 - 反思：
   - 最开始没有考虑到字符串中有重复字符如"abb"，使用list来存储结果，导致返回结果把两个相同的a当做a1和a2处理了，和预期不一致。后面改为用set进行结果去重，不过程序处理时还是会把a当做a1和a2处理造成无效计算最后又利用set唯一性舍弃。
     - 可以效仿官方的方法，在for那使用set做剪枝（判断`availableChars.charAt(i);`是否出现过），这样就不会有无效计算了。
-  - iterator，iterator(),hasNext(),next()这套使用不熟练
-  - StringBuilder使用不熟练。实际上String有的方法基本上StringBuilder都有，但是StringBuilder还有跟多的方法如append，deleteCharAt，insert等；要熟练掌握StringBuilder的方法。
+  - iterator，iterator(),hasNext(),next()这套使用不熟练。不过可以直接用foreach写法遍历。
+  - StringBuilder使用不熟练。实际上String有的方法基本上StringBuilder都有，但是StringBuilder还有跟多的方法如append，**deleteCharAt，insert**等；要熟练掌握StringBuilder的方法。
 
 - 赞：
   - 递归思想处理的不错，尤其是传递地址的变量在递归后要修改回来这点做的不错。
@@ -8424,11 +6530,946 @@ class Solution {
   究其原因就是因为没有恢复字符串 导致基准字符串发生了两次改变 因此每一层调用的基准字符串都必须恢复原形才能保证完整性 不能中途更换基准字符串
   ```
 
+
+## 动态规划(简单)
+
+### [剑指 Offer 10- I. 斐波那契数列](https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/)
+
+codetop==30
+
+#### 首战寄
+
+先尝试直接递归，n==43时会超时，因为执行每一个fib都会一直递归到0或1，但是比如`return (fib(n-1)+fib(n-2))%1000000007;`计算了左边的fib(49)后，计算右边的fib(48)时还递归到底，所以最好把计算过的结果保存！保存计算结果应该是动态规划区别于递归的一个特征。
+
+```java
+class Solution {
+    public int fib(int n) {
+        //设定返回条件
+        if(n==0) {
+            return 0;
+        }else if(n==1) {
+            return 1;
+        }
+
+        return (fib(n-1)+fib(n-2))%1000000007;
+    }
+}
+```
+
+- 但是想不起来怎么保存结果了
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330174419199](lcof.assets/image-20220330174419199.png)
+
+![image-20220330174432153](lcof.assets/image-20220330174432153.png)
+
+动态规划解析：
+
+![image-20220330174451619](lcof.assets/image-20220330174451619.png)
+
+空间复杂度优化：
+
+![image-20220330174517988](lcof.assets/image-20220330174517988.png)
+
+循环求余法 处理大数：
+
+![image-20220330174550027](lcof.assets/image-20220330174550027.png)
+
+复杂度分析：
+
+![image-20220330174615495](lcof.assets/image-20220330174615495.png)
+
+代码：
+
+> Python 由于语言特性可以省去 sum*s**u**m* 辅助变量和大数越界处理,java也就只给了不处理大数越界的版本
+
+```java
+class Solution {
+    public int fib(int n) {
+        int a = 0, b = 1, sum;
+        for(int i = 0; i < n; i++){
+            sum = (a + b) % 1000000007;
+            a = b;
+            b = sum;
+        }
+        return a;
+    }
+}
+```
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public int fib(int n) {
+        /*
+        动态规划，当前值只与前两个值有关；让值从小往大加即可
+         */
+
+        //先返回特殊值；这样下面的for循环才能安全地只接收n>=2的情况
+        if(n==0||n==1)return n;
+
+        int pre2=0,pre1=1;
+
+        //循环当前的i为谁，执行完当前循环，得到的sum即为fib(i)
+        for(int i=2;i<=n;i++){
+
+            int tempSum=(pre2%1000000007+pre1%1000000007)%1000000007;
+            pre2=pre1;
+            pre1=tempSum;
+        }
+
+        //最后一次循环得到的sum即为fib(n)，这个sum被复制给pre1了
+        return pre1;
+
+    }
+}
+```
+
+- 第一次提交的时候，忽略了处理n==1和0的情况；for循环无法处理n<2的情况，所以要做面对n==1和0的情况时的特殊处理。如上处理后就提交成功了。
+
+
+
+### [剑指 Offer 10- II. 青蛙跳台阶问题](https://leetcode-cn.com/problems/qing-wa-tiao-tai-jie-wen-ti-lcof/)
+
+codetop==30
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int numWays(int n) {
+        /*
+        跳上台阶的跳法，至只与前两步有关系:跳到当前台阶的方法数==跳到prev1（前一个台阶）的方法数+跳到prev2的方法数。
+        因为跳到当前台阶只有两种可能：从prev1跳1个台阶上来，或从prev2一跃跳两个台阶上来
+         */
+
+         if(n==0||n==1)return 1;
+         if(n==2)return 2;
+
+        //从第三级台阶开始动态规划
+         int prev1=2,prev2=1;
+         //当前循环为i，则执行完当前循环时的sum为跳到第i级台阶的跳法数
+         for(int i=3;i<=n;i++){
+             int tempSum=(prev1%1000000007+prev2%1000000007)%1000000007;
+             prev2=prev1;
+             prev1=tempSum;
+         }
+
+         return prev1;
+
+    }
+}
+```
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330180140749](lcof.assets/image-20220330180140749.png)
+
+- 本题和斐波那契数列问题基本一模一样。
+- 注意大佬评语：此类求 ***多少种可能性*** 的题目一般都有 **递推性质** ，即 f(n)*f*(*n*) 和 f(n-1)*f*(*n*−1)…f(1)*f*(1) 之间是有联系的。
+
+复杂度分析：
+
+![image-20220330180256791](lcof.assets/image-20220330180256791.png)
+
+代码：
+
+```java
+class Solution {
+    public int numWays(int n) {
+        int a = 1, b = 1, sum;
+        for(int i = 0; i < n; i++){
+            sum = (a + b) % 1000000007;
+            a = b;
+            b = sum;
+        }
+        return a;
+    }
+}
+```
+
+
+
+### [剑指 Offer 63. 股票的最大利润](https://leetcode-cn.com/problems/gu-piao-de-zui-da-li-run-lcof/)
+
+codetop==5
+
+笔试遇见：好大夫
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        /*记录历史最大利润，和最低价格的股票 */
+        
+        //处理特殊情况
+        if(prices.length==0)return 0;
+        
+        int lowP=prices[0];
+        int benefit=0;
+        for(int i=0;i<prices.length;i++){
+            //时刻更新最大收益
+            if((prices[i]-lowP)>benefit){
+                benefit=prices[i]-lowP;
+            }
+            //只要碰见更小的price就保存，因为未来碰见相同的高值时，记录下更小的lowP可以带来更大的收入。
+            if(prices[i]<lowP){
+                lowP=prices[i];
+            }
+        }
+        
+        return benefit;
+
+    }
+}
+```
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220330192323464](lcof.assets/image-20220330192323464.png)
+
+动态规划解析：
+
+![image-20220330192357464](lcof.assets/image-20220330192357464.png)
+
+效率优化：
+
+![image-20220330192427858](lcof.assets/image-20220330192427858.png)
+
+复杂度分析：
+
+![image-20220330192446488](lcof.assets/image-20220330192446488.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        int cost = Integer.MAX_VALUE, profit = 0;
+        for(int price : prices) {
+            cost = Math.min(cost, price);
+            profit = Math.max(profit, price - cost);
+        }
+        return profit;
+    }
+}
+```
+
+- 注意这里java工具类方法`Math.min`和`Math.max`的用法。
+
+### [121. 买卖股票的最佳时机](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/)
+
+和剑指63相同
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        /**
+        遍历数组，记录下最小股票价格；比较最小股票价格买入当前卖出赚的钱vs历史最大赚的钱
+         */
+        //没有收益的话返回0，所以maxProfit初始化为0
+        int maxProfit=0;
+        // prices[i] 的最小值为0，所以初始化他为prices[0]
+        int min=prices[0];
+        for(int i=0;i<prices.length;i++){
+            if(prices[i]<min) min=prices[i];
+            if(prices[i]-min>maxProfit) maxProfit=prices[i]-min;
+        }
+
+        return maxProfit;
+    }
+}
+```
+
+
+
+## 动态规划(中等)
+
+### [剑指 Offer 42. 连续子数组的最大和](https://leetcode-cn.com/problems/lian-xu-zi-shu-zu-de-zui-da-he-lcof/)
+
+codetop==24
+
+#### 首战寄
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220331195848158](lcof.assets/image-20220331195848158.png)
+
+动态规划解析：
+
+![image-20220331195938823](lcof.assets/image-20220331195938823.png)
+
+空间复杂度降低：
+
+![image-20220331200048428](lcof.assets/image-20220331200048428.png)
+
+复杂度分析：
+
+![image-20220331200117017](lcof.assets/image-20220331200117017.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        int res = nums[0];
+        for(int i = 1; i < nums.length; i++) {
+            nums[i] += Math.max(nums[i - 1], 0);
+            res = Math.max(res, nums[i]);
+        }
+        return res;
+    }
+}
+```
+
+网友补充：感谢分享，思路很清晰，只是有一点建议。 因为有的时候，题目要求可能不能修改原有数组，考虑到在dp列表中，dp[i]只和dp[i-1]有关,所以用两个参数存储循环过程中的dp[i]和dp[i-1]的值即可，空间复杂度也为O(1)。 代码如下：
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        int max = nums[0];
+        int former = 0;//用于记录dp[i-1]的值，对于dp[0]而言，其前面的dp[-1]=0
+        int cur = nums[0];//用于记录dp[i]的值
+        for(int num:nums){
+            cur = num;
+            if(former>0) cur +=former;
+            if(cur>max) max = cur;
+            former=cur;
+        }
+        return max;
+    }
+}
+```
+
+
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        /* 
+        dpi表示已i号元素结尾的最大子数组，那么dpi=Max(dp[i-1]+numsi,numsi),所以dp[i-1]<0的话只能拖后腿就截掉
+        因为最长子数组是连续的，所以要以i为结尾的数组做dp数组
+        */
+        //处理特殊情况
+        if(nums.length==0)return 0;
+        if(nums.length==1)return nums[0];
+
+        //从数组第二个元素开始就dpi
+        int curMaxSum=nums[0],historyMaxSum=curMaxSum;
+        for(int i=1;i<nums.length;i++){
+            if(curMaxSum<0){
+                curMaxSum=nums[i];
+            }else{
+                curMaxSum+=nums[i];
+            }
+
+            //判断当前的最大值是否比之前所有记载过的最大值都大，都大的话更新历史最大值
+            if(curMaxSum>historyMaxSum){
+                historyMaxSum=curMaxSum;
+            }
+        }
+
+        return historyMaxSum;
+
+    }
+}
+```
+
+
+
+### [剑指 Offer 47. 礼物的最大价值](https://leetcode-cn.com/problems/li-wu-de-zui-da-jie-zhi-lcof/)
+
+codetop==2
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int maxValue(int[][] grid) {
+        /*
+        覆写二维数组，在相应位置写上“以左上角出发到当前位置能拿到的最大礼物”，这个礼物值只与上一节点和左一节点有关。
+
+        为了空间复杂度，直接在二维数组上记录
+         */
+         //处理特殊情况;注意要先判断行不为0，否则先判断列不为0的话可能出现空指针异常
+         if(grid.length==0||grid[0].length==0)return 0;
+
+         //先处理二维数组的行
+         for(int i=0;i<grid.length;i++){
+             //再在二维数组的某个行中依次处理各个列元素
+             for(int j=0;j<grid[0].length;j++){
+                 //获得数组当前元素，从左or从上来，哪个拿更多礼物
+                 int tempLeft=0,tempUp=0;
+                if(i>0){//如果i大于0，说明不在第一行，那么可以获得grid[i-1][j]位置存放的最大礼物
+                    tempUp=grid[i-1][j];
+                }
+                if(j>0){//如果j大于0，说明不在第一列，那么可以获得grid[i][j-1]位置存放的最大礼物
+                    tempLeft=grid[i][j-1];
+                }
+
+                //把grid[i][j]覆盖写为走当当前位置能拿到得最多礼物。
+                grid[i][j]=Math.max(tempLeft,tempUp)+grid[i][j];
+             }
+
+         }
+
+         return grid[grid.length-1][grid[0].length-1];
+
+    }
+}
+```
+
+- 看了官方解析，我得解法就是官方的待优化版，可以先初始化“第一行 第一列”，这样就避免每次判断当前元素是不是在二维数组的边缘。
+
+#### 官方-动态规划
+
+解题思路：
+
+![image-20220401152228155](lcof.assets/image-20220401152228155.png)
+
+动态规划解析：
+
+![image-20220401152255940](lcof.assets/image-20220401152255940.png)
+
+空间复杂度优化：
+
+![image-20220401152320811](lcof.assets/image-20220401152320811.png)
+
+复杂度分析：
+
+![image-20220401152346735](lcof.assets/image-20220401152346735.png)
+
+代码：
+
+```java
+class Solution {
+    public int maxValue(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        for(int i = 0; i < m; i++) {
+            for(int j = 0; j < n; j++) {
+                if(i == 0 && j == 0) continue;
+                if(i == 0) grid[i][j] += grid[i][j - 1] ;
+                else if(j == 0) grid[i][j] += grid[i - 1][j];
+                else grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
+            }
+        }
+        return grid[m - 1][n - 1];
+    }
+}
+```
+
+以上代码逻辑清晰，和转移方程直接对应，但仍可提升效率：当 gridgrid 矩阵很大时， i = 0i=0 或 j = 0j=0 的情况仅占极少数，相当循环每轮都冗余了一次判断。因此，可先初始化矩阵第一行和第一列，再开始遍历递推:
+
+```java
+class Solution {
+    public int maxValue(int[][] grid) {
+        int m = grid.length, n = grid[0].length;
+        for(int j = 1; j < n; j++) // 初始化第一行
+            grid[0][j] += grid[0][j - 1];
+        for(int i = 1; i < m; i++) // 初始化第一列
+            grid[i][0] += grid[i - 1][0];
+        for(int i = 1; i < m; i++)
+            for(int j = 1; j < n; j++) 
+                grid[i][j] += Math.max(grid[i][j - 1], grid[i - 1][j]);
+        return grid[m - 1][n - 1];
+    }
+}
+
+```
+
+
+
+### [剑指 Offer 46. 把数字翻译成字符串](https://leetcode-cn.com/problems/ba-shu-zi-fan-yi-cheng-zi-fu-chuan-lcof/)
+
+codetop==11
+
+#### 首战寄
+
+#### 大佬-适合新手理解
+
+思路：
+
+此题总结规律和青蛙跳台阶有点相似（没刷到的可以先刷青蛙跳台阶），青蛙跳台阶是只能跳一步或者两步，所以最后只有两种情况：
+
+
+    1. 跳到n-1阶，然后再跳1
+    2. 跳到n-2阶,然后再跳2
+    所以f(n) = f(n-1)+f(n-2)
+此题关注的是最大能翻译的数字为25，说明情况为要不一次性翻译一个数字，要不一次性翻译两个数字（不可能三个数字，三个数字肯定大于25了），和青蛙跳只能跳一步或两步类似
+
+
+    假设dp(i)为长度为i的数字的翻译总数
+        a.如果最后两位数字大于10且小于25，他才能翻译两个数字，他就和青蛙跳类似有两种情况：
+             1.dp(i-1),然后最后一个数字单独翻译
+             2.dp(i-2),然后最后两个数字一起翻译
+             所以dp(i) = dp(i-1) + dp(i-2);
+        b.如果最后两位数字比10小，比25大，那么他最后一个数字只能单独翻译，所以只有一种情况：
+             1.dp(i-1),然后最后一个数字单独翻译,所以dp(i) = dp(i-1);
+代码(最好理解的写法)
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        //dp[i-2]
+        int a = 1;
+        //dp[i-1]
+        int b = 1;
+        //dp[i]
+        int c = 1;
+        String s = String.valueOf(num);
+        for (int i = 1; i < s.length(); i++) {
+            //最后两个数字大于10小于25
+            if ((s.charAt(i-1) == '1') || ( s.charAt(i-1) == '2' && s.charAt(i) <= '5')) {
+                c = b + a;
+                //更新新的dp[i-2]
+                a = b;
+                //更新新的dp[i-1]
+                b = c;
+            }else {
+                c = b;
+                //由于新的dp[i-1]值没变，所以只更新新的dp[i-2]
+                a = b;
+            }
+        }
+        return c;
+
+    }
+}
+```
+
+- 注意：字符‘1’ ‘2’ ‘3’ ‘4’ ‘5’，，也是ascii递增的，他们可以用符号比大小。
+
+#### 官方1-动态规划+字符串遍历
+
+解题思路：
+
+根据题意，可按照下图的思路，总结出 “递推公式” （即转移方程）。
+因此，此题可用动态规划解决，以下按照流程解题。
+
+![Picture1.png](lcof.assets/e231fde16304948251633cfc65d04396f117239ea2d13896b1d2678de9067b42-Picture1.png)
+
+动态规划解析：
+
+![image-20220401172718039](lcof.assets/image-20220401172718039.png)
+
+字符串遍历做法：
+
+![image-20220401172829205](lcof.assets/image-20220401172829205.png)
+
+复杂度分析：
+
+![image-20220401172857171](lcof.assets/image-20220401172857171.png)
+
+代码：
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int a = 1, b = 1;
+        for(int i = 2; i <= s.length(); i++) {
+            String tmp = s.substring(i - 2, i);
+            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
+            b = a;
+            a = c;
+        }
+        return a;
+    }
+}
+```
+
+高赞网友补充：动态规划思想，按照大佬的思路，使用的数组（感觉使用a和b不太直观）
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int[] dp = new int[s.length()+1];
+        dp[0] = 1;
+        dp[1] = 1;
+        for(int i = 2; i <= s.length(); i ++){
+            String temp = s.substring(i-2, i);
+            if(temp.compareTo("10") >= 0 && temp.compareTo("25") <= 0)
+                dp[i] = dp[i-1] + dp[i-2];
+            else
+                dp[i] = dp[i-1];
+        }
+        return dp[s.length()];
+    }
+}
+```
+
+![image-20220401173035518](lcof.assets/image-20220401173035518.png)
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        String s = String.valueOf(num);
+        int a = 1, b = 1;
+        for(int i = s.length() - 2; i > -1; i--) {
+            String tmp = s.substring(i, i + 2);
+            int c = tmp.compareTo("10") >= 0 && tmp.compareTo("25") <= 0 ? a + b : a;
+            b = a;
+            a = c;
+        }
+        return a;
+    }
+}
+```
+
+#### 官方2-动态规划+数字求余
+
+上述方法1虽然已经节省了 dp列表的空间占用，但字符串 s 仍使用了 O(N)大小的额外空间。
+
+空间复杂度优化：
+
+![image-20220401173303141](lcof.assets/image-20220401173303141.png)
+
+复杂度分析：
+
+![image-20220401173327733](lcof.assets/image-20220401173327733.png)
+
+代码：
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        int a = 1, b = 1, x, y = num % 10;
+        while(num != 0) {
+            num /= 10;
+            x = num % 10;
+            int tmp = 10 * x + y;
+            int c = (tmp >= 10 && tmp <= 25) ? a + b : a;
+            b = a;
+            a = c;
+            y = x;
+        }
+        return a;
+    }
+}
+```
+
+高赞网友补充：大佬，直接对100取余可以简化代码:
+
+```java
+class Solution {
+    public int translateNum(int num) {
+        int m = 1, n = 1;
+        // 至少是一个两位数才需要考虑能不能组合
+        while (num > 9) { 
+            int t = (num % 100 < 26 && num % 100 > 9) ? m + n : n;
+            m = n;
+            n = t;
+            num /= 10;
+        }
+        return n;
+    }
+}
+```
+
+#### 及时再战成功
+
+```java
+class Solution {
+    public int translateNum(int num) {
+
+        /**
+        数字翻译成字符串是对称的，所以从右往左看；以nums[i-1]为首位的数字，可能收到nums[i]和nums[i+1]的影响
+         */
+        //初始化，把num看做nums数组的话，表示以nums[len-1]和nums[len]为终点的的翻译有几种情况，虽然初始情况下dpLater2对应的nums[len]不存在，但是可以通过dp[len-2]和dp[len-1]推出dp[len].
+        int dpLater1=1,dpLater2=1;
+
+        //使用对100求余数，得到最接近左遍历终点的两个数字构成的数
+        while(num>9){
+            int tempFocus=num%100;
+            int dpCur;
+            //数字在[10,25]有两种翻译方法
+            if(tempFocus>=10&&tempFocus<=25){
+                dpCur=dpLater1+dpLater2;
+            }else{
+                dpCur=dpLater1;
+            }
+
+            //往左继续处理
+            dpLater2=dpLater1;
+            dpLater1=dpCur;
+            num/=10;
+        }
+
+        //最后的dpCur给了dpLater1
+        return dpLater1;
+
+    }
+}
+```
+
+1，自画思路图：
+
+![image-20220401181306013](lcof.assets/image-20220401181306013.png)
+
+- 我：即最后的12，如果整体翻译，就是以4为左结尾的翻译可能数（12    4，共一种情况）；如果拆开翻译，即是以2为结尾的返回数（1   2   4，1    24，  共两种情况）；又因为既能翻译为1又能翻译为12，所以是两种翻译情况的种数的和。
+  - 比如324，最后分析32，不能作为翻译单元，所以只能拆开3和2；有3   24，3    2    4两种情况，即相当于以2结尾的翻译可能数。
+- 我：其实核心思想就是，从右往左处理时，最后的翻译单元是1 还是12；最后的翻译单元是1则对应一个1xxxx翻译，最后的翻译单元是12则对应一个12xxxx翻译，xxxx区域相当于就是动态规划的子问题，共两种情况。如果数字更长的话，也是同理。
+
+2，20220429再看，已倒序处理为例，214可以视为21 【4】也可以视为2 【14】；但是264 只能翻译为2 6 【 4】，中括号【】表示可以继续切分的段。
+
+### [剑指 Offer 48. 最长不含重复字符的子字符串](https://leetcode-cn.com/problems/zui-chang-bu-han-zhong-fu-zi-fu-de-zi-zi-fu-chuan-lcof/)
+
+codetop==14
+
+#### 首战寄
+
+#### 官方-解题思路
+
+解题思路：
+
+![image-20220402102952931](lcof.assets/image-20220402102952931.png)
+
+动态规划解析：
+
+![image-20220402103030643](lcof.assets/image-20220402103030643.png)
+
+空间复杂度优化：
+
+![image-20220402103106620](lcof.assets/image-20220402103106620.png)
+
+#### 官方方法1-动态规划 + 哈希表
+
+![image-20220402103323735](lcof.assets/image-20220402103323735.png)
+
+复杂度分析：
+
+![image-20220402103346795](lcof.assets/image-20220402103346795.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int res = 0, tmp = 0;
+        for(int j = 0; j < s.length(); j++) {
+            int i = dic.getOrDefault(s.charAt(j), -1); // 获取索引 i
+            dic.put(s.charAt(j), j); // 更新哈希表
+            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
+            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
+        }
+        return res;
+    }
+}
+```
+
+- Java 的  getOrDefault(key, default)， 代表当哈希表包含键 key时返回对应 value ，不包含时返回默认值 default ；可以用containsKey做ifelse判断实现相同功能。
+
+- 我：dpj的值由dpj-1和i共同决定；如果i在dpj-1所代表的字符串中，则dpj的长度为j-i；如果i不在dpj-1所代表的字符串中，则dpj的长度为(dpj-1)+1。
+
+#### 官方方法2-动态规划 + 线性遍历
+
+思路：
+
+![image-20220402104704664](lcof.assets/image-20220402104704664.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int res = 0, tmp = 0;
+        for(int j = 0; j < s.length(); j++) {
+            int i = j - 1;
+            while(i >= 0 && s.charAt(i) != s.charAt(j)) i--; // 线性查找 i
+            tmp = tmp < j - i ? tmp + 1 : j - i; // dp[j - 1] -> dp[j]
+            res = Math.max(res, tmp); // max(dp[j - 1], dp[j])
+        }
+        return res;
+    }
+}
+
+```
+
+- 这种往左遍历增大了时间复杂度为on2，不可取，不建议
+
+#### 官方方法3-双指针 + 哈希表
+
+思路：
+
+![image-20220402104914233](lcof.assets/image-20220402104914233.png)
+
+代码：
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> dic = new HashMap<>();
+        int i = -1, res = 0;
+        for(int j = 0; j < s.length(); j++) {
+            if(dic.containsKey(s.charAt(j)))
+                i = Math.max(i, dic.get(s.charAt(j))); // 更新左指针 i
+            dic.put(s.charAt(j), j); // 哈希表记录
+            res = Math.max(res, j - i); // 更新结果；j - i即为以i为右指针的最长字符串的长度，其要与历史最大值比较来更新历史最大值。
+        }
+        return res;
+    }
+}
+
+```
+
+- 网友问：left = Math.max(left, hashMap.get(ch) + 1);为什么取最大值
+
+  - 网友答：
+
+  - 因为需要保证的是`[left,right]`没有重复值。而你的left如果不取最大值的话，是有可能往前退，就无法保证这个条件了。
+
+    比如`abba` , 到第二个`a`的时候，这时候上一轮的第二个b完成，此时`left=2` ，而`a`上一次出现的地方是0。
+
+    如果你直接`left = hashMap.get(ch) + 1` ,此时 left = 1 ,范围为`[left,right] = [1,3]` 而此时`[1,2] = bb` ，b已经重复了。本质就是你这个字母上次出现的地方到当前再次出现的位置，这两者间可能存在重复的值
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        /**
+        从左往右遍历，ij分别为左右重复元素，dpj由dpj-1和i共同决定
+         */
+
+        //存储字符元素-位置
+        Map<Character,Integer> map=new HashMap<>();
+        //j位置为当前元素，i为当前元素之前的重复元素的位置
+        int i=-1,dpPre=0,result=0;
+        for(int j=0;j<s.length();j++){
+            //先获取当前元素的上一个重复元素的index，如果没出现过则返回-1；
+            i=map.getOrDefault(s.charAt(j),-1);
+
+            //当前元素为右尾的子串的长度，由dpPre和ij关系共同决定。注意dpPre==j-i时j的上一个重复元素在dpPre对应的子串的首位，所以在dpPre对应的子串内，所以不能用dpPre+1作为新值。
+            int dpCur=(dpPre>=j-i?j-i:dpPre+1);
+            //比较以当前元素为结尾的子串的最大长度和历史上记录的最大长度，更新历史最大长度
+            result=Math.max(result,dpCur);
+
+            //更新s.charAt(j)字符的位置为当前位置
+            map.put(s.charAt(j),j);
+            //不要忘记更新dpPre，否则dpPre永远是0
+            dpPre=dpCur;
+        }
+
+        return result;
+
+    }
+}
+```
+
+- 能理顺动态规划的思路，但是写代码的时候忘记更新dpPre，且一直没排查出来；最后用idea debug才发现。**涉及到pre的一定要注意pre是否需要被更新**！
+
+### [3. 无重复字符的最长子串](https://leetcode-cn.com/problems/longest-substring-without-repeating-characters/)
+
+codetop==422
+
+和剑指48重复
+
+#### 首战告捷-hashmap+双指针
+
+`uniqueLeft`和`i`构成了双指针。
+
+```java
+class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        /**
+        动态规划思想，新最长子串的长度=max(老最长子串的长度，以当前节点为结尾的子串的最大长度)
+         */
+
+        int maxL=0;
+        //把字符和index加入hash表，这样可以知道每个字符上一次出现是什么时候
+        Map<Character,Integer> mymap=new HashMap<>();
+        //维护一个左边界，左边界到当前元素中间没有重复字符串
+        int uniqueLeft=0;
+        for(int i=0;i<s.length();i++){
+            char curChar=s.charAt(i);
+
+            //如果字符出现过，获取上次出现的位置
+            if(mymap.containsKey(curChar)){
+                //如果字符上次出现的位置在unique左边，说明上次出现的位置不在[uniqueLeft,i-1]中（这个区间对应i-1位结尾的最大子串长度），那么i结尾的最大子串范围就是[uniqueLeft,i]
+                int lastIndex=mymap.get(curChar);
+                if(lastIndex<uniqueLeft){
+                    //比较[uniqueLeft,i]和历史最大子串的长度，并更新为大的那个
+                    maxL=Math.max(i-uniqueLeft+1,maxL);
+                }else{//如果字符上次出现的位置在uniqueLeft及右边，那么更新uniqueLeft为当前字符上次出现的位置+1。肯定不会比i-1结尾的子字符串的长度长，所以不用比较更新了
+                    uniqueLeft=lastIndex+1;
+                }
+
+                //并更新本字符对应的index
+                mymap.put(curChar,i);
+            }else{//如果当前字符没出现过，尝试更新maxL并把当前字符加入hashmap
+                maxL=Math.max(i-uniqueLeft+1,maxL);
+                mymap.put(curChar,i);
+            }
+            
+        }
+
+        //on遍历一遍后，得到最终的maxL
+        return maxL;
+    }
+}
+```
+
+
+### [53. 最大子数组和](https://leetcode.cn/problems/maximum-subarray/)
+
+和[剑指 Offer 42. 连续子数组的最大和](https://leetcode.cn/problems/lian-xu-zi-shu-zu-de-zui-da-he-lcof/)相同。
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        /**
+        动态规划思想，以当前数组元素结尾的最大和，与前一元素结尾的最大和有关
+         */
+        
+        int maxHistory=nums[0];
+        int preMax=nums[0];
+
+        //遍历数组
+        for(int i=1;i<nums.length;i++){
+            int curMax=0;
+            //如果以前一个元素为结尾的数组的最大和小于0，说明其对以当前元素为结尾的数组的最大和起副作用，忽略preMax
+            if(preMax<=0){
+                curMax=nums[i];
+                if(curMax>maxHistory) maxHistory=curMax;
+            }else{
+                curMax=preMax+nums[i];
+                if(curMax>maxHistory) maxHistory=curMax;
+            }
+
+            preMax=curMax;
+        }
+
+        return maxHistory;
+
+    }
+}
+```
+
+
+
 ## 动态规划(困难)
 
 ### [剑指 Offer 19. 正则表达式匹配](https://leetcode-cn.com/problems/zheng-ze-biao-da-shi-pi-pei-lcof/)
 
-5+18=23
+codetop==5+18=23
 
 #### 首战寄
 
@@ -8759,6 +7800,2098 @@ class Solution {
 }
 ```
 
+
+
+## 双指针(简单)
+
+### [剑指 Offer 18. 删除链表的节点](https://leetcode-cn.com/problems/shan-chu-lian-biao-de-jie-dian-lcof/)
+
+codetop==4
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public ListNode deleteNode(ListNode head, int val) {
+        //处理特殊情况。习惯性的做一下null处理，避免恶心人的案例。
+        if(head==null)return null;
+        
+        //创建引用当前节点的引用
+        ListNode cur=head;
+        
+        //由于总是删除下一节点，所以先处理头节点;因为头节点不能被通过前节点删除。
+        if(head.val==val){
+            head=head.next;
+            return head;
+        }
+
+        //由于总是判断删除下一个节点，所以判断的是next不为空；本while循环不会循环完退出，只会在循环中找到了要删除的节点并退出
+        while(cur.next!=null){
+            //判断当前节点的下一个节点要不要被删掉；由于程序最迟在cur为倒数第二个节点时能判断到倒数第一个节点要被删掉，并且while的条件保证了下一节点不为空，所以其实不用担心cur.next==null即cur为结尾指针造成的空指针异常。
+            if(cur.next.val==val){
+                //即使是删掉最后一个节点，cur为倒数第二个节点，cur.next.next也为null不会空指针异常
+                cur.next=cur.next.next;
+                return head;
+            }
+            //while不要忘记移动cur
+            cur=cur.next;
+        }
+        //正常来说，这个return是永远不会使用的。
+        return null;
+    }
+}
+```
+
+- 没用到双指针，就时间复杂度on解决了
+
+#### 官方-双指针
+
+其实官方的双指针就是我的做法吗，只不过多此一举用了两个指针。
+
+解题思路：
+
+![image-20220403171506936](lcof.assets/image-20220403171506936.png)
+
+算法流程：
+
+![image-20220403171539038](lcof.assets/image-20220403171539038.png)
+
+复杂度分析：
+
+![image-20220403171557465](lcof.assets/image-20220403171557465.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode deleteNode(ListNode head, int val) {
+        if(head.val == val) return head.next;
+        ListNode pre = head, cur = head.next;
+        while(cur != null && cur.val != val) {
+            pre = cur;
+            cur = cur.next;
+        }
+        if(cur != null) pre.next = cur.next;
+        return head;
+    }
+}
+```
+
+- 我：有个网友评价“单指针”就够了，做法就是我的做法。
+
+
+
+### [剑指 Offer 22. 链表中倒数第k个节点](https://leetcode-cn.com/problems/lian-biao-zhong-dao-shu-di-kge-jie-dian-lcof/)
+
+codetop==85
+
+#### 首战告捷--递归法
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    //定义全局变量
+    ListNode result;
+    public ListNode getKthFromEnd(ListNode head, int k) {
+        /*
+        倒数，想到栈：先把节点全部入栈，出栈的时候计数，到指定节点都出栈的时候，返回那个节点。
+        栈可以通过递归实现，计数可以通过全局变量
+         */
+
+        //执行递归，以保存目标节点
+        recur(head,k);
+
+        return result;
+
+    }
+    public int recur(ListNode head,int k){
+        //设定递归触底条件，哪个递归层拿到的return与k相同，则说明应返回当前节点
+        if(head==null) return 1;
+
+        //如果下一层递归返回的当前层的倒数层数为k，说明当前节点就是目标节点；
+        int kthFromEnd=recur(head.next,k);
+        if(kthFromEnd==k){
+            result=head;
+        }
+
+        //给退栈时的各层返回他们的倒数的层数
+        return kthFromEnd+1;
+    }
+}
+```
+
+- 问问问：我n层递归，空间复杂度是不是就是on了，那性能就不如官方的了。
+
+#### 官方--双指针
+
+解题思路：
+
+![image-20220403175326006](lcof.assets/image-20220403175326006.png)
+
+算法流程：
+
+![image-20220403175352955](lcof.assets/image-20220403175352955.png)
+
+复杂度分析：
+
+![image-20220403175419032](lcof.assets/image-20220403175419032.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode getKthFromEnd(ListNode head, int k) {
+        ListNode former = head, latter = head;
+        for(int i = 0; i < k; i++)
+            former = former.next;
+        while(former != null) {
+            former = former.next;
+            latter = latter.next;
+        }
+        return latter;
+    }
+}
+```
+
+- 本题没有 k*k* 大于链表长度的 case ，因此不用考虑越界问题。
+
+- 我：看来双指针可以这样控制距离，牛逼！
+
+
+
+### [剑指 Offer 25. 合并两个排序的链表](https://leetcode-cn.com/problems/he-bing-liang-ge-pai-xu-de-lian-biao-lcof/)
+
+codetop==6
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        //处理特殊情况
+        if(l1==null)return l2;
+        if(l2==null)return l1;
+        //能走到这一步说明两个链表的头结点都不为空，不会空指针；保存初始头结点为两个链表头结点里小的那个；必须保存了头结点，后面while中才能有head.next的方式赋值，才能连接起链表。
+        ListNode head;
+        if(l1.val<=l2.val){
+            head=l1;
+            //l1的头结点已经被加入结果链表了，所以往下移动一位看下一个节点
+            l1=l1.next;
+        }else{
+            head=l2;
+            l2=l2.next;
+        }
+        ListNode headCur=head;
+
+        //建立双指针分别指向两个链表，合并
+        ListNode pl1=l1;
+        ListNode pl2=l2;
+        //把两个节点中较小的节点加入结果列表head
+        while(pl1!=null&&pl2!=null){   
+            if(pl1.val<=pl2.val){
+                headCur.next=pl1;
+                headCur=headCur.next;
+                pl1=pl1.next;
+            }else{
+                headCur.next=pl2;
+                headCur=headCur.next;
+                pl2=pl2.next;
+            }
+        }
+
+        //一个队列遍历完毕后，把另一个队列的剩余部分直接加入结果链表
+        if(pl1!=null){
+            headCur.next=pl1;
+        }else{
+            headCur.next=pl2;
+        }
+
+
+        return head;
+    }
+}
+```
+
+- 为了结果链表的第一个节点，我的操作比较复杂，实际上可以像官方答案一样，使用一个伪头节点即可。
+
+#### 官方-双指针+伪头结点
+
+解题思路：
+
+![image-20220403192034915](lcof.assets/image-20220403192034915.png)
+
+算法流程：
+
+![image-20220403192122384](lcof.assets/image-20220403192122384.png)
+
+复杂度分析：
+
+![image-20220403192147988](lcof.assets/image-20220403192147988.png)
+
+代码：
+
+```java
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        ListNode dum = new ListNode(0), cur = dum;
+        while(l1 != null && l2 != null) {
+            if(l1.val < l2.val) {
+                cur.next = l1;
+                l1 = l1.next;
+            }
+            else {
+                cur.next = l2;
+                l2 = l2.next;
+            }
+            cur = cur.next;
+        }
+        cur.next = l1 != null ? l1 : l2;
+        return dum.next;
+    }
+}
+
+```
+
+- 这个伪头结点的思路确实不错！
+
+
+
+### [剑指 Offer 52. 两个链表的第一个公共节点](https://leetcode-cn.com/problems/liang-ge-lian-biao-de-di-yi-ge-gong-gong-jie-dian-lcof/)
+
+codetop==18
+
+#### 首战寄
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        /**
+         链表判断环，判断相交，就考虑双指针
+         */
+        ListNode la=headA;
+        ListNode lb=headB;
+
+        //使用两个指针分别遍历两个链表，当发现指向同一节点时返回该节点；以节点的地址为判断节点相等的标准，因为节点的值可重复见（示例）
+        while((la!=null)&&(lb!=null)){
+            System.out.println("la:"+la);
+            System.out.println("lb:"+lb);
+            if(la==lb){
+                return la;
+            }
+            //while始终记住要移动指针
+            la=la.next;
+            lb=lb.next;
+        }
+
+        //经过遍历都没找到公共节点，说明无公共节点
+        return null;
+    }
+}
+```
+
+- 忽略了公共节点前，两个链表的前部长度不一致的问题；比如公共部分有c1 c2的话，头部长的链表的指针走到c1，头部短的链表的指针走到c2，两个指针总是有前后差距错开了。
+
+
+
+#### 官方-双指针+浪漫相遇
+
+解题思路：
+
+我们使用两个指针 node1，node2 分别指向两个链表 headA，headB 的头结点，然后同时分别逐结点遍历，当 node1 到达链表 headA 的末尾时，重新定位到链表 headB 的头结点；当 node2 到达链表 headB 的末尾时，重新定位到链表 headA 的头结点。
+
+这样，当它们相遇时，所指向的结点就是第一个公共结点。
+
+复杂度分析：
+
+![image-20220404150150252](lcof.assets/image-20220404150150252.png)
+
+代码：
+
+```java
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        ListNode PA = headA;
+        ListNode PB = headB;
+        while (PA != PB) {
+            PA = PA == null ? headB : PA.next;
+            PB = PB == null ? headA : PB.next;
+        }
+        return PA;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+
+        /**
+        小心两个链表的头部的长度是不一致的，需要让两个指针都走一遍两个列表；这样要不走完都没相遇，要不在走对方列表的时候相遇
+         */
+
+        ListNode ha=headA;
+        ListNode hb=headB;
+
+        /**
+        遍历情况分类讨论：
+        1，如果两条链表一样长：如果有公共节点说明头部也一样长，那么指针在遍历各自的第一条链表时就能找到交点；如果没有公共节点，则两个指针会同时走到链表末尾都为null，触发while的退出，即可返回null即无交点。
+        2，如果两条链表不一样长：那么要处理节点前后距离差的问题，如果有交点，那么指针会把两个链表都走一遍，走到第二个链表的时候会在交点出相交；如果两个链表没有交点的话，指针也会把两个链表都走一遍，两个指针也会同时从两个链表的尾部退出
+
+        注意由于列表长度可能不等，所以要两个指针都为null即都到了链表结尾（要不数组长度相等一遍过无交点，要不数组长度不等两遍过无交点），才允许退出；只一个指针为null的话，可能另一个指针还在遍历第一个链表，不能允许退出。
+         */
+        while(ha!=hb){
+            //如果当前节点遍历到第一条链表的末尾，另一个节点还在遍历链表时，让他遍历第二条链表；没有交点的话第二条链表的结尾两个指针都会指向null，退出while
+            ha=(ha==null?headB:ha.next);
+            hb=(hb==null?headA:hb.next);
+        }
+
+        //ha==hb且ha!=null退出的话，ha==hb==交点；ha==hb==null退出的话，也返回null
+        return ha;
+        
+    }
+}
+```
+
+
+
+### [剑指 Offer 21. 调整数组顺序使奇数位于偶数前面](https://leetcode-cn.com/problems/diao-zheng-shu-zu-shun-xu-shi-qi-shu-wei-yu-ou-shu-qian-mian-lcof/)
+
+codetop==29
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] exchange(int[] nums) {
+        /**
+        双指针，l指向奇数段的右部右一位，r指向偶数段左部左一位
+        只移动一个指针，本例移动奇指针，发现偶数就给偶指针交换，偶指针再左移动一位，奇指针重新判断；发现奇数则寄指针右移一位；两指针重合时退出，重合位置的奇偶性无所谓，毕竟位于奇数段偶数段的交点，是谁都可以。
+         */
+
+        //处理特殊情况，测试案例[]纯纯乌鱼子
+        if(nums.length==0)
+        return nums;
+
+         int l=0,r=nums.length-1;
+         while(l!=r){
+             //左指针发现偶数
+             if(nums[l]%2==0){
+                 //交换左右指针指向的数组元素
+                 int temp=nums[r];
+                 nums[r]=nums[l];
+                 nums[l]=temp;
+                //移动右指针
+                r--;
+             }else{//左指针发现奇数，左指针右移一位
+                l++;
+             }
+             //如果左指针发现偶数，左右指针指向的数组元素交换后，左指针会再次检查被换来的元素是否为奇数
+         }
+        return nums;
+    }
+}
+```
+
+- 有完整思路和代码框架，但是漏了“左指针移动”，和”空数组处理“；不过自行修改完毕了。
+
+#### 官方-双指针+同时移动
+
+解题思路：
+
+考虑定义双指针 ii , jj 分列数组左右两端，循环执行：
+
+1. 指针 ii 从左向右寻找偶数；
+2. 指针 jj 从右向左寻找奇数；
+3. 将 偶数 nums[i]nums[i] 和 奇数 nums[j]nums[j] 交换。
+
+可始终保证： 指针 ii 左边都是奇数，指针 jj 右边都是偶数 。
+
+![image-20220404161217051](lcof.assets/image-20220404161217051.png)
+
+算法流程：
+
+![image-20220404161240739](lcof.assets/image-20220404161240739.png)
+
+复杂度分析：
+
+![image-20220404161301033](lcof.assets/image-20220404161301033.png)
+
+代码：
+
+![image-20220404161323780](lcof.assets/image-20220404161323780.png)
+
+```java
+class Solution {
+    public int[] exchange(int[] nums) {
+        int i = 0, j = nums.length - 1, tmp;
+        while(i < j) {
+            while(i < j && (nums[i] & 1) == 1) i++;
+            while(i < j && (nums[j] & 1) == 0) j--;
+            tmp = nums[i];
+            nums[i] = nums[j];
+            nums[j] = tmp;
+        }
+        return nums;
+    }
+}
+```
+
+- 我：本代码左右同时动，我是一个去找另一个，时间复杂度一样；我的代码没有双循环，甚至更优雅些。
+
+- 网友：本题蕴含快速排序的思想！
+
+### [剑指 Offer 57. 和为s的两个数字](https://leetcode-cn.com/problems/he-wei-sde-liang-ge-shu-zi-lcof/)
+
+codetop==2
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+
+        /**
+        尽量用上“递增”这个条件，求和的两个数肯定一大一小；左右两端两个指针，求和，值大了左移右指针，值小了右移左指针
+         */
+
+        //处理空数组
+        if(nums.length==0)return new int[0];
+
+        int left=0,right=nums.length-1;
+        while(left<right){
+            if(nums[left]+nums[right]<target){
+                left++;
+            }else if(nums[left]+nums[right]>target){
+                right--;
+            }else{
+                //注意是输出元素值，而不是输出index
+                return new int[]{nums[left],nums[right]};
+            }
+        }
+
+        //如果没找到，返回空
+        return new int[0];
+    }
+}
+```
+
+#### 官方-对撞双指针
+
+解题思路：
+
+![image-20220404164513158](lcof.assets/image-20220404164513158.png)
+
+算法流程：
+
+![image-20220404164531875](lcof.assets/image-20220404164531875.png)
+
+正确性证明：
+
+![image-20220404164558086](lcof.assets/image-20220404164558086.png)
+
+- 我：意会一下，被排除掉的元素都是不可能构成结果的。
+  - 以初始状态为例，假设nums[left]+nums[right]<target，那么right左移，最右边的元素被排除在可能的结果集之外，
+  - 采用反证法，如果右边的元素不该被排除在结果集之外，那么需要一个比left更小的元素，可是left已经是数组中的最小值了，不会有更小的值，所以反例不存在；
+  - 所以被排除的最右边的元素不会是被误排除的，反证法证毕。
+
+复杂度分析：
+
+![image-20220404164622003](lcof.assets/image-20220404164622003.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        int i = 0, j = nums.length - 1;
+        while(i < j) {
+            int s = nums[i] + nums[j];
+            if(s < target) i++;
+            else if(s > target) j--;
+            else return new int[] { nums[i], nums[j] };
+        }
+        return new int[0];
+    }
+}
+```
+
+- 网友：提醒一下，判断条件最好不要用相加后的结果，应该用target - nums[i] 跟 nums[j]比较，这样保证不会溢出。虽然这题中不会出错。同样的例子还有二分查找，(left + right) / 2 可以用left + ((rigth - left) >> 1))代替。
+
+
+
+### [剑指 Offer 58 - I. 翻转单词顺序](https://leetcode-cn.com/problems/fan-zhuan-dan-ci-shun-xu-lcof/)
+
+codetop==5
+
+#### 首战寄
+
+- 写的时候就感觉要是用一些工具类，看题解果然至少要用StringBuilder。
+
+#### 官方1-双指针
+
+算法解析：
+
+![image-20220404172111604](lcof.assets/image-20220404172111604.png)
+
+复杂度分析：
+
+![image-20220404172131469](lcof.assets/image-20220404172131469.png)
+
+代码：
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        s = s.trim(); // 删除首尾空格
+        int j = s.length() - 1, i = j;
+        StringBuilder res = new StringBuilder();
+        while(i >= 0) {
+            while(i >= 0 && s.charAt(i) != ' ') i--; // 搜索首个空格
+            res.append(s.substring(i + 1, j + 1) + " "); // 添加单词
+            while(i >= 0 && s.charAt(i) == ' ') i--; // 跳过单词间空格
+            j = i; // j 指向下个单词的尾字符
+        }
+        return res.toString().trim(); // 转化为字符串并返回，因为单词尾部会被人为加上空格
+    }
+}
+```
+
+- 注意`str.substing(左闭,右开)`和`StringBuilder`的用法。
+
+#### 官方2-分割 + 倒序（不建议）
+
+利用 “字符串分割”、“列表倒序” 的内置函数 *（**面试时不建议使用**）* ，可简便地实现本题的字符串翻转要求。
+
+算法解析：
+
+![image-20220404172258931](lcof.assets/image-20220404172258931.png)
+
+![Picture0.png](lcof.assets/9ef4a9ea565bf1c2d9209ca94881a77288f90f222476cfd44c418fa3f2d2d7c1-Picture0.png)
+
+复杂度分析：
+
+![image-20220404172508237](lcof.assets/image-20220404172508237.png)
+
+代码：
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        String[] strs = s.trim().split(" "); // 删除首尾空格，分割字符串
+        StringBuilder res = new StringBuilder();
+        for(int i = strs.length - 1; i >= 0; i--) { // 倒序遍历单词列表
+            if(strs[i].equals("")) continue; // 遇到空单词则跳过
+            res.append(strs[i] + " "); // 将单词拼接至 StringBuilder
+        }
+        return res.toString().trim(); // 转化为字符串，删除尾部空格，并返回
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public String reverseWords(String s) {
+        /**
+        用双指针的间距定位单词，类似双指针取倒数第n个数一样
+        掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
+         */
+
+        //先剔除首位空格，保证指针初始指向的不是空格
+        s.trim();
+
+        StringBuilder sb= new StringBuilder();
+        //ij想做取单词
+        int j=s.length()-1,i=j;
+        while(i>=0){
+            //取单词；同时注意防止一路i--导致超过字符串边界
+            while(i>=0&&s.charAt(i)!=' ')i--;
+            //单词以空格分开
+            sb.append(s.substring(i+1,j+1)+" ");
+            //剔除单词间的空格；这里也需要担心超过字符串边界，因为一路清除空格到i=-1时，还会继续执行本内存while，导致超过字符串边界；
+            while(i>=0&&s.charAt(i)==' ')i--;
+            //空格剔除完毕后，i停在下一个单词的尾部，把j移动过来
+            j=i;
+        }
+
+        //返回sb，记得去除最后单词后面的空格
+        return sb.toString().trim();
+    }
+}
+```
+
+- 难点坑点：
+  - 内部循环防超过字符串边界
+  - 掌握substring(s小写)， trim， StringBuilder， toString（s大写）的使用
+
+
+
+### [15. 三数之和](https://leetcode.cn/problems/3sum/)
+
+#### 首战寄
+
+没什么好思路
+
+#### 官方-排序+双指针
+
+解题思路：
+
+![image-20220509224340355](lcof.assets/image-20220509224340355.png)
+
+时间复杂度分析：
+
+![image-20220509224356038](lcof.assets/image-20220509224356038.png)
+
+- 我：由于“时间复杂度是总运算次数表达式中受n的变化影响最大的那一项(不含系数)”，所以快排占用的onlogn的时间复杂度被双指针排序时的N^2排挤忽略了，所以总的时间复杂度是N^2。
+
+代码：
+
+```java
+class Solution {
+    public List<List<Integer>> threeSum(int[] nums) {
+        Arrays.sort(nums);//排序，nums变成递增数组
+        List<List<Integer>> res = new ArrayList<>();
+        //k < nums.length - 2是为了保证后面还能存在两个数字i j
+        for(int k = 0; k < nums.length - 2; k++){
+            if(nums[k] > 0) break;//若nums[k]大于0，则后面的数字也是大于零（排序后是递增的）
+            if(k > 0 && nums[k] == nums[k - 1]) continue;//nums[k]值重复了，去重
+            int i = k + 1, j = nums.length - 1;//定义左右指针
+            while(i < j){
+                int sum = nums[k] + nums[i] + nums[j];
+                if(sum < 0){
+                    while(i < j && nums[i] == nums[++i]);//左指针前进并去重
+                } else if (sum > 0) {
+                    while(i < j && nums[j] == nums[--j]);//右指针后退并去重
+                } else {
+                    res.add(new ArrayList<Integer>(Arrays.asList(nums[k], nums[i], nums[j])));
+                    while(i < j && nums[i] == nums[++i]);//左指针前进并去重
+                    while(i < j && nums[j] == nums[--j]);//右指针后退并去重
+                }
+            }
+        }
+        return res;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public List<List<Integer>> threeSum(int[] nums) {
+        /**
+        由于不能包括重复的三元组，所以可以排序数组来解决重复元素的问题（碰到重复的元素就跳过）
+
+        固定一个元素，另外两个元素双指针往中间去找合适的三元组
+         */
+        List<List<Integer>> res=new LinkedList<>();
+        
+        //排序数组，默认是升序的
+        Arrays.sort(nums);
+
+        //数组用三指针 i j k；遍历i，使用双指针找j k；因为i后面有jk，所以i最大为nums.length-3
+        for(int i=0;i<nums.length-2;i++){
+            //如果nums[i]>0，那么肯定不存在nums[i]+nums[j]+nums[k]==0。避免重复计算。
+            if(nums[i]>0)break;
+            //避免处理相同的i，从而避免了重复的三元组
+            if(i>0&&nums[i]==nums[i-1])continue;
+
+            //双指针查找针对当前i合适的三元组
+            int j=i+1,k=nums.length-1;
+            while(j<k){
+                int sum=nums[i]+nums[j]+nums[k];
+                if(sum>0){//如果sum>0，那么左移k，并且相同的k都要被移
+                    do{
+                        k--;
+                    }while(j<k&&nums[k]==nums[k+1]);//!!!!注意，dowhile的while后面要加上";"
+                }else if(sum<0){//如果sum<0，那么右移j，并且相同的j都要被移
+                    do{
+                        j++;
+                    }while(j<k&&nums[j]==nums[j-1]);
+                }else{//如果sum=0，那么记录此时三个指针指向的元素。ij移动，且相同的ij都要被移
+                    res.add(new LinkedList(Arrays.asList(nums[i],nums[j],nums[k])));//这里的第二层列表用LinkedList或ArrayList都可以。
+                    do{
+                        k--;
+                    }while(j<k&&nums[k]==nums[k+1]);
+                    do{
+                        j++;
+                    }while(j<k&&nums[j]==nums[j-1]);
+
+                }
+            }
+
+        }
+
+        return res;
+
+    }
+}
+```
+
+- 我：无论何时使用Arrays.asList，建议都用LinkedList或ArrayList包裹一层再使用；因为Arrays.asList返回的结果不是真正的list而是一个内部类。
+
+### [21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)
+
+和剑指25相同
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {
+        /**
+        双指针分别指向两个链表进行合并
+         */
+
+        ListNode l1=list1,l2=list2;
+        ListNode dummyHead=new ListNode(-1);
+        ListNode cur=dummyHead;
+
+        //合并两个链表，直到一个链表完全进入结果链表
+        while(l1!=null&&l2!=null){
+            if(l1.val<l2.val){
+                cur.next=l1;
+
+                cur=cur.next;
+                l1=l1.next;
+            }else{
+                cur.next=l2;
+
+                cur=cur.next;
+                l2=l2.next; 
+            }
+        }
+
+        //如果l1还有剩余，把l1放入结果链表
+        while(l1!=null){
+            cur.next=l1;
+
+            cur=cur.next;
+            l1=l1.next;
+        }
+        //如果l2还有剩余，把l2放入结果链表
+        while(l2!=null){
+            cur.next=l2;
+
+            cur=cur.next;
+            l2=l2.next;
+        }
+
+        return dummyHead.next;
+
+    }
+}
+```
+
+### [1. 两数之和](https://leetcode.cn/problems/two-sum/)
+
+#### 首战寄
+
+代码：
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        /**
+        排序数组后用双指针
+
+        时间复杂度应该是ologn，以快排的时间复杂度为准
+         */
+        Arrays.sort(nums);
+
+        int left=0,right=nums.length-1;
+
+        //至少有两个数的时候才比较
+        while(left<right){
+            int temp=nums[left]+nums[right];
+            if(temp<target){
+                left++;
+                //把相同的数也跳过。不需要考虑left<right，因为本题总有输出
+                while(left>0&&nums[left]==nums[left-1])left++;
+            }else if(temp>target){
+                right--;
+                //把相同的数也跳过
+                while((right<nums.length-1)&&nums[right]==nums[right+1])right--;
+            }else{
+                //找到目标，直接构建数组+数组内容并返回！！！错误，这么返回的是排序后的坐标，又因为可能有重复元素所以用hashmap记录坐标只会记录最后的那个数字，像[3,3]这种情况就无法处理。
+                return new int[]{left,right};
+            }
+        }
+
+        //这个返回值永远不会使用
+        return new int[0];
+    }
+}
+```
+
+- 三数之和返回的是元素，所以可以排序；但是这里需要返回坐标，坐标在排序后就丢失了，用hash记录坐标和值又存在一个值对应多个坐标的问题。所以没有什么好思路，用暴力解没什么意思。
+  - 可以先复制一份原数组，然后拿着求得的两个元素回到原序的复制数组里，找到对应的index（如果index2==index1，说明拿到的两个元素相等，则index2放弃当前index找下一个index）
+
+- 我：hash法一次性存储确实会导致index覆盖，但是如果是边处理边存储，就不会覆盖了。
+
+#### 官方1-排序后折半查找
+
+[链接](https://leetcode.cn/problems/two-sum/solution/liang-shu-zhi-he-de-si-chong-jie-fa-pai-6vatw/)
+
+算法描述：
+
+- 先将元素nums拷贝一份为copiedNums，然后将原数组排序，接着遍历排序后的数组，以遍历到的数字之后的数列执行折半查找，查找目标为target - nums[i]。因为原数组排序后丢失原下标信息，因此执行折半查找得到n0和n1(n0 + n1 = target)后，再遍历两次copiedNums分别得到n0和n1在copiedNums中的下标(原下标)。排序和折半查找可以调用Arrays静态方法Arrays.sort()和Arrays.binarySearch()，也可以自己实现。代码示例中排序用Arrays.sort()，折半查找用自己实现的版本。
+
+复杂度：
+
+- 排序耗时O(nlogn)(假设采用O(nlogn)的排序算法)，拷贝原数组耗时O(n)，排序后的折半查找耗时为O(logn)，最后找原下标的两个for均耗时O(n)，所以总体时间复杂度为O(nlogn)。
+
+- 空间复杂度为O(n)。
+
+代码：
+
+```java
+public int[] twoSumSortBinarySearch(int[] nums, int target) {
+    int[] res = new int[2];
+    int[] resVal = new int[2];
+    int[] copiedNums = Arrays.copyOf(nums, nums.length);
+    Arrays.sort(nums);
+    int n1 = -1;
+    for (int i = 0; i < nums.length; i++) {
+        resVal[0] = nums[i];
+        resVal[1] = target - resVal[0];
+        // 也可以用Arrays自带的折半查找方法Arrays.binarySearch()，
+        // 但要注意判断返回值的地方要做相应修改。
+        // n1 = Arrays.binarySearch(nums, i + 1, nums.length -1 , resVal[1]);
+        n1 = binarySearchBasic(nums, i + 1, resVal[1]);
+        if(n1 != -1) {
+            break;
+        }
+    }
+    if(n1 == -1) {
+        return new int[] {};
+    }
+    for (int j = 0; j < copiedNums.length; j++) {
+        if(copiedNums[j] == resVal[0]) {
+            res[0] = j;
+            break;
+        }
+    }
+    for (int k = 0; k < copiedNums.length; k++) {
+        // 注意不能是同一个元素，需加上 k != res[0] 条件
+        if(copiedNums[k] == resVal[1] && k != res[0]) {
+            res[1] = k;
+            break;
+        }
+    }
+    return res;
+}
+
+private int binarySearchBasic(int[] arr, int low, int target) {
+    int high = arr.length - 1;
+    while(low <= high) {
+        int center = (low + high) / 2;
+        if(target == arr[center]) {
+            return center;
+        }
+        else if(target < arr[center]) {
+            high = center - 1;
+        }
+        else {
+            low = center + 1;
+        }
+    }
+    return -1;
+}
+```
+
+- 高赞网友：
+
+  - 有序：对撞指针或二分
+
+  - 无序：哈希表
+
+#### 官方2-哈希表
+
+思路及算法：
+
+![image-20220512191245196](lcof.assets/image-20220512191245196.png)
+
+- 方法一即on^2的暴力方法
+
+代码：
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        Map<Integer, Integer> hashtable = new HashMap<Integer, Integer>();
+        for (int i = 0; i < nums.length; ++i) {
+            if (hashtable.containsKey(target - nums[i])) {
+                return new int[]{hashtable.get(target - nums[i]), i};
+            }
+            hashtable.put(nums[i], i);
+        }
+        return new int[0];
+    }
+}
+```
+
+- 我：因为是两数之和，在遍历到数组的第二个数的时候，第一个数必定已经被放入hashmap；遍历到第一个数的时候，由于第二个数没有被放入hashmap，所以只是把第一个数放入hashmap，这样遍历到第二个数的时候就可以找到第一个数了。
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        /**
+        使用hashmap记录元素和index。target有两个整数相加得到，当遍历到第二个整数时，第一个整数已经在hashmap中了。
+
+        不用担心重复元素，因为任何一个重复元素的坐标都符合题意
+         */
+        Map<Integer,Integer> mymap=new HashMap<>();
+        for(int i=0;i<nums.length;i++){
+            if(mymap.containsKey(target-nums[i])){
+                return new int[]{mymap.get(target-nums[i]),i};
+            }
+
+            //添加或更新hashmap的键值对
+            mymap.put(nums[i],i);
+        }
+
+        //这个return不会被使用
+        return new int[0];
+    }
+}
+```
+
+
+
+
+
+
+
+## 排序(简单)
+
+### [剑指 Offer 45. 把数组排成最小的数](https://leetcode-cn.com/problems/ba-shu-zu-pai-cheng-zui-xiao-de-shu-lcof/)
+
+codetop==17
+
+#### 首战寄
+
+应该是按照数字最高位去降序排序，没思路
+
+- 网友评：这道题似乎变成了lambda讨论会，其实我觉得a+b < b+a 真的好难想
+- 网友：我在纸上反复写，找规律，脑子都要炸了，然后突然发现，就是在比较两个字符串不同顺序相加的结果，然后就豁然开朗。
+- 网友：华为机试+第一轮技术面的题，有点高频。
+
+#### 官方-自定义排序
+
+解题思路：
+
+![image-20220407155555720](lcof.assets/image-20220407155555720.png)
+
+排序规则的传递性证明：
+
+- 这里是证明，不然上面的解释太牵强了，此题解作者估计也不真正明白为什么可以这样做，这道题目其实属于很难的题目，不能让人信服为什么那样排序一下就可以，也不是简单的 x +y > y +x 则 x > y 譬如 x=6, y=305 x+y(6305) > y+x(3056) 但是真实数字上x < y
+
+为什么这样排个序就可以了呢？简单证明一下。根据算法，如果a < b，那么a排在b前面，否则b排在a前面。可利用反证法，假设排成的最小数字为xxxxxx，并且至少存在一对字符串满足这个关系：a > b，但是在组成的数字中a排在b前面。根据a和b出现的位置，分三种情况考虑：
+
+```
+  （1）xxxxab，用ba代替ab可以得到xxxxba，这个数字是小于xxxxab，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+  （2）abxxxx，用ba代替ab可以得到baxxxx，这个数字是小于abxxxx，与假设矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+  （3）axxxxb，这一步证明麻烦了一点。可以将中间部分看成一个整体ayb，则有ay < ya，yb < by成立。将ay和by表示成10进制数字形式，则有下述关系式，这里a，y，b的位数分别为n，m，k。
+
+    关系1： ay < ya => a * 10^m + y < y * 10^n + a => a * 10^m - a < y * 10^n - y => a( 10^m - 1)/( 10^n - 1) < y
+
+    关系2： yb < by => y * 10^k + b < b * 10^m + y => y * 10^k - y < b * 10^m - b => y < b( 10^m -1)/( 10^k -1) 
+
+    关系3： a( 10^m - 1)/( 10^n - 1) < y < b( 10^m -1)/( 10^k -1)  => a/( 10^n - 1)< b/( 10^k -1) => a*10^k - a < b * 10^n - b =>a*10^k + b < b * 10^n + a => a < b
+
+   这与假设a > b矛盾。因此排成的最小数字中，不存在上述假设的关系。
+
+   综上所述，得出假设不成立，从而得出结论：对于排成的最小数字，不存在满足下述关系的一对字符串：a > b，但是在组成的数字中a出现在b的前面。从而得
+```
+
+- 根据本证明，只要列表排序后为xyz，且保证xy<yx,yz<zy，就可以保证xyz是用【x y z】三个整数能实现的最小的拼接数；所以我们就自定义Comparator把【x y z】按照“若xy<yx，则x必须放y前面”的规则排序好即可。
+
+算法流程：
+
+![image-20220407155615917](lcof.assets/image-20220407155615917.png)
+
+复杂度分析：
+
+![image-20220407155640803](lcof.assets/image-20220407155640803.png)
+
+代码：
+
+本文列举 快速排序 和 内置函数 两种排序方法，其他排序方法也可实现。
+
+快速排序：
+
+- 需修改快速排序函数中的排序判断规则。字符串大小（字典序）对比的实现方法：
+  - Java 中使用函数 A.compareTo(B)；
+
+```java
+public String minNumber(int[] nums) {
+    String[] strs = new String[nums.length];
+    for (int i = 0; i < nums.length; i++) {
+        strs[i] = String.valueOf(nums[i]);
+    }
+    quickSort(strs, 0, strs.length - 1);
+    StringBuilder res = new StringBuilder();
+    for (String s : strs)
+        res.append(s);
+    return res.toString();
+}
+
+public void quickSort(String[] strs, int low, int high) {
+    if (low < high) {
+        int middle = getMiddle(strs, low, high);
+        quickSort(strs, low, middle - 1);
+        quickSort(strs, middle + 1, high);
+    }
+}
+
+public int getMiddle(String[] strs, int low, int high) {
+    //数组的第一个数为基准元素
+    String temp = strs[low];
+    while (low < high) {
+        //从后向前找比基准小的数
+        while (low < high && (strs[high] + temp).compareTo(temp + strs[high]) >= 0)
+            high--;
+        //把比基准小的数移到低端
+        strs[low] = strs[high];
+        //从前向后找比基准大的数
+        while (low < high && (strs[low] + temp).compareTo(temp + strs[low]) <= 0)
+            low++;
+        //把比基准大的数移到高端
+        strs[high] = strs[low];
+    }
+    strs[low] = temp;
+    return low;
+}
+```
+
+- 网友评：你这个写法像左神。
+
+内置函数：
+
+- 需定义排序规则：
+  - Java 定义为 (x, y) -> (x + y).compareTo(y + x) ；
+
+```java
+class Solution {
+    public String minNumber(int[] nums) {
+        //构建字符串数组
+        String[] strs = new String[nums.length];
+        for(int i = 0; i < nums.length; i++)
+            strs[i] = String.valueOf(nums[i]);
+        //排序字符串数组
+        Arrays.sort(strs, (x, y) -> (x + y).compareTo(y + x));
+        //合并字符串数组
+        StringBuilder res = new StringBuilder();
+        for(String s : strs)
+            res.append(s);
+        return res.toString();
+    }
+}
+```
+
+- Arrays.sort方法使用，[参考](https://blog.csdn.net/ted_cs/article/details/82713706)；本例用的 Compareable接口，而不是Compartor接口。
+  - 但是我看官方的sort接口是传入Comparator接口的实现类，我还是安装java官方的来吧，即自己传Comparator。
+
+- [Java中java.util.Comparator用法](https://www.cnblogs.com/XDU-Lakers/p/13985258.html)
+  - 重写方法`public int compare(String o1, String o2) `，凡是返回1或者大于0的正数的时候就要交换位置
+  - Comparator是一个函数式接口，所以能用lamda表达式表示。
+
+#### 即时再战半寄
+
+```java
+class Solution {
+    public String minNumber(int[] nums) {
+        /**
+        核心就是要把数组，按照首位排序（升序）；首位一样的比较第二位。但是有一种简单的算法：
+        1. 把整数数组转化为字符串数组
+        2. 把字符串数组排序。例如x=="1"且y=="45"，若x+y<y+x，即认为x<y
+        3. 把字符串数组排好升序，就意味着
+         */
+        //整数数组转换为字符串数组。新建数组列表的末尾不需要括号，别写成new String[nums.length]()
+        String [] nstr=new String[nums.length];
+        for(int i=0;i<nums.length;i++){
+            nstr[i]=nums[i]+"";
+        }
+        //排序数组，使用sort+Comparator接口。注意匿名内部类的写法，要把重写方法写在花括号{}里。
+        Arrays.sort(nstr,new Comparator<String>(){
+            //重写public compare方法，指示元素间大小关系的判断。注解首字母大写，参照@Autowired
+            @Override
+            public int compare(String s1,String s2){
+                //防止超过整数边界
+                long s1s2= Long.valueOf(s1+s2).longValue();
+                long s2s1= Long.valueOf(s2+s1).longValue();
+                if(s1s2<s2s1){//返回-1，表示不交换s1和s2的值，因为此时s1本来就小于s2
+                    return -1;
+                }else if(s1s2==s2s1){
+                    return 0;
+                }else{
+                    return 1;//返回1表示交换s1和s2的值
+                }
+            }
+        });
+        //把排序后的数组转换成字符串,StringBuilder线程不安全，但是效率高些
+        StringBuilder sb=new StringBuilder();
+        for(int i=0;i<nstr.length;i++){
+            sb.append(nstr[i]);
+        }
+        return sb.toString();
+    }
+}
+```
+
+- 思路和代码主题没问题，但是有几个知识点没记牢，靠百度和debug解决的：
+  - 新建字符数组用`String [] nstr=new String[nums.length];`，而不是String [] nstr=new String[nums.length]\();就是注意不应该有小括号。
+  - Comparator.compare()方法是public的；并且此方法要重写在匿名内部类的花括号中，用lamda表达式也可以，但是个人感觉可读性差。
+  - 理解“若x+y<y+x，即认为x<y，按照此规则排序完数组后为什么就能让拼接成的”字符串值最小
+
+- 自我表扬：
+  - 记住了注解首字母大写
+  - 用`long`避免超过整数边界，用`Long.valueOf(obj)`把字符串转化为Long(long的包装类)，用`Long.longValue();`把Long转化成基本数据类型long。
+  - 基本能自主写出Arrays.sort自定义排序。
+
+### [剑指 Offer 61. 扑克牌中的顺子](https://leetcode-cn.com/problems/bu-ke-pai-zhong-de-shun-zi-lcof/)
+
+codetop==17
+
+#### 首战告捷
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        /**
+        排序，查gap和0的关系
+         */
+
+        //题目说抽5张牌，所以不需要处理特殊情况
+
+        //排序数组，默认升序
+        Arrays.sort(nums);
+
+        //遍历排序后的数组，记录gap和0
+        int zNum=0,lastNum=-1,gapNum=0,i=0;
+        //记录0的个数
+        while(nums[i]==0){
+            zNum++;
+            i++;
+        }
+        //记录gap的总长度
+        lastNum=nums[i];//保存第一个非0的数，作为lastNum
+        i++;
+        while(i<nums.length){
+            if(nums[i]-lastNum>1){//侦查到gap
+                gapNum+=(nums[i]-lastNum-1);
+            }else if(nums[i]==lastNum){//考虑数目相同的情况，只要出现非0数目相同，即不是扑克牌的顺子，直接返回false。之前以为根据题意，不用考虑非0数多次出现。。失策了
+                return false;
+            }
+
+            //不管有没有侦查到gap，都更新lastNum和i
+            lastNum=nums[i];
+            i++;
+        }
+
+        return gapNum<=zNum;
+
+    }
+}
+```
+
+- 初始思路：升序排序数组；遍历数组，碰到0记录下总数，碰到gap区记录下长度。遍历完毕后，如果gap的总长度<=0的个数，即顺子。
+- 注意：虽然题目没有说明白“牌连续”的概念，但是扑克牌里，手牌中有非0重复的牌的话，不算顺子。
+- 我：快速排序Arrays.sort的时间复杂度是nlogn
+
+#### 官方1-set集合+遍历
+
+解题思路：
+
+![image-20220408165259162](lcof.assets/image-20220408165259162.png)
+
+集合 Set + 遍历，做法：
+
+- 遍历五张牌，遇到大小王（即 0 ）直接跳过。
+- **判别重复**： 利用 Set 实现遍历判重， Set 的查找方法的时间复杂度为 O(1)；
+- **获取最大 / 最小的牌**： 借助辅助变量 ma 和 mi，遍历统计即可。
+
+复杂度分析：
+
+![image-20220408165525298](lcof.assets/image-20220408165525298.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        Set<Integer> repeat = new HashSet<>();
+        int max = 0, min = 14;
+        for(int num : nums) {
+            if(num == 0) continue; // 跳过大小王
+            max = Math.max(max, num); // 最大牌
+            min = Math.min(min, num); // 最小牌
+            if(repeat.contains(num)) return false; // 若有重复，提前返回 false
+            repeat.add(num); // 添加此牌至 Set
+        }
+        return max - min < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
+    }
+}
+```
+
+#### 官方2-排序 + 遍历
+
+![image-20220408165708980](lcof.assets/image-20220408165708980.png)
+
+复杂度分析：
+
+![image-20220408165727381](lcof.assets/image-20220408165727381.png)
+
+代码：
+
+```java
+class Solution {
+    public boolean isStraight(int[] nums) {
+        int joker = 0;
+        Arrays.sort(nums); // 数组排序
+        for(int i = 0; i < 4; i++) {
+            if(nums[i] == 0) joker++; // 统计大小王数量
+            else if(nums[i] == nums[i + 1]) return false; // 若有重复，提前返回 false
+        }
+        return nums[4] - nums[joker] < 5; // 最大牌 - 最小牌 < 5 则可构成顺子
+    }
+}
+```
+
+- 我和网友：max - min < 5的思路很赞！这样效率就比我硬执行高。
+
+## 排序(中等)
+
+### [剑指 Offer 40. 最小的k个数](https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/)
+
+codetop==29
+
+#### 首战告捷
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        /** 
+        数组splice(闭,开)表示切数组；类似的有String用substring切
+        */
+        //快排
+        Arrays.sort(arr);
+        
+        //return arr.splice(0,k);这个函数怎么用？
+        int[] result=new int[k];
+        for(int i=0;i<k;i++){
+            result[i]=arr[i];
+        }
+
+        return result;
+    }
+}
+```
+
+- 反省：忘记了数组切割的函数；Arrays.copyOf(arr, k)有截取数组的功能，k表示截取前k个数。
+
+#### 官方-单纯快速排序
+
+本题使用排序算法解决最直观，对数组 arr 执行排序，再返回前 k个元素即可。使用任意排序算法皆可，本文采用并介绍 快速排序 ，为下文 方法二 做铺垫。
+
+快速排序原理：
+
+- 快速排序算法有两个核心点，分别为 “哨兵划分” 和 “递归” 。
+
+哨兵划分操作： 
+
+- 以数组某个元素（一般选取首元素）为 基准数 ，将所有小于基准数的元素移动至其左边，大于基准数的元素移动至其右边。
+
+> 如下图所示，为哨兵划分操作流程。通过一轮 哨兵划分 ，可将数组排序问题拆分为 两个较短数组的排序问题 （本文称之为左（右）子数组）。
+
+![image-20220408174558724](lcof.assets/image-20220408174558724.png)
+
+- 原版的这个动图不错
+
+递归： 对 左子数组 和 右子数组 递归执行 哨兵划分，直至子数组长度为 1 时终止递归，即可完成对整个数组的排序。
+
+> 如下图所示，为示例数组 [2,4,1,0,3,5] 的快速排序流程。观察发现，快速排序和 二分法 的原理类似，都是以 \loglog 时间复杂度实现搜索区间缩小。
+
+![Picture1.png](lcof.assets/1612615552-rifQwI-Picture1.png)
+
+复杂度分析：
+
+![image-20220408174755183](lcof.assets/image-20220408174755183.png)
+
+- [参考：快排时间复杂度分析](https://zhuanlan.zhihu.com/p/341201904)
+
+代码：
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        quickSort(arr, 0, arr.length - 1);
+        return Arrays.copyOf(arr, k);
+    }
+    private void quickSort(int[] arr, int l, int r) {
+        // 子数组长度为 1 时终止递归
+        if (l >= r) return;
+        // 哨兵划分操作（以 arr[l] 作为基准数）
+        int i = l, j = r;
+        while (i < j) {
+            while (i < j && arr[j] >= arr[l]) j--;
+            while (i < j && arr[i] <= arr[l]) i++;
+            swap(arr, i, j);
+        }
+        swap(arr, i, l);
+        // 递归左（右）子数组执行哨兵划分
+        quickSort(arr, l, i - 1);
+        quickSort(arr, i + 1, r);
+    }
+    private void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+- 在选最左边的数为哨兵的前提下，因为先whilej--，再whilei++，导致了最后一步总是j早就停在了一个比哨兵小的数，而i主动靠过来导致ij重合；所以重合的地方应该归左边，即交换哨兵和重合位置的元素。（看动图看的更清晰）
+- 注意：这里Arrays.copyOf(arr, k)有截取数组的功能，k表示截取前k个数。
+
+#### 官方-基于快速排序的数组划分
+
+优化思路：
+
+![image-20220408175159330](lcof.assets/image-20220408175159330.png)
+
+算法流程：
+
+![image-20220408175449452](lcof.assets/image-20220408175449452.png)
+
+复杂度分析：
+
+![image-20220408175517282](lcof.assets/image-20220408175517282.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] getLeastNumbers(int[] arr, int k) {
+        if (k >= arr.length) return arr;
+        return quickSort(arr, k, 0, arr.length - 1);
+    }
+    private int[] quickSort(int[] arr, int k, int l, int r) {
+        int i = l, j = r;
+        while (i < j) {
+            while (i < j && arr[j] >= arr[l]) j--;
+            while (i < j && arr[i] <= arr[l]) i++;
+            swap(arr, i, j);
+        }
+        swap(arr, i, l);
+        if (i > k) return quickSort(arr, k, l, i - 1);
+        if (i < k) return quickSort(arr, k, i + 1, r);
+        return Arrays.copyOf(arr, k);
+    }
+    private void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+### [剑指 Offer 41. 数据流中的中位数](https://leetcode-cn.com/problems/shu-ju-liu-zhong-de-zhong-wei-shu-lcof/)
+
+codetop==5
+
+#### 首战半寄
+
+思路对，有人用我这种暴力法也过了，可能我这暴力中间有些多余步骤，导致超时；不超时的暴力可以在下面看到。
+
+```java
+class MedianFinder {
+
+    /** initialize your data structure here. */
+    //使用列表存储数据，每次取中位数之前排序一下
+    List<Integer> list=null; 
+    int lsSize=0;//自己保存列表大小，省的每次都on查找列表大小
+    public MedianFinder() {
+        list=new ArrayList<>();
+    }
+    
+    public void addNum(int num) {
+        list.add(num);
+        lsSize++;
+    }
+    
+    public double findMedian() {
+        //排序；列表
+        list.sort(new Comparator<Integer>(){
+            @Override
+            public int compare(Integer o1,Integer o2){
+                if(o1<=o2){//本身升序的话，不交换位置
+                    return -1;
+                }else{
+                    return 1;//1表示交换位置
+                }
+            }
+        });
+
+        //拿中位数
+        if(lsSize%2==0){
+            //拿出数，并把数转为double
+            double templ=(double)list.get(lsSize/2-1).intValue();
+            double tempr=(double)list.get(lsSize/2).intValue();
+            return templ/2+tempr/2;//防止超过边界
+        }else{
+            return (double)list.get(lsSize/2).intValue();
+        }
+    }
+}
+
+/**
+ * Your MedianFinder object will be instantiated and called as such:
+ * MedianFinder obj = new MedianFinder();
+ * obj.addNum(num);
+ * double param_2 = obj.findMedian();
+ */
+```
+
+- 失败原因：超时。我的算法对于输入不多的时候都ok，但是对于长输入会有超时；估计是因为长列表排序太消耗时间了。
+
+- 注意：
+
+  - 我这方法每次插入都得排序列表。像Arrays.sort()只能排序数组而不能排序list，想排序列表ls就可以用ls.sort(new Comparator\<T>(){})；或者用`Collections.sort(List<T> list, Comparator<? super T> c)`。
+    - 注意本匿名内部类Comparator，”尖括号，小括号，花括号“都不能少。
+    - 我：还是喜欢**Collections的静态方法sort**一点，因为这个方法和Arrays.sort的样式统一；java暴力算法过的老哥也是用这个方法。
+
+  - 官方解法用来堆排序，[堆排序实战参考](https://blog.csdn.net/qq_41682302/article/details/95910651)，这里介绍的堆排序实战和官方使用的PriorityQueue一致！
+
+  - 官方用的堆排序，和我自己用的快速排序的[对比](https://www.cnblogs.com/gzshan/p/10904254.html)，为什么使用堆排序？
+    - 我理解：
+      - 使用插入排序的话，虽然每次插入耗时间但是取数据节省时间；数组实现插入排序的时间复杂度是on2，取数据实现复杂度是o1；但是链表实现插入排序的时间复杂度是on（链表插入数据不用移动后续数据），取数据时间复杂度是o1。。于此同时使用链表+快速排序的话，查找的时候（包含排序）时间复杂度是onlogn，插入的时候时间复杂度是o1。所以n比较大时，“链表+快速排序”的综合性能，弱于“链表+插入排序”，所以首先排除用的这种“每次查询时快排”的方式
+      - 现在再看堆排序，但是使用堆排序的话，可以实现ologn的插入，和o1的查找，综合性能比“链表+插入排序”更高。
+
+有老哥就用java暴力法过了，方法和我类似，但是少了“自定义排序，手动装箱拆箱，类型强转“。
+
+```java
+class MedianFinder { 
+List<Integer> list = new ArrayList<Integer>();
+/** initialize your data structure here. */
+public MedianFinder() {
+}
+
+public void addNum(int num) {
+    list.add(num);
+}
+
+public double findMedian() {
+    Collections.sort(list);
+    int len = list.size();
+    if (len == 0) {
+        return 0.0;
+    }
+    if (len%2 == 1) {
+        return list.get(len/2);
+    } else {
+        return (list.get(len/2-1) + list.get(len/2))/2.0;
+    }
+}
+}
+```
+
+#### 官方-优先队列/堆
+
+解题思路：
+
+![image-20220408204404242](lcof.assets/image-20220408204404242.png)
+
+- billibili堆排序[教学](https://www.bilibili.com/video/BV1Eb41147dK?from=search&seid=8087900261957567930&spm_id_from=333.337.0.0)
+
+![Picture1.png](lcof.assets/25837f1b195e56de20587a4ed97d9571463aa611789e768914638902add351f4-Picture1.png)
+
+算法流程：
+
+![image-20220408204443165](lcof.assets/image-20220408204443165.png)
+
+- 我：之所以要先插入别人那，是因为要让对方堆也能根据新到数据排序，更新对方的堆；并且拿回来的数据，可能在对方堆的数据中间，导致拿回来的数据和插入对方堆的数据是不一样的。
+
+复杂度分析：
+
+![image-20220408204754191](lcof.assets/image-20220408204754191.png)
+
+代码：
+
+Java 使用 `PriorityQueue<>((x, y) -> (y - x))` 可方便实现大顶堆。
+
+```java
+class MedianFinder {
+    Queue<Integer> A, B;
+    public MedianFinder() {
+        A = new PriorityQueue<>(); // 小顶堆，保存较大的一半
+        B = new PriorityQueue<>((x, y) -> (y - x)); // 大顶堆，保存较小的一半
+    }
+    public void addNum(int num) {
+        if(A.size() != B.size()) {
+            A.add(num);
+            B.add(A.poll());
+        } else {
+            B.add(num);
+            A.add(B.poll());
+        }
+    }
+    public double findMedian() {
+        return A.size() != B.size() ? A.peek() : (A.peek() + B.peek()) / 2.0;
+    }
+}
+```
+
+- `/2.0`会自动把“integer自动拆箱得到的int”转化为double。
+- [PriorityQueue详解](https://www.jianshu.com/p/f1fd9b82cb72):
+  - 利用堆排序，保证树里总是最大/最小的元素在父节点；并且除顶部是最大值/最小值外，集合的其余部分是不保证有序的。
+  - Comparator自定义排序的话，返回-1表示o1和o2的顺序是默认的升序，即o1<o2，所以不用交换两者顺序。
+
+#### 即时再战半寄
+
+```java
+class MedianFinder {
+
+    /** initialize your data structure here. */
+    /**
+    smaller是较小的一半集合，用大顶堆处理这个集合，让较小集合里的最大值始终在堆顶部，即在中位数附近；允许smaller比bigger多一个元素
+    bigger是较大的一半集合，用小顶堆处理这个集合，让较大集合里的最小值始终在堆顶部，即在中位数附近
+     */
+    PriorityQueue<Integer> smaller=null;
+    PriorityQueue<Integer> bigger=null;
+    public MedianFinder() {
+        smaller=new PriorityQueue<>(new Comparator<Integer>(){//大顶堆递减，不是默认的，要自定义比较规则
+            @Override
+            public int compare(Integer o1,Integer o2){
+                if(o1<o2){//如果前面的更小，返回1表示交换两者顺序，即为了让前面的更大（即实现降序）
+                    return 1;
+                }else if(o1>o2){
+                    return -1;
+                }else{
+                    return 0;
+                }
+            }
+        });
+        //smaller=new PriorityQueue<>((x, y) -> (y - x));
+        bigger=new PriorityQueue<>();//小顶堆递增
+    }
+    
+    public void addNum(int num) {
+        //因为待插入值可能属于对面堆，所以每个值都要先填入对面堆，再从对面堆顶部拿值；
+        if(smaller.size()==bigger.size()){//如果两个堆数目相同，往smaller中插入；但是先插入bigger保证smaller是总集合的较小一半数的集合
+            bigger.offer(num);
+            smaller.offer(bigger.poll());
+        }else{//如果smaller数目多1，就往bigger堆插入；但是先插入smaller,才能保证bigger是总集合的较大一半数的集合
+            smaller.offer(num);
+            bigger.offer(smaller.poll());
+        }
+    }
+    
+    public double findMedian() {
+        if(smaller.size()==bigger.size()){//如果两个堆的元素数目相同，那么各取堆顶计算中位数
+            return (smaller.peek()+bigger.peek())/2.0;//2.0自动把整个式子转化为float；返回类型是double，我估计就自动转化了。注意查找中位数不能执行poll，poll会移除元素，要用peek
+        }else{//如果smaller的元素多1，说明共奇数个元素，直接拿smaller堆的堆顶返回即可
+            return smaller.peek();
+        }
+    }
+}
+
+/**
+ * Your MedianFinder object will be instantiated and called as such:
+ * MedianFinder obj = new MedianFinder();
+ * obj.addNum(num);
+ * double param_2 = obj.findMedian();
+ */
+```
+
+- 关于[`size()`时间复杂度](https://blog.csdn.net/Kevin___________/article/details/108681594)
+
+- 错误点：
+
+  - 求中位数时，误用poll取数，导致更改了堆影响后续操作；应该用peek。
+  - poll的是堆顶，小顶堆是递增，那么poll出的就是最小值；反之大顶堆poll出来的就是最大值。
+
+- 问答问：为什么都用了堆排序，我的效率比官方低这么多？（红框是我，绿框是官方）
+
+  <img src="lcof.assets/image-20220409010404047.png" alt="image-20220409010404047" style="zoom:50%;" />
+
+  - 经过使用官方的lamda表达式决定大顶堆，但是线效率没变，说明是其他部位导致的。
+
+  - 自答：发现代码遗留了debug时设置的System.out.println()，删掉之后效率和官方一致；看来输出很耗时啊！
+
+    <img src="lcof.assets/image-20220409010830512.png" alt="image-20220409010830512" style="zoom:50%;" />
+
+
+## 分治算法(中等)
+
+### [剑指 Offer 07. 重建二叉树](https://leetcode-cn.com/problems/zhong-jian-er-cha-shu-lcof/)
+
+codetop==10
+
+#### 首战寄
+
+能用笔实现出来，但是用算法实现没有思路。
+
+#### 官方-分治
+
+[文字看不懂的话，可以看这个讲解视频](https://www.bilibili.com/video/BV1LJ411y7Xa?from=search&seid=7337447768713066113&spm_id_from=333.337.0.0)，看完视频后再看下面的解析和代码。
+
+解题思路：
+
+![image-20220411200426772](lcof.assets/image-20220411200426772.png)
+
+![image-20220411200437879](lcof.assets/image-20220411200437879.png)
+
+分治算法解析：
+
+![image-20220411200501485](lcof.assets/image-20220411200501485.png)
+
+复杂度分析：
+
+![image-20220411200517480](lcof.assets/image-20220411200517480.png)
+
+代码：
+
+> 注意：本文方法只适用于 “无重复节点值” 的二叉树。
+
+```java
+ //利用原理,先序遍历的第一个节点就是根。在中序遍历中通过根 区分哪些是左子树的，哪些是右子树的
+    //左右子树，递归
+    HashMap<Integer, Integer> map = new HashMap<>();//标记中序遍历
+    int[] preorder;//保留的先序遍历
+
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        this.preorder = preorder;
+        for (int i = 0; i < preorder.length; i++) {
+            map.put(inorder[i], i);
+        }
+        return recursive(0,0,inorder.length-1);
+    }
+
+    /**
+     * @param pre_root_idx  先序遍历的索引
+     * @param in_left_idx  中序遍历的索引
+     * @param in_right_idx 中序遍历的索引
+     */
+    public TreeNode recursive(int pre_root_idx, int in_left_idx, int in_right_idx) {
+        //相等就是自己
+        if (in_left_idx > in_right_idx) {
+            return null;
+        }
+        //root_idx是在先序里面的
+        TreeNode root = new TreeNode(preorder[pre_root_idx]);
+        // 有了先序的,再根据先序的，在中序中获 当前根的索引
+        int idx = map.get(preorder[pre_root_idx]);
+
+        //左子树的根节点就是 左子树的(前序遍历）第一个，就是+1,左边边界就是left，右边边界是中间区分的idx-1
+        root.left = recursive(pre_root_idx + 1, in_left_idx, idx - 1);
+
+        //由根节点在中序遍历的idx 区分成2段,idx 就是根
+
+        //右子树的根，就是右子树（前序遍历）的第一个,就是当前根节点 加上左子树的数量
+        // pre_root_idx 当前的根  左子树的长度 = 左子树的左边-右边 (idx-1 - in_left_idx +1) 。最后+1就是右子树的根了
+        root.right = recursive(pre_root_idx + (idx-1 - in_left_idx +1)  + 1, idx + 1, in_right_idx);
+        return root;
+    }
+```
+
+- 我理解：用hash关联中序的值和index，是为了根据先序的root值，求得root在中序中的index；进而根据中序中root的index，得到root的左右子树元素的个数。因为无论是中序还是先序数组，左/右子树的所有节点都是紧贴在一起的；而中序遍历的特点就是root能分割左右子树，特别适合用来判断数组中左/右子树的元素的个数。
+
+#### 即时再战成功
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    int[] pre;
+    Map<Integer,Integer> in=new HashMap<>();
+    public TreeNode buildTree(int[] preorder, int[] inorder) {
+        /**
+        利用特性：
+        1.先序遍历的第一个节点为当前树的root；
+        2.中序中root分割左右子树，可以求得左or右子树分别有多少个元素
+        
+        本解法的前提是树中元素都不唯一
+         */
+
+        //处理特殊情况
+        if(preorder.length==0)return null;
+
+        //为了在递归中使用preorder数组，并且不必往方法传入preorder数组，这里用全局变量保存preorder数组
+        pre=preorder;
+        //把inorder中元素和index用hash关联起来；便于后续根据root值求得左右子树的元素数目
+        for(int i=0;i<inorder.length;i++){
+            in.put(inorder[i],i);
+        }
+
+        //递归， 根据pre中root的index 和 in中树的左右边界，构建树并返回根节点
+        return recur(0,0,inorder.length-1);
+    }
+    public TreeNode recur(int pre_root_idx, int in_left_idx, int in_right_idx){
+        //设置递归返回条件，in_left_idx和in_right_idx交叉时说明子树是空节点了，直接返回null
+        if(in_left_idx>in_right_idx)return null;
+
+        //先利用pre_root_index拿到root的值
+        int rootValue=pre[pre_root_idx];
+        //再根据root的值得到中序遍历数组中，root的位置
+        int in_root_index=in.get(rootValue);
+
+        //创建当前节点
+        TreeNode cur=new TreeNode(rootValue);
+
+        /*
+        递归创建当前节点的左右子节点：
+        1.根据先序遍历数组的特点可知，左子节点的pre_root_idx即为当前pre_root_idx+1，右子节点的pre_root_idx即为当前pre_root_idx+左子树节点个数+1(加1是为了越过左子树而到达右子树)
+        2.根据中序遍历数组的特点可知，中序遍历中，左子树的左边界为in_left_idx，左子树的右边界为in_root_index-1;
+                                                  右子树的左边界为in_root_index+1，右子树的右边界为in_right_idx
+         */
+        cur.left=recur(pre_root_idx+1,in_left_idx,in_root_index-1);
+        cur.right=recur(pre_root_idx+(in_root_index-in_left_idx)+1,in_root_index+1,in_right_idx);
+
+        return cur;
+    }
+}
+```
+
+- 我：我感觉我这个代码的命名和编写，搭配注释，比官方还要容易理解。
+
+- 注意：可以如本例`pre=preorder;`，直接对数组增加引用。
+
+### [剑指 Offer 16. 数值的整数次方](https://leetcode-cn.com/problems/shu-zhi-de-zheng-shu-ci-fang-lcof/)
+
+codetop==3
+
+#### 首战半寄
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        /**
+        对n分类讨论，同时注意分母为0的情况
+         */
+        //针对x处理特殊情况，减少计算
+        if(x==1)return 1;
+        if(x==0)return 0;
+        
+        if(n>0){
+            double stordX=x;//注意x是double类型，保存的x也得是声明为double
+            for(int i=0;i<n-1;i++){//指数是n的话，x自乘n-1次。注意是n-1次！！！！
+                //但是不能使用x*=x;这回导致：第一次计算是n*n，第二次计算实际上是(n的平方)*(n的平方)了
+                x*=stordX;
+            }
+            return x;
+        }else if(n<0){
+            if(x==0){//0不能做分母
+                return 0;
+            }
+            double stordX=x;
+            for(int i=n;i<0;i++){//指数是-n的话，用1除以x进行n次
+                //x=1/x;不能直接1/x，因为第一次除后为1/x，再用1/(1/x)那么又得到了x。。
+                if(i==n){//第一次是1/x，其他的都是之前的结果除以x
+                    x=1/x;
+                }else{
+                    x=x/stordX;
+                } 
+            }
+            return x;
+        }else{//指数n==0，直接返回1即可
+            return 1;
+        }
+
+    }
+}
+```
+
+- 用常规思路做的，通过了301/303个测试案例，但是2.00000的 -2147483648次方计算超时了。
+- 反思：
+  - n>0时，没用心，最开始做成了指数为n就自乘n次，实际上是自乘n-1次。
+  - n<0时，没用心，最开始做成了指数为n就不停让x=1/x，但是这样相当于总是把1放在分子，而实际上应该把除后的结果放在分子。
+  - 之前计算时，没把x保留下来，导致每次都会把计算后的x当成原x，导致错误。
+
+#### 大佬-快速幂
+
+官方的解释的不清楚，就用大佬的。
+
+解题思路：
+
+![image-20220411180036705](lcof.assets/image-20220411180036705.png)
+
+[知乎快速幂](https://zhuanlan.zhihu.com/p/95902286)：
+
+- 我理解：就不让cpu每次乘一个小数，而是先乘得一个大数，然后两个大数相乘，这样就减少了乘法的次数。
+
+位运算使用：
+
+![image-20220411184903746](lcof.assets/image-20220411184903746.png)
+
+我理解：
+
+![image-20220411183243537](lcof.assets/image-20220411183243537.png)
+
+代码：
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        if(x == 0) return 0;
+        long b = n;
+        double res = 1.0;
+        //如果幂是负数，就把它转化为正数来处理
+        if(b < 0) {
+            x = 1 / x;
+            b = -b;
+        }
+        while(b > 0){
+            // 最后一位为1，需要乘上该位上的权重
+            if((b & 1) == 1){
+                res *= x;
+            }
+            //不断自乘即为不断平方
+            x *= x;
+            b >>= 1;
+        }
+        return res;
+    }
+}
+```
+
+- 网友问：为什么要把其中的n换成long类型？
+  - 网友答：因为32位int是补码形式，正数是和原码相同，范围是0到2的31次方-1，但是对于负数，需要反码+1，范围是负2的31次方到0，负数要比正数多一个数字。如果传进来的int刚好是负2的32次方，取相反数之后就超过int32类型的取值范围了，所以需要用long来扩大取值范围。不好意思啊，评论区数学公式不太好打。
+  - 注意：有符号的话有个符号站位，就级数是2的31次方；如果没有正负号，就所有位都用来保存数字，级数就为2的32次方。
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public double myPow(double x, int n) {
+        /**
+        使用快速幂，尽量让大数相乘，不要让小数相乘占用CPU
+         */
+        //特殊情况处理
+        if(x==0)return 0;
+        
+        //用于返回结果，需要的自乘的x的结果会被乘入res
+        double res=1;
+        
+        //n为负数的时候，把它转换为正数的问题来处理
+        long b=n;//因为负数的绝对值更大，为了防止负数变成正数问题时超过证书边界，得用long来处理n
+        if(b<0){
+            b=-b;
+            x=1/x;//因为x为0的情况排除了，所以可以安心把x放在分母
+        }
+        
+        //开始快速幂运算，让x不断自己平方，当幂的二进制的对应位为1时，则说明需要把自乘x的当前结果往结果中乘
+        //处理幂转化为二进制后的每个二进制位
+        while(b>0){
+            if((b&1)==1){//如果当前处理而二进制幂的位置为1，说明x自乘的当前结果要乘入结果
+                res*=x;
+            }
+            x*=x;//x不断自己平方，是快速幂节省cpu运算的关键
+            b=b>>1;//把幂的二进制右移一位（即从低位砍掉一位），下一次循环就会处理的是更高一位
+        }
+
+        return res;
+    }
+}
+```
+
+- 反思：
+  - 位运算>>后会得到一个结果，所以必须要用等号来赋值。` b=b>>1;`等价于` b>>=1;`
+  - 与运算符&的优先级没有==高，所以要用括号包裹`b&1`
+    - 运算符优先级容易记混，总是用括号包裹好了；可读性还蛮好。
+
+
+
+### [剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
+
+codetop==12
+
+#### 首战半寄
+
+```java
+class Solution {
+    int[] postorder;
+    boolean falseFound;//默认是false
+    public boolean verifyPostorder(int[] postorder) {
+        /**
+        二叉搜索树中左子树的所有值小于rootval，右子树的所有值大于rootval。
+        后续遍历的话，数组末尾就是树的根节点。根节点的左边是【左子树】【右子树】黏连而成。分割左右子树的方法：
+        遍历【左子树】【右子树】区域，第一次发现节点大于rootval的时候，说明前一步遍历完了左子树，现在在遍历右子树的第一个节点；因为不知道什么时候节点变大，所以用hash没用
+         */
+        this.postorder=postorder;//把传入的数组赋值给全局数组，使得在递归中也能访问到数组
+        int root_index=postorder.length-1;
+        int left_index=0,right_index=postorder.length-2;
+        return recur(root_index,left_index,right_index);
+    }
+    public boolean recur(int root_index,int left_index,int right_index){
+        //如果分治到最后lr交叉都没发现问题，说明至少本段分治符合二叉搜索树
+        if(left_index>right_index){
+            return true;
+        }
+
+        
+        //遍历数组，找到第一个比root大的，即为右子树的第一个节点；如果没遍历到，说明右子树为空
+        int firstRight=-1;
+        for(int i=left_index;i<=right_index;i++){
+            System.out.println("正在寻找右子树的首节点，当前节点值为："+postorder[i]);
+            if(postorder[i]>postorder[root_index]){
+                firstRight=i;
+                System.out.println("找到了右子树的首节点，节点值为："+postorder[i]);
+                //找到了右子树的首节点后要及时break，不然首节点会右移
+                break;
+            }
+        }
+        
+        //右子树为空的话，右子树的首节点设置在数组范围外。这样下一轮递归的话，left是firstRight，right是right-1，就会形成交叉，直接返回true而不会进一步处理
+        if(firstRight==-1){
+            System.out.println("右子树为空");
+            firstRight=right_index+1;
+        }
+        
+        
+        //由于是用节点是否比rootval小找到右子树第一个节点，所以左子树的合法性不需要验证，是已成立的。
+        //检查右子树合法性，右子树中出现比root大的数的话，直接返回false
+        for(int i=firstRight;i<=right_index;i++){
+            System.out.println("正在校验右子树的合法性，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
+            if(postorder[i]<postorder[root_index]){
+                System.out.println("右子树不合法，当前节点值为："+postorder[i]+" root的值为:"+postorder[root_index]);
+                falseFound=true;
+                return false;
+            }
+        }
+
+        //剪枝
+        if(falseFound)return false;
+
+        System.out.println("进入更深层次递归");
+        //如果没看出什么问题，递归查看当前root的左右子树的情况；左边函数是左子树，右边函数是右子树。两个都为true才返回true。
+        return recur(firstRight-1,left_index,firstRight-2)&&recur(right_index,firstRight,right_index-1);
+    }
+}
+```
+
+- 思路完整，框架完整，但是有一些小细节是debug才发现的。
+
+- 注意把代码中的sout注释掉后，代码的执行速度更快。
+
+- 解题debug反思：
+
+  - 用` if(postorder[i]>postorder[root_index])`找到右子树首节点后，忘记退出for循环，导致循环可能继续右移。
+
+  - firstRight初始值设置为0，然后用`if(firstRight==0)`判断得firstRight在找右子树首节点的过程中没被修改过，便手动给右子树首节点赋值；但是忽视了一种情况，就是左子树为空，那么firstRight本身就是==0的，反而被我手动赋值了。所以应该如提交代码中似的，把firstRight初始值设置为-1，并且针对firstRight在寻找完右子树后有没有变化来判断（没变化说明右子树为空）是否需要手动赋值。
+
+#### 官方-递归分治
+
+思想就是我写代码的思想
+
+解题思路：
+
+![image-20220412195804787](lcof.assets/image-20220412195804787.png)
+
+递归分支思路：
+
+- 根据二叉搜索树的定义，可以通过递归，判断所有子树的 **正确性** （即其后序遍历是否满足二叉搜索树的定义） ，若所有子树都正确，则此序列为二叉搜索树的后序遍历。
+
+递归解析：
+
+![image-20220412195901552](lcof.assets/image-20220412195901552.png)
+
+- 注意：划分左右子树的时候，寻找的**第一个**大于根节点的节点；我写代码就漏了这点，虽然思考的时候肯定是知道要找第一个。
+
+复杂度分析：
+
+![image-20220412200013412](lcof.assets/image-20220412200013412.png)
+
+- 时间复杂度“每轮递归都需要遍历树所有节点”解释：从left到firstRight，从firstRight到right，正好遍历完当前root对应的子树，也就是on的遍历。递归节点又有on，所以综合来看时间复杂度是on2。
+
+代码：
+
+```java
+class Solution {
+    public boolean verifyPostorder(int[] postorder) {
+        return recur(postorder, 0, postorder.length - 1);
+    }
+    boolean recur(int[] postorder, int i, int j) {
+        if(i >= j) return true;
+        int p = i;
+        while(postorder[p] < postorder[j]) p++;
+        int m = p;
+        while(postorder[p] > postorder[j]) p++;
+        return p == j && recur(postorder, i, m - 1) && recur(postorder, m, j - 1);
+    }
+}
+```
+
 ## 分治算法(困难)
 
 ### [剑指 Offer 17. 打印从1到最大的n位数](https://leetcode-cn.com/problems/da-yin-cong-1dao-zui-da-de-nwei-shu-lcof/)
@@ -9036,6 +10169,922 @@ class Solution {
 
 本题hard，虽然频度高，但是先放放不再战。
 
+
+## 位运算(简单)
+
+### [剑指 Offer 15. 二进制中1的个数](https://leetcode-cn.com/problems/er-jin-zhi-zhong-1de-ge-shu-lcof/)
+
+codetop==5
+
+####  首战寄
+
+有思路，但是代码运行结果不符合预期。
+
+```java
+public class Solution {
+    // you need to treat n as an unsigned value
+    public int hammingWeight(int n) {
+        /**
+        使用位运算，总是&最小位，为1的话则计数；计数完毕后右移，直到没有位了
+         */
+        System.out.println("输入的n:"+n);
+        int count=0;
+        while(n>0){
+            System.out.println("当前n:"+n);
+            if((n&1)==1){//计算数的二进制表示的末尾是否为1，是的话计数
+                System.out.println("当前n的末尾为1");
+                count++;
+            }
+            //不管末尾是否为1，都右移，即二进制末尾截掉一位
+            n>>=n;
+            System.out.println("右移1位后n:"+n);
+        }
+
+        return count;
+        
+    }
+}
+```
+
+![image-20220413155221429](lcof.assets/image-20220413155221429.png)
+
+- 问答问：打印出来的是输入了11右移一位后不是5，而直接为0退出了，不懂了。就算是以十进制为单位右移（除法），那也还有1啊。
+  - 自答：我这应该是`n>>>=1;`，原因有两个：
+    1. 源代码`n>>=n;`表示一下右移11位，肯定一下就移完了
+    2. java中无符号位运算用`>>>`。注意区别`>>`和`>>>`，`>>>`是对int32和int64才有用的无符号右移,[参考](https://www.cnblogs.com/SunArmy/p/9837348.html)
+- 看完官方解析后的反思，错误：
+  - `while(n>0)`导致输入n<0的数话，会不进入while。应该写成`while(n!=0)`
+  - ` n>>=n;`会一下子有符号右移n位，直接为0；并且对负数有符号位移的话补1，会导致计算错误。应该写成`n>>>=1;`。
+
+#### 网友热门
+
+java居然有这个方法:
+
+```java
+public class Solution {
+    // you need to treat n as an unsigned value
+    public int hammingWeight(int n) {
+        return Integer.bitCount(n);
+    }
+}
+```
+
+#### 官方1-位运算+逐位判断
+
+思路：
+
+![image-20220413161839865](lcof.assets/image-20220413161839865.png)
+
+算法流程：
+
+![image-20220413161858902](lcof.assets/image-20220413161858902.png)
+
+
+
+复杂度分析：
+
+![image-20220413161917124](lcof.assets/image-20220413161917124.png)
+
+代码：
+
+```java
+public class Solution {
+    public int hammingWeight(int n) {
+        int res = 0;
+        while(n != 0) {
+            res += n & 1;
+            n >>>= 1;
+        }
+        return res;
+    }
+}
+```
+
+- 我：思路就是我首战寄的思路
+
+#### 官方2-位运算+巧用 n \& (n - 1)
+
+思路：
+
+![image-20220413162127582](lcof.assets/image-20220413162127582.png)
+
+算法流程：
+
+![image-20220413162143982](lcof.assets/image-20220413162143982.png)
+
+复杂度分析：
+
+![image-20220413162204749](lcof.assets/image-20220413162204749.png)
+
+- 官方1中，哪怕当前很多位是0也要一个一个地位移，浪费时间复杂度。本方法2直接采取“消去1”的策略，每次消去末尾的1都可以给res加一，只需要做1的个数次操作即可，而不是像官方方法1中做多位次运算。
+
+代码：
+
+```java
+public class Solution {
+    public int hammingWeight(int n) {
+        int res = 0;
+        while(n != 0) {
+            res++;
+            n &= n - 1;
+        }
+        return res;
+    }
+}
+```
+
+### [剑指 Offer 65. 不用加减乘除做加法](https://leetcode-cn.com/problems/bu-yong-jia-jian-cheng-chu-zuo-jia-fa-lcof/)
+
+#### 首战寄
+
+无思路。
+
+建议熟悉java位运算：[参考](https://zhuanlan.zhihu.com/p/106893096)
+
+#### 官方-位运算
+
+解题思路：
+
+![image-20220413165208729](lcof.assets/image-20220413165208729.png)
+
+- 异或：不同为1，相同为0；与：都为1才为1，有一个是0都为0。
+
+- 我：比如`1111+1111`=`0000+11110`=30，无进位跳出
+
+![Picture1.png](lcof.assets/56d56524d8d2b1318f78e209fffe0e266f97631178f6bfd627db85fcd2503205-Picture1.png)
+
+> Q ： 若数字 aa 和 bb 中有负数，则变成了减法，如何处理？
+> A ： 在计算机系统中，数值一律用 补码 来表示和存储。补码的优势： 加法、减法可以统一处理（CPU只有加法器）。因此，以上方法 同时适用于正数和负数的加法 。
+>
+
+复杂度分析：
+
+![image-20220413165358375](lcof.assets/image-20220413165358375.png)
+
+代码：
+
+```java
+class Solution {
+    public int add(int a, int b) {
+        while(b != 0) { // 当进位为 0 时跳出
+            int c = (a & b) << 1;  // c = 进位
+            a ^= b; // a = 非进位和
+            b = c; // b = 进位
+        }
+        return a;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int add(int a, int b) {
+        /**
+        加法=异或+与<<
+         */
+        
+        //求进位；求进位要放在求非进位之前，因为“求非进位”时会修改a的值。注意<<1的移动位数1别忘记！！
+        int c=(a&b)<<1;
+        //求非进位
+        a^=b;
+        //要记住把c赋值给b，这样才能让进位和非进位继续相加
+        b=c;
+
+        //进位为0的时候，求和结果即为a。
+        while(b!=0){
+            //求进位
+            c=(a&b)<<1;
+            //求非进位
+            a^=b;
+            //要记住把c赋值给b，这样才能让进位和非进位继续相加
+            b=c;
+        }
+
+        return a;
+
+    }
+}
+```
+
+- 注意：<<1的移动位数1别忘记！！
+
+## 位运算(中等)
+
+### [剑指 Offer 56 - I. 数组中数字出现的次数](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-lcof/)
+
+codetop==2
+
+#### 首战寄 
+
+没思路
+
+#### 官方-位运算异或
+
+解题思路：
+
+![image-20220414142917210](lcof.assets/image-20220414142917210.png)
+
+```java
+public int[] singleNumber(int[] nums) {
+    int x = 0;
+    for(int num : nums)  // 1. 遍历 nums 执行异或运算
+        x ^= num;
+    return x;            // 2. 返回出现一次的数字 x
+}
+```
+
+异或符合交换律解析如下：
+
+![image-20220414142641610](lcof.assets/image-20220414142641610.png)
+
+难点：
+
+![image-20220414145633625](lcof.assets/image-20220414145633625.png)
+
+- 异或两个数，那么原数不同的地方会在异或后表示为1，我们侦测异或后的1的位置，就可以把两个不同的数区分开来；两个数可能有多个位不一样，任意抓住一位都能区分开原来的两个数，这里去找不同的最低位。
+- 用mask不仅可以区分出两个目标数，还能把剩余的所有数分两队；在“mask为1的位” 为1的数被分到一队，在“mask为1的那位” 为0的数被分到另一队，因为前者和mask异或得0，后者和mask异或不得0。
+
+代码：
+
+```java
+class Solution {
+    public int[] singleNumbers(int[] nums) {
+        //用于将所有的数异或起来。最后的k即为两个只出现一次的数的异或结果
+        int k = 0;
+        for(int num: nums) {
+            k ^= num;
+        }
+        
+        //获得k中最低位的1。这个1标记了“两个只出现一次的数”从低位往高位比，第一次出现不同的位置
+        int mask = 1;
+        //mask = k & (-k) 这种方法也可以得到mask，具体原因百度 哈哈哈哈哈
+        while((k & mask) == 0) {//异或结果k和mask再进行“与操作”得0，表示在mask为1的位置 k在此位置不为1，即两个只出现一次的数在这位是相同的（这样异或后 此位才为0）
+            mask <<= 1;
+        }
+        
+        //对数组用mask做分组的同时，用a和b分别异或处理属于不同类的数据，得到的a b结果即为两个只出现一次的数
+        int a = 0;
+        int b = 0;
+        for(int num: nums) {
+            if((num & mask) == 0) {
+                a ^= num;
+            } else {
+                b ^= num;
+            }
+        }
+        
+        return new int[]{a, b};
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] singleNumbers(int[] nums) {
+        /**
+        使用异或^从出现两次的数中找到只出现一次的数
+        使用与&把两个只出现一次的数，利用他两的异或结果，把它们分成2组
+         */
+        
+        //数组全体异或，假设只出现一次的数为a b，那么得到的结果是a^b
+        int c=0;
+        for(int i=0;i<nums.length;i++){
+            c^=nums[i];
+        }
+
+        //用探针pin把两个只出现一次的数分开
+        int pin=1;
+        while((c&pin)==0){//a和b在pin中1的位置相同。注意按位与&的优先级低，每次使用必须用括号包裹！！！
+            pin=pin<<1;
+        }
+
+        //根据pin把nums分两队；两队内自行异或，即得到a和b
+        int a=0,b=0;
+        for(int i=0;i<nums.length;i++){
+            if((nums[i]&pin)==0){
+                a^=nums[i];
+            }else{
+                b^=nums[i];
+            }
+        }
+
+        return new int[]{a,b};
+    }
+}
+```
+
+- 注意：
+  - 按位与&的优先级低，每次使用必须用括号包裹
+  - pin用&操作把数组分两组，因为一组与pin为0，另一组不是；num & pin得0，是因为num在pin为1的那一位为0，0&1==0,1&1==1。
+
+### [剑指 Offer 56 - II. 数组中数字出现的次数 II](https://leetcode-cn.com/problems/shu-zu-zhong-shu-zi-chu-xian-de-ci-shu-ii-lcof/)
+
+codetop==3
+
+#### 首战寄
+
+#### 官方-位运算+有限状态自动机
+
+如下图所示，考虑数字的二进制形式，对于出现三次的数字，各 **二进制位** 出现的次数都是 3 的倍数。
+因此，统计所有数字的各二进制位中 1 的出现次数，并对 3求余，结果则为只出现一次的数字。
+
+![Picture1.png](lcof.assets/28f2379be5beccb877c8f1586d8673a256594e0fc45422b03773b8d4c8418825-Picture1.png)
+
+略。。题目出现率不高
+
+#### 大佬-hashMap法
+
+```java
+// 使用 HashMap 记录各个数字出现的次数
+    public int singleNumber(int[] nums) {
+        Map<Integer, Integer> map = new HashMap();
+
+        for(int i = nums.length - 1; i >= 0; --i){
+            int key = nums[i];
+            if(!map.containsKey(key)){
+                // 如果之前没有遇到这一数字，则放入 map 中
+                map.put(key, 1);
+            }else{
+                // 如果之前遇到过这一数字，则出现次数加 1
+                map.put(key, map.get(key) + 1);
+            }
+        }
+
+        for(Map.Entry<Integer, Integer> entry: map.entrySet()){
+            if(entry.getValue() == 1){
+                return entry.getKey();
+            }
+        }
+
+        return -1;
+    }
+```
+
+- 网友评：可以再优化一下，已经记过一次的数再放进来直接置值为-1就好，少一次get操作。
+
+  ```
+          for (int i = 0; i < nums.length; i++) {
+              Integer obj = map.get(nums[i]);
+              if(obj == null){
+                  map.put(nums[i],1);
+              }else if(obj == 1){
+                  map.put(nums[i],-1);
+              }
+          }
+  ```
+
+#### 即时再战
+
+用hashmap的话，就不需要再战了。
+
+## 数学(简单)
+
+### [剑指 Offer 39. 数组中出现次数超过一半的数字](https://leetcode-cn.com/problems/shu-zu-zhong-chu-xian-ci-shu-chao-guo-yi-ban-de-shu-zi-lcof/)
+
+codetop==16
+
+#### 首战寄
+
+有正负电荷抵消的思想，但是想不出来怎么实施。能实施的只有hashmap计数算法，性能不算好。
+
+#### 官方-摩尔投票法
+
+我个人更愿意称之为正负电荷抵消法,关注抵消的时刻。
+
+解题思路：
+
+![image-20220414164157239](lcof.assets/image-20220414164157239.png)
+
+摩尔投票法：
+
+![image-20220414164224802](lcof.assets/image-20220414164224802.png)
+
+![Picture1.png](lcof.assets/1603612327-bOQxzq-Picture1.png)
+
+![image-20220414164246112](lcof.assets/image-20220414164246112.png)
+
+算法流程：
+
+![image-20220414164259764](lcof.assets/image-20220414164259764.png)
+
+复杂度分析：
+
+![image-20220414164332148](lcof.assets/image-20220414164332148.png)
+
+代码：
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        int x = 0, votes = 0;
+        for(int num : nums){
+            if(votes == 0) x = num;
+            votes += num == x ? 1 : -1;
+        }
+        return x;
+    }
+}
+```
+
+![image-20220414164717570](lcof.assets/image-20220414164717570.png)
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        int x = 0, votes = 0, count = 0;
+        for(int num : nums){
+            if(votes == 0) x = num;
+            votes += num == x ? 1 : -1;
+        }
+        // 验证 x 是否为众数
+        for(int num : nums)
+            if(num == x) count++;
+        return count > nums.length / 2 ? x : 0; // 当无众数时返回 0
+    }
+}
+```
+
+- 本题众数指数目超过一般的数，但是一般指[出现次数最多的数](https://baike.baidu.com/item/%E4%BC%97%E6%95%B0/44796)
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int majorityElement(int[] nums) {
+        /**
+        正负电荷抵消
+         */
+
+        int major=0;
+        int count=0;
+        for(int i=0;i<nums.length;i++){
+            //在计数为0时，把当前节点设置为众数,重设置计数为1
+            if(count==0){
+                major=nums[i];
+                count=1;
+            }else{//如果计数不为0，比较当前数和众数是否相同，相同则给计数+1，不同则给计数-1
+                if(nums[i]==major){
+                    count++;
+                }else{
+                    count--;
+                }
+            }
+        }
+
+        //退出for循环后，留下的众数必定是目标众数
+        return major;
+    }
+}
+```
+
+### [剑指 Offer 66. 构建乘积数组](https://leetcode-cn.com/problems/gou-jian-cheng-ji-shu-zu-lcof/)
+
+codetop==3
+
+解题思路：
+
+![image-20220414172126126](lcof.assets/image-20220414172126126.png)
+
+![Picture1.png](lcof.assets/1624619180-vpyyqh-Picture1.png)
+
+算法流程：
+
+![image-20220414172154862](lcof.assets/image-20220414172154862.png)
+
+复杂度分析：
+
+![image-20220414172212852](lcof.assets/image-20220414172212852.png)
+
+代码：
+
+```java
+class Solution {
+    public int[] constructArr(int[] a) {
+        int len = a.length;
+        if(len == 0) return new int[0];
+        int[] b = new int[len];
+        b[0] = 1;
+        int tmp = 1;
+        for(int i = 1; i < len; i++) {
+            b[i] = b[i - 1] * a[i - 1];
+        }
+        for(int i = len - 2; i >= 0; i--) {
+            tmp *= a[i + 1];
+            b[i] *= tmp;
+        }
+        return b;
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[] constructArr(int[] a) {
+        /**
+        用两个dp乘法
+         */
+        //处理特殊情况。我认为是不用处理的，但是系统还是会输入空数组,空数组如下设置
+        if(a.length==0||a.length==1)return new int[0];
+
+        //把对角线下半的乘积先放入结果数组。新建数组要new int[length],别忘了new
+        int[] res=new int[a.length];
+        int temp=1;
+        res[0]=1;
+        for(int i=1;i<a.length;i++){
+            temp*=a[i-1];
+            res[i]=temp;
+        }
+
+        //把对角线上半的成绩放入结果数组
+        temp=1;
+        for(int i=a.length-2;i>=0;i--){
+            temp*=a[i+1];
+            res[i]*=temp;
+        }
+
+        return res;
+
+    }
+}
+```
+
+- 注意：
+  - 新建空数组的方式:`new int[0];`
+  - 新建数组不要忘记new关键字
+
+## 数学(中等)
+
+### [剑指 Offer 14- I. 剪绳子](https://leetcode-cn.com/problems/jian-sheng-zi-lcof/)
+
+codetop==5
+
+#### 没思路
+
+#### 官方1-贪心
+
+我：贪心的数学要求高，普适性不大
+
+![image-20220415170356783](lcof.assets/image-20220415170356783.png)
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        if(n <= 3) return n - 1;
+        int a = n / 3, b = n % 3;
+        if(b == 0) return (int)Math.pow(3, a);
+        if(b == 1) return (int)Math.pow(3, a - 1) * 4;
+        return (int)Math.pow(3, a) * 2;
+    }
+}
+```
+
+#### 官方2-动态规划
+
+思路：
+
+![image-20220423205556605](lcof.assets/image-20220423205556605.png)
+
+代码：
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        int[] dp = new int[n + 1];
+        dp[2] = 1;
+        for(int i = 3; i < n + 1; i++){
+            for(int j = 2; j < i; j++){
+                dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j]));
+            }
+        }
+        return dp[n];
+    }
+}
+```
+
+- 网友问：dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j])); 动态规划dp[i] 为什么依赖于自己呢
+  - 网友答：想了一会才反应过来，对于同一个i，内层循环对不同的j都还会拿到一个max，所以每次内层循环都要更新max
+  - 网友答：不是依赖自己，是不同的j都会有一个dp[i]，这是在取不同的j情况下dp[i]的最大值。dp[i]就是更新储存最大值的，不是依赖自己，还是那两种情况, 感觉还是写成两段更容易理解一点` int tmp=max(j*(i-j),j*dp[i-j]); dp[i]=max(dp[i],tmp);`
+
+复杂度分析：
+
+![image-20220423210349090](lcof.assets/image-20220423210349090.png)
+
+#### 即时重做成功
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        /**
+        绳子可以剪成两端，左边这段固定，右边这段剪不剪使用动态规划判断
+         */
+        //dpi表示绳子长度为i时的最大乘积;因为要记录dpn，所以dp数组的长度设置为n+1
+        int []dp=new int[n+1];
+
+        //初始化。长度为1的绳子没法剪，从长度为3的绳子开始考虑
+        dp[2]=1;
+
+        //从短绳子到长绳子，根据短绳子的最大乘积得到长绳子的最大乘积
+        for(int i=3;i<=n;i++){
+            //针对每个长度的绳子，取不同长度的左边段，求他的最大乘积。i表示绳子全长，j表示绳子的左边的长度
+            for(int j=1;j<i;j++){
+                //右半部继续剪短，和右半部不继续剪短，两种情况求得一个较大值；使用到dp(i-j)就体现了动态规划由小得到大的思想
+                int temp=Math.max(j*(i-j),j*dp[i-j]);
+                //该较大值和其他j的情况下记载的较大值做比较，保留下大的那个
+                dp[i]=Math.max(dp[i],temp);
+            }
+        }
+
+        //处理完数组后，返回dpn即为剪短长度为n的数组可能得到的最大乘积
+        return dp[n];
+
+
+    }
+}
+```
+
+
+
+### [剑指 Offer 57 - II. 和为s的连续正数序列](https://leetcode-cn.com/problems/he-wei-sde-lian-xu-zheng-shu-xu-lie-lcof/)
+
+codetop==9
+
+#### 首战半寄
+
+能通过23/32个测试案例，但是在大数上超时了；至少有思路，不过不够优化。
+
+```java
+class Solution {
+    public int[][] findContinuousSequence(int target) {
+        /**
+        等差数列求和公式+while双指针
+         */
+        List<List<Integer>> resultList =new ArrayList<>();
+        List<Integer> oneTempInstance=null;
+        //以每个整数为left开始做双指针
+        for(int i=1;i<target;i++){
+            long left=i,right=target;
+            //做双指针
+            while(left<right){
+                long temp1=(left+right)*(right-left+1),temp2=target*2;//避免反复计算.除法默认向下取整，尽量避免。用long防止超过整数边界
+                if(temp1==temp2){//找到目标时。不会再在本基础上缩小范围了，用break跳出while避免无效计算
+                    oneTempInstance=new ArrayList<>();
+                    for(int j=(int)left;j<=right;j++){
+                        oneTempInstance.add(j);
+                    }
+                    resultList.add(new ArrayList<>(oneTempInstance));//为了避免oneInstance的操作影响resultList中已存入的结果，根据oneTempInstance的内容新分配一块内存作为resultList的元素
+                    break;
+                }else if(temp1<temp2){
+                    left++;
+                }else{
+                    right--;
+                }
+            }
+        }
+
+        //把列表转化为2维数组返回。转换成数组是真傻比，直接返回链表不就行了！
+        int[][] result=new int[resultList.size()][];//第一个方括号表示行，应该在这个括号限定行数
+        for(int i=0;i<resultList.size();i++){
+            //复用oneTempInstance
+            oneTempInstance=resultList.get(i);
+            int tempSize=oneTempInstance.size();
+            //对二维数组不等长的情况分配内存：https://blog.csdn.net/weixin_30709179/article/details/115082821
+            result[i]=new int[tempSize];
+            for(int j=0;j<tempSize;j++){
+                result[i][j]=oneTempInstance.get(j);
+            }
+        }
+        return result;
+    }
+}
+```
+
+- 注意：
+  - 大数乘法的时候可能会超过整数边界，要用long
+  - long基本类型可以使用`(int) longValue`来强转成int。
+- 我：已经想到左右指针了，相当于是官方解法滑动窗口的两边，但是用for循环暴力导致O(nlogn)的时间复杂度
+
+#### 官方-滑动窗口
+
+什么是滑动窗口：
+
+![image-20220415204353222](lcof.assets/image-20220415204353222.png)
+
+- 注意：官方这里说 滑动窗口一般左闭右开，但是实战中也可以自己实现两个都闭的方法，如本题。
+
+如何用滑动窗口解这道题：
+
+![image-20220415204435385](lcof.assets/image-20220415204435385.png)
+
+![proof](lcof.assets/728c705889a672d5a85709cb3fd157216bb1a41dc377dcc125818d9e18b8dd55.jpg)
+
+![image-20220415204506800](lcof.assets/image-20220415204506800.png)
+
+时间复杂度：
+
+![image-20220415204754472](lcof.assets/image-20220415204754472.png)
+
+代码：
+
+```java
+public int[][] findContinuousSequence(int target) {
+    int i = 1; // 滑动窗口的左边界
+    int j = 1; // 滑动窗口的右边界
+    int sum = 0; // 滑动窗口中数字的和
+    List<int[]> res = new ArrayList<>();
+
+    while (i <= target / 2) {
+        if (sum < target) {
+            // 右边界向右移动
+            sum += j;
+            j++;
+        } else if (sum > target) {
+            // 左边界向右移动
+            sum -= i;
+            i++;
+        } else {
+            // 记录结果
+            int[] arr = new int[j-i];
+            for (int k = i; k < j; k++) {
+                arr[k-i] = k;
+            }
+            res.add(arr);
+            // 左边界向右移动
+            sum -= i;
+            i++;
+        }
+    }
+
+    return res.toArray(new int[res.size()][]);
+}
+```
+
+- 网友：还是有点不太懂为什么i <= target/2？求大佬
+  - 网友答：5最大只可能是2+3，不可能等于3+4
+- 注意：
+  - `list.toArray(new 数组)`，要传入“分配了内存的数组“
+  - 可以先使用`List<int[]>`对结果列表进行初始化，最后把只有一层的list轻松转为数组，即得二维数组。
+  - `int[] arr = new int[j-i];//记录结果`体现了左闭右开，因为i位置的数不会被记录。
+
+网友补充，有左闭右闭的，都闭更利于理解：
+
+```java
+class Solution {
+public int[][] findContinuousSequence(int target) {
+            List<int[]> res = new ArrayList<>();
+            // 滑动窗口,左右指针指向的数
+            // 初始窗口的宽度为1，所有左右都指向1
+            int left = 1;
+            int right = 1;
+            // 窗口内的数字和,左闭右闭
+            int sum = 1;
+            // 只需要遍历到目标值的一般即可，后面加起来肯定大于target
+            while (left <= target / 2){
+                // 如果小了，右指针增大
+                if (sum < target) {
+                    right++;
+                    sum += right;
+                }else if (sum > target){
+                    // 如果大了，左指针增大
+                    sum -= left;
+                    left++;
+                }else {
+                    // 说明匹配上了需要把窗口中的元素放进结果集
+                    int[] level = new int[right - left + 1];
+                    for (int i = left; i <= right; i++) {
+                        level[i - left] = i;
+                    }
+                    res.add(level);
+                    // 加入结果集之后窗口要移动
+                    sum -= left;
+                    left++;
+                }
+            }
+            return res.toArray(new int[res.size()][]);
+        }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int[][] findContinuousSequence(int target) {
+        /**
+        滑动窗口左闭右闭，on时间复杂度
+        滑动窗口左右都只能右移
+         */
+        List<int[]>resultList=new ArrayList<>();
+        int l=1,r=1,sum=1;
+        while(l<=target/2){//之所以要<=而不是<,是因为target==3的情况
+            if(sum>target){
+                sum-=l;
+                l++;
+            }else if(sum<target){
+                r++;//注意sum 窗沿的处理顺序，在两个if情况是不一样的
+                sum+=r;
+            }else{
+                //找到目标窗口，把数据填入
+                int[] temp=new int[r-l+1];
+                for(int i=l;i<=r;i++){
+                    temp[i-l]=i;
+                }
+                resultList.add(temp);//因为temp只在else的花括号中存活，且在temp传入resultList和temp死亡前的这段时间里没有针对temp元素的修改；所以不需要额外给内存，即不用防止修改temp导致resultList被修改，
+                //左窗沿右移
+                sum-=l;
+                l++;
+            }
+        }
+
+        return resultList.toArray(new int[resultList.size()][]);
+    }
+}
+```
+
+- 注意：
+  - 把List<int[]>转化为int\[][]要用：`resultList.toArray(new int[resultList.size()][]);`。第二个中括号的内存是已知的，因为resultList中已经存了每个元素；需要让toArray知道的是resultList有多少个元素，所以要在第一个中括号中设置大小，即二维数组的行数。
+  - `return resultList.toArray(new int[resultList.size()][]);`写成`return resultList.toArray(new int[0][]);`就行，更节省空间，不需要在toArray的输入中指定一共需要多少个，只需要指定一个即可；但是完全不指定大小如`return resultList.toArray(new int[][]);`也是不行的，会报错`error: array dimension missing`。
+
+### [剑指 Offer 62. 圆圈中最后剩下的数字](https://leetcode-cn.com/problems/yuan-quan-zhong-zui-hou-sheng-xia-de-shu-zi-lcof/)
+
+codetop 27
+
+#### 首战寄
+
+没思路。
+
+[参考约瑟夫环](https://blog.csdn.net/u011500062/article/details/72855826)
+
+- 网友：每杀死一个人，整体往前移动m个数是为了假设下一次开始数m个数是从0开始。
+
+  也就是说f(11,3)=6
+  假设最后存活下来的人在第一轮的坐标为6,杀掉第3个人(i=2)的人，杀掉后下一次从i=3的位置开始计数下一轮，这时候还剩10个人，这时候如果想从0计算最后存活下来的人的坐标，就得从把下一轮开始计数位置(也就是i=3)那个位置的坐标向左移动3，这时候整体向左移3，最后存活下来的坐标也就变成了3，也会是10个人的时候坐标变成了3
+
+#### 官方1-模拟链表
+
+O(n^2)的时间复杂度
+
+![image-20220415235803966](lcof.assets/image-20220415235803966.png)
+
+![image.png](lcof.assets/0a7538f213070b64cac8427d453de6e305fb63c99e9585948f52a116e0558ddc-image.png)
+
+![image-20220415235828058](lcof.assets/image-20220415235828058.png)
+
+```java
+class Solution {
+    public int lastRemaining(int n, int m) {
+        ArrayList<Integer> list = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            list.add(i);
+        }
+        int idx = 0;
+        while (n > 1) {
+            idx = (idx + m - 1) % n;
+            list.remove(idx);
+            n--;
+        }
+        return list.get(0);
+    }
+}
+```
+
+
+
+#### 官方2-约瑟夫环
+
+> 这个问题是以弗拉维奥·约瑟夫命名的，他是1世纪的一名犹太历史学家。他在自己的日记中写道，他和他的40个战友被罗马军队包围在洞中。他们讨论是自杀还是被俘，最终决定自杀，并以抽签的方式决定谁杀掉谁。约瑟夫斯和另外一个人是最后两个留下的人。约瑟夫斯说服了那个人，他们将向罗马军队投降，不再自杀。约瑟夫斯把他的存活归因于运气或天意，他不知道是哪一个。 —— 【约瑟夫问题】维基百科
+
+数学解法，O(n):
+
+这么著名的约瑟夫环问题，是有数学解法的！
+因为数据是放在数组里，所以我在数组后面加上了数组的复制，以体现是环状的。我们先忽略图片里的箭头：
+【第一轮后面的数字应该是[0, 1, 2 ,3 ,4]，手误打错了。。抱歉】
+
+
+![image.png](lcof.assets/9dda886441be8d249abb76e35f53f29fd6e780718d4aca2ee3c78f947fb76e75-image.png)
+
+![image-20220415235554790](lcof.assets/image-20220415235554790.png)
+
+```java
+class Solution {
+    public int lastRemaining(int n, int m) {
+        int ans = 0;
+        // 最后一轮剩下2个人，所以从2开始反推
+        for (int i = 2; i <= n; i++) {
+            ans = (ans + m) % i;
+        }
+        return ans;
+    }
+}
+```
+
+
+
 ## 数学(困难)
 
 ### [剑指 Offer 14- II. 剪绳子 II](https://leetcode-cn.com/problems/jian-sheng-zi-ii-lcof/)
@@ -9148,4 +11197,246 @@ class Solution {
 #### 官方
 
 暂略
+
+
+
+## 模拟(中等)
+
+### [剑指 Offer 29. 顺时针打印矩阵](https://leetcode-cn.com/problems/shun-shi-zhen-da-yin-ju-zhen-lcof/)
+
+codetop 20
+
+#### 首战成功
+
+```java
+class Solution {
+    public int[] spiralOrder(int[][] matrix) {
+        /**
+        每次触及边界，就让该方向能触及的边界内缩一位。top，bottom，left，right；
+        用四个小while控制顺时针打印
+        用一个大while包裹四个小while，每次小while结束都会侦测是否要退出大while（up和buttom交叉，left和right交叉）
+         */
+        //处理特殊情况
+        if(matrix.length==0)return new int[0];
+
+        //限制顺时针访问能到达的边界
+        int top=0,bottom=matrix.length-1,left=0,right=matrix[0].length-1;
+        //保存结果的数组
+        int[] result=new int[matrix.length*matrix[0].length];
+        //ij是二维数组中要打印的当前元素；count是结果数组的待点入坐标，并且起到了计数功能
+        int i=0,j=0,count=0;
+        //大while保持顺时针
+        while(top<=bottom&&left<=right){
+            //四个小while控制顺时针的方向
+            while(j<=right){//先右移动
+                result[count]=matrix[i][j];
+                j++;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次j加法使j超过了right，要减少回来,使j停留在边界right，准备向下移动;count不需要减少，因为它得停留在下一次要存储的位置
+            j--;
+            //向右处理完了，top要++，下次不能再触及这一行了
+            top++;
+            //下一波往下走
+            i++;
+            
+            while(i<=bottom){//再向下移动
+                result[count]=matrix[i][j];
+                i++;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次i加法使i超过了bottom，要减少回来,使i停留在边界bottom，准备向左移动;count不需要减少，因为它得停留在下一次要存储的位置
+            i--;
+            //向右处理完了，right要--，下次不能再触及这一列了
+            right--;
+            //下一波往左走
+            j--;
+            
+            
+            while(j>=left){//再向左移动
+                result[count]=matrix[i][j];
+                j--;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次j减法使j超过了left，要增加回来,使j停留在边界left，准备向上移动;count不需要减少，因为它得停留在下一次要存储的位置
+            j++;
+            //向左处理完了，bottom要--，下次不能再触及这一行了
+            bottom--;
+            //下一波往上走
+            i--;
+            
+            while(i>=top){//再向上移动
+                result[count]=matrix[i][j];
+                i--;
+                count++;
+            }
+            //可能走到中途就要break
+            if(count==result.length)break;
+            //退出的时候多做了一次i减法使i超过了top，要减少回来，使i停留在边界top，准备向右移动;count不需要减少，因为它得停留在下一次要存储的位置
+            i++;
+            //向上处理完了，left要++，下次不能再触及这一列了
+            left++;
+            //下一波往右走
+            j++;
+            
+        }
+
+        return result;
+    }
+}
+```
+
+- 注意：i代表行，j代表列；想要向右移动的话，i不变，j增加。
+
+#### 官方-模拟+设定边界
+
+解题思路：
+
+![image-20220416141340955](lcof.assets/image-20220416141340955.png)
+
+算法流程：
+
+![image-20220416141406403](lcof.assets/image-20220416141406403.png)
+
+复杂度分析：
+
+![image-20220416141422173](lcof.assets/image-20220416141422173.png)
+
+代码：
+
+> Java 代码利用了 ++ 操作的便利性，详情可见 ++i 和 i++ 的区别 ；
+>
+> res[x++] 等价于先给 res[x] 赋值，再给 x 自增 11 ；
+> ++t > b 等价于先给 t 自增 11 ，再判断 t > b 逻辑表达式。
+
+```java
+class Solution {
+    public int[] spiralOrder(int[][] matrix) {
+        if(matrix.length == 0) return new int[0];
+        int l = 0, r = matrix[0].length - 1, t = 0, b = matrix.length - 1, x = 0;
+        int[] res = new int[(r + 1) * (b + 1)];
+        while(true) {
+            for(int i = l; i <= r; i++) res[x++] = matrix[t][i]; // left to right.
+            if(++t > b) break;
+            for(int i = t; i <= b; i++) res[x++] = matrix[i][r]; // top to bottom.
+            if(l > --r) break;
+            for(int i = r; i >= l; i--) res[x++] = matrix[b][i]; // right to left.
+            if(t > --b) break;
+            for(int i = b; i >= t; i--) res[x++] = matrix[i][l]; // bottom to top.
+            if(++l > r) break;
+        }
+        return res;
+    }
+}
+```
+
+- 网友问：有一个疑惑，什么叫模拟？
+  - 网友答：就是代码的思路是跟着实际要求的顺时针的思路来走的
+
+- 我：自己写的版本和官方思路一致。
+
+### [剑指 Offer 31. 栈的压入、弹出序列](https://leetcode-cn.com/problems/zhan-de-ya-ru-dan-chu-xu-lie-lcof/)
+
+codetop==11
+
+#### 首战寄 
+
+没什么思路
+
+#### 官方-模拟
+
+解题思路：
+
+如下图所示，给定一个压入序列 pushed和弹出序列 popped，则压入 / 弹出操作的顺序（即排列）是 **唯一确定** 的。
+
+![Picture1.png](lcof.assets/c880f045c03a8e03b7908b2d49b658a9a32ba8f5d40cb19da62db32c7eb58830-Picture1.png)
+
+如下图所示，栈的数据操作具有 **先入后出** 的特性，因此某些弹出序列是无法实现的。
+
+![Picture2.png](lcof.assets/4397f5b44038603d70568147824877cacdaa76cef22371c2c80ff55f915092fd-Picture2.png)
+
+考虑借用一个辅助栈 stackstack ，模拟 压入 / 弹出操作的排列。根据是否模拟成功，即可得到结果。
+
+- 入栈操作： 按照压栈序列的顺序执行。
+- 出栈操作： 每次入栈后，循环判断 “栈顶元素 == 弹出序列的当前元素” 是否成立，将符合弹出序列顺序的栈顶元素全部弹出。
+
+> 由于题目规定 "栈的所有数字均不相等" ，因此在循环入栈中，每个元素出栈的位置的可能性是唯一的（若有重复数字，则具有多个可出栈的位置）。因而，在遇到 “栈顶元素 == 弹出序列的当前元素” 就应立即执行出栈。
+
+算法流程：
+
+![image-20220416152859724](lcof.assets/image-20220416152859724.png)
+
+- 不停按照入栈数组入栈，等到入栈的节点和出栈数组的顶部相同时，才有出栈的资格，这是很好理解的。使用模拟可以侦测到不合理的出入栈顺序。
+
+复杂度分析：
+
+![image-20220416152918099](lcof.assets/image-20220416152918099.png)
+
+代码：
+
+> 题目指出 pushed 是 popped 的排列 。因此，无需考虑 pushedpushed 和 poppedpopped 长度不同 或 包含元素不同 的情况。
+>
+
+```java
+class Solution {
+    public boolean validateStackSequences(int[] pushed, int[] popped) {
+        Stack<Integer> stack = new Stack<>();
+        int i = 0;
+        for(int num : pushed) {
+            stack.push(num); // num 入栈
+            while(!stack.isEmpty() && stack.peek() == popped[i]) { // 循环判断与出栈
+                stack.pop();
+                i++;
+            }
+        }
+        return stack.isEmpty();
+    }
+}
+```
+
+- 网友：不过Stack不建议使用，可以使用Deque，Deque也包含了栈的push和pop方法
+
+  - 网友问：为什么建议用 Deque 代替 Stack呢
+    - 网友答：这个是Java历史遗留问题，Stack继承了Vector且是Vector的唯一子类，Vector逐渐被Java抛弃了，且Stack是实体类，Deque是一个通用接口，使用起来更灵活，你查Java api中java.util.Stack中官方文档也给出了使用Deque来代替Stack的建议。Deque一般用LinkedList实现
+
+  - 网友追问： stack的方法，deque都可以用吗？
+    - 网友答：可以的，你就把它当成个stack就行，方法通用
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public boolean validateStackSequences(int[] pushed, int[] popped) {
+        /**
+        1. 一个节点只有先入栈才能出栈，所以根据入栈数组不停入栈。
+        2. 入栈后，当入栈的元素是出栈数组的顶部时，不停出栈
+        3. 出栈完毕后，继续入栈，看看能否继续有与出栈数组顶部相同的元素入栈
+
+        使用deque实现栈，而不是过时的stack
+         */
+        Deque<Integer> stack=new LinkedList<>();
+        int pophead=0;
+        for(int i=0;i<pushed.length;i++){
+            //不停入栈
+            stack.push(pushed[i]);
+            //每次push后检查是否可以开始pop。注意要先保证stack不为空，再做peek等操作，否则可能出现空指针异常。integer在较小时是在常量池里，不过本题不碍事。
+            while(!stack.isEmpty()&&stack.peek()==popped[pophead]){//退栈至不可再退为止，即栈顶元素和poped数组的当前元素不一致
+                stack.pop();
+                pophead++;
+            }
+        }
+        
+        //如果执行完入栈出栈后，stack不为空，说明poped[]是不合法的
+        return stack.isEmpty();
+    }
+}
+```
+
+
 
