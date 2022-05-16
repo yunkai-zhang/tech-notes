@@ -2307,6 +2307,127 @@ class Solution {
 }
 ```
 
+### [141. 环形链表](https://leetcode.cn/problems/linked-list-cycle/)
+
+这个题应该是和“剑指23”相同，但是leetcode剑指上没有23题
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public boolean hasCycle(ListNode head) {
+        /**
+        使用快慢指针
+         */
+
+        //保证链表至少有两个节点才做判断环的处理
+        if(head==null||head.next==null)return false;
+
+        //初始化快慢指针，如果前面的快指针能和后面的慢指针重合，那么说明有环
+        ListNode fast=head.next;
+        ListNode slow=head;
+        while(fast!=null&&slow!=null){
+            if(fast==slow)return true;//追赶上的话
+            
+            //fast移动时要防止空指针异常
+            if(fast.next==null)return false;//表示fast已经来到链表末尾
+
+            fast=fast.next.next;//上一个if保证这里的fast.next不为空即不会发生空指针异常
+            slow=slow.next;
+        }
+
+        //fast或slow能到链表结尾，说明没有环，返回false
+        return false;
+        
+    }
+}
+```
+
+#### 官方-hash表
+
+思路及算法：
+
+最容易想到的方法是遍历所有节点，每次遍历到一个节点时，判断该节点此前是否被访问过。
+
+具体地，我们可以使用哈希表来存储所有已经访问过的节点。每次我们到达一个节点，如果该节点已经存在于哈希表中，则说明该链表是环形链表，否则就将该节点加入哈希表中。重复这一过程，直到我们遍历完整个链表即可。
+
+代码：
+
+```java
+public class Solution {
+    public boolean hasCycle(ListNode head) {
+        Set<ListNode> seen = new HashSet<ListNode>();
+        while (head != null) {
+            if (!seen.add(head)) {
+                return true;
+            }
+            head = head.next;
+        }
+        return false;
+    }
+}
+```
+
+- 我：这里的hash表法，其实用的hashset；但是hashset的底层是hashmap；hashmap可以在o1的时间复杂度下判断两个对象（这里是key）是否相等。
+- 我：我觉得可以用`hashset.contains(obj)`来判断obj是否在hashset中；示例代码通过add的方式确实不容易记住用法，因为我记得有些add就不会返回值。
+
+复杂度分析:
+
+![image-20220515153137428](lcof.assets/image-20220515153137428.png)
+
+#### 官方2-快慢指针
+
+思路及算法：
+
+本方法需要读者对「Floyd 判圈算法」（又称龟兔赛跑算法）有所了解。
+
+假想「乌龟」和「兔子」在链表上移动，「兔子」跑得快，「乌龟」跑得慢。当「乌龟」和「兔子」从链表上的同一个节点开始移动时，如果该链表中没有环，那么「兔子」将一直处于「乌龟」的前方；如果该链表中有环，那么「兔子」会先于「乌龟」进入环，并且一直在环内移动。等到「乌龟」进入环时，由于「兔子」的速度快，它一定会在某个时刻与乌龟相遇，即套了「乌龟」若干圈。
+
+我们可以根据上述思路来解决本题。具体地，我们定义两个指针，一快一满。慢指针每次只移动一步，而快指针每次移动两步。初始时，慢指针在位置 head，而快指针在位置 head.next。这样一来，如果在移动的过程中，快指针反过来追上慢指针，就说明该链表为环形链表。否则快指针将到达链表尾部，该链表不为环形链表。
+
+细节：
+
+![image-20220515153724894](lcof.assets/image-20220515153724894.png)
+
+代码：
+
+```java
+public class Solution {
+    public boolean hasCycle(ListNode head) {
+        if (head == null || head.next == null) {
+            return false;
+        }
+        ListNode slow = head;
+        ListNode fast = head.next;
+        while (slow != fast) {
+            if (fast == null || fast.next == null) {
+                return false;
+            }
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        return true;
+    }
+}
+```
+
+- 我：示例这种循环判断的写法比我首战的写法更合理。
+
+复杂度分析：
+
+![image-20220515153802000](lcof.assets/image-20220515153802000.png)
+
 
 
 ## 111111字符串(简单)
@@ -2627,6 +2748,12 @@ class Solution {
 
 codetop==2
 
+和主站[65. 有效数字](https://leetcode.cn/problems/valid-number/)相同。
+
+#### 面试情况
+
+我字节一面出了这原题。这题剑指和主站的频率都很低，，给我出，感觉是不想要我。
+
 #### 首战寄
 
 没有啥很好的思路：
@@ -2638,7 +2765,7 @@ codetop==2
 网友评价：
 
 - 关键是题目中给的示例不详尽，提交一次，修改一次代码，修改的全是细节 做一次恶心一次
-- 这题是个典型的面向测试用例编程的题目
+-  这题是个典型的面向测试用例编程的题目
 
 #### 大佬-常规思路
 
@@ -2824,6 +2951,8 @@ class Solution {
 ```
 
 - 我：字符相减，可以得到数字字符的差值
+
+### [5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)
 
 
 
@@ -3770,6 +3899,112 @@ class Solution {
   - 快排在while交换位置时，要记住逼近要比较taregt，还要防止left right交叉。
   - random的用法不熟练。[参考](https://cloud.tencent.com/developer/article/1332907)，`java.util.Random`下的，`random.nextInt(x)`可以获取`[0,x-1]`的整数，范围相当于是[0,x)。
 
+
+
+### [33. 搜索旋转排序数组](https://leetcode.cn/problems/search-in-rotated-sorted-array/)
+
+#### 首战寄
+
+没有很好的思路
+
+#### 官方-二分查找
+
+思路和算法：
+
+![image-20220515182422390](lcof.assets/image-20220515182422390.png)
+
+![fig1](lcof.assets/33_fig1.png)
+
+需要注意的是，二分的写法有很多种，所以在判断 `target` 大小与有序部分的关系的时候可能会出现细节上的差别。
+
+代码：
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0, right = nums.length - 1;
+        while(left < right){
+            int mid = left + ((right - left) >> 1);
+            if(target == nums[mid])return mid;
+            if(nums[mid] < nums[right]){//有序部分为后半段，在后半段判断
+                if(target > nums[mid] && target <= nums[right]){
+                    left = mid + 1;
+                }else{//target大于右边界 or target小于nums[mid]
+                    right = mid - 1;
+                }
+            }else{//前半部分有序，在前半段判断
+                if(target >= nums[left] && target < nums[mid]){
+                    right = mid - 1;
+                }else{
+                    left = mid + 1;
+                }
+            }
+        }
+        return nums[left] == target ? left : -1;
+    }
+}
+```
+
+- 网友：评论区两拨人理解的都是对的，但是说的不是一个问题：一些人说的“只在有序的半边二分”指的是以mid为分界的；如果以“旋转点”来分两半的话，两半确实都是有序的！但是想解决该题，就必须在以mid为界的两半中去找单调的那一半持续二分，直至循环结束或找到target。该题的**思路其实挺简单**：始终去有序的那个范围内去找target，不在就去另一半无序的找，但是要将无序再次划分成有序然后再找...
+
+复杂度分析：
+
+![image-20220515182646056](lcof.assets/image-20220515182646056.png)
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        /**
+        使用双指针，用left和right确定mid，mid的一边是有序的。
+        1.如果target在mid的有序的一边的话，在有序这边二分
+        2.如果target不在mid有序的这一边的话，说明target在mid两侧的无序的那边，便在那边继续二分
+         */
+        
+        //定义双指针。使用左闭右开模板，所以right为nums.lengt而不减少1
+        int left=0,right=nums.length;
+
+        //迭代查找
+        while(left<right){
+            //计算mid，注意要防止整数范围溢出
+            int mid=left+(right-left)/2;//！！！注意left+(right-left)/2的mid可以和left重合；right-(right-left)/2的mid可以和right重合；一般左闭右开的写法都是允许mid和left重合
+
+            //先查看mid的位置是不是target，是的话直接返回index
+            if(nums[mid]==target)return mid;
+            
+            //如果有序区在mid的左边
+            if(nums[mid]>=nums[left]){//!!!注意一定要等于，因为[0,1)时，left==mid==0，right==1，所以nums[mid]的值应该允许等于nums[left]
+                //如果target在有序区中，往有序区中缩小查找范围
+                if(nums[left]<=target&&target<nums[mid]){//因为之前判断过nums[mid]不等于target，所以这里target小于nums[mid]即可
+                    right=mid;//因为mid已经在之前确定不是target的位置，所以让right==mid，体现了左闭右开
+                }else{//如果target不在有序区，那么在无序区中缩小查找对象
+                    left=mid+1;//因为mid已经在之前确定不是target的位置，所以让left==mid+1，体现了左闭右开
+                }
+
+            }else{//如果有序区在mid的右边
+                //如果target在有序区中，往有序区中缩小查找范围
+                if(nums[right-1]>=target&&target>nums[mid]){//target不需要等于nums[mid]，是因为之前判断过；right需要-1是因为right本身不在考虑的数据范围内（左闭右开）
+                    left=mid+1;
+
+                }else{
+                    right=mid;
+                }
+
+            }
+            
+        }
+
+        //退出时left==right说明[left,right)区间没有值，直接返回-1
+        return -1;
+    }
+}
+```
+
+- 我：核心就是要掌握二分查找左闭右开的思想！
+- 反思：
+  - 求mid的防止溢出的写法推荐为`mid=left+(right-left)/2;`，因为这样mid可以和left重合，左闭右开中基本都这么做。
+
 ## 搜索与回溯算法(简单)
 
 ### [剑指 Offer 32 - I. 从上到下打印二叉树](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-lcof/)
@@ -4536,6 +4771,89 @@ class Solution {
         return res;
 
         
+
+    }
+}
+```
+
+
+
+### [103. 二叉树的锯齿形层序遍历](https://leetcode.cn/problems/binary-tree-zigzag-level-order-traversal/)
+
+和[剑指 Offer 32 - III. 从上到下打印二叉树 III](https://leetcode.cn/problems/cong-shang-dao-xia-da-yin-er-cha-shu-iii-lcof/)类似，但是不相同；剑指说的是返回结果值锯齿状就行，那么就可以用双端队列cheat；但是主站这道题小括号中描述的就是以锯齿状方式遍历，可能就是推荐遍历的时候就是要用锯齿的方式。
+
+#### 首战成功
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    public List<List<Integer>> zigzagLevelOrder(TreeNode root) {
+        /**
+        使用两个队列，一个是当前层队列，一个是下一层队列：
+        1. 构成奇数层的队列时，从first开始放，先放右子节点，再放左子节点
+        2. 构成偶数层的队列时，从first开始放，先放左子节点，在放右子节点
+         */
+        //处理特殊情况
+        if(root==null)return new LinkedList<>();
+
+
+        List<List<Integer>> res=new LinkedList<>();
+        //实现bfs就要用队列，规定从last入队，从first出队
+        Deque<TreeNode> cur=new LinkedList<>();
+        cur.offerLast(root);
+
+        //bfs。从已有的第一层开始处理，即从第二层开始构建
+        int curLevel=1;
+        while(!cur.isEmpty()){//只要当前队列不为空就要处理
+            //建立本层专属的临时集合，在遍历的时候按顺序存入数据
+            List<Integer> temp=new ArrayList<>();
+            //每次层前清空存储next层的队列
+            Deque<TreeNode> next=new LinkedList<>();
+
+            //处理当前层的每个节点。！！！i至少为1才有节点
+            for(int i=cur.size();i>0;i--){
+                TreeNode curNode=cur.pollFirst();
+                //当前层temp加入节点的值
+                temp.add(curNode.val);
+                //根据构建的是奇数层还是偶数层来决定先加右节点还是左节点
+                if((curLevel&1)==1){//如果当前层是奇数层，那么构建的就是偶数层
+                    //从first，先加入右子节点，再加入左子节点
+                    if(curNode.left!=null)next.offerFirst(curNode.left);
+                    if(curNode.right!=null)next.offerFirst(curNode.right);
+
+                }else{//如果当前层是偶数层，那么构建的就是寄数层
+                    //从first，先加入右子节点，再加入左子节点。！！！注意，节点不为空才加入列表
+                    if(curNode.right!=null)next.offerFirst(curNode.right);
+                    if(curNode.left!=null)next.offerFirst(curNode.left);
+                }
+
+            }
+            //把当前层结果存入结果列表
+            res.add(temp);
+            //层数加一
+            curLevel++;
+            //next作为当前层
+            cur=next;
+            
+        }
+
+        //处理完节点后，返回
+        return res;
+
 
     }
 }
@@ -6236,6 +6554,81 @@ class Solution {
 - 我：他这个省掉了官方的`if(left == null && right == null) return null;`，其实也合理，因为right不为空left为空返回right，right为空left为空返回的null也正是right的值。
 - 我：感觉不如我首战告捷的好理解，全局变量yyds！！！
 
+
+
+### [236. 二叉树的最近公共祖先](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/)
+
+与[剑指 Offer 68 - II. 二叉树的最近公共祖先](https://leetcode.cn/problems/er-cha-shu-de-zui-jin-gong-gong-zu-xian-lcof/)相同
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode(int x) { val = x; }
+ * }
+ */
+class Solution {
+    //记录全局变量，保证找到结果后不会继续递归，节约时间。不过这会影响整个代码逻辑，就先不优化了。
+    //boolean gotten=false;
+    
+    public TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+        /**
+        树问题一般可以考虑采用后续遍历：先获取左子树的情况，再获取右子树的情况；然后结合左右子树和当前节点的情况处理当前节点。后续遍历也能实现自底向上的处理，避免重复计算。
+         
+        根据题意，一开始传入的树不会是空树
+         */
+
+        //设置递归触底返回条件
+        if(root==null) return null;
+
+        //如果当前递归层传入的节点不为空，进行真正的处理
+        //获取左右子树的结果
+        TreeNode left=lowestCommonAncestor(root.left,p,q);
+        TreeNode right=lowestCommonAncestor(root.right,p,q);
+        
+        //结合左右子树和当前节点的情况，求出当前节点的返回值。！！返回值只可能是“null p q 非pq的目标节点”
+        if(left!=null&&right!=null){//如果左右都有非空节点返回，那么说明当前节点就是目标节点
+            return root;
+        }else if(left!=null&&right==null){//如果left不为空，right为空，那么就结合当前节点的情况处理
+            if(left!=p&&left!=q){//如果左子树的返回不是p或q，那么就是目标节点，直接返回
+                return left;
+            }else if(root==p||root==q){//能走到这步说明左子树返回的是pq之一；如果左子树有pq之一，本节点也是pq之一，那么本节点就是目标节点，直接返回
+                return root;
+            }else{//如果左子树是pq之一，本节点不是pq之一，那么直接返回left表示本支线的有效值
+                return left;
+            }
+
+        }else if(left==null&&right!=null){//如果left为空，right不为空；那么就结合当前节点的情况处理
+            if(right!=p&&right!=q){
+                return right;
+            }else if(root==p||root==q){
+                return root;
+            }else{
+                return right;
+            }
+
+        }else{//对应left和right都为空的情况，判断当前节点是否为pq
+            if(root==p||root==q){
+                return root;
+            }else{//之前把有效情况处理了，最后剩下的就是无效情况；一般这么处理比较不会漏情况。
+                return null;//如果左右子树和本节点都没有用信息，返回null表示本支线没目标信息
+            }
+
+        }
+
+    }
+}
+```
+
+- 我：看了自己在剑指的写法，感觉我全局变量+新增recur的写法还是不错的；全局变量在保存res的情况下经常有用！
+
+
+
 ## 搜索与回溯算法(困难)
 
 ### [剑指 Offer 37. 序列化二叉树](https://leetcode-cn.com/problems/xu-lie-hua-er-cha-shu-lcof/)
@@ -6529,6 +6922,234 @@ class Solution {
   
   究其原因就是因为没有恢复字符串 导致基准字符串发生了两次改变 因此每一层调用的基准字符串都必须恢复原形才能保证完整性 不能中途更换基准字符串
   ```
+
+
+
+### [200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/)
+
+#### 首战寄
+
+没什么好思路
+
+#### 官方-dfs遍历数组
+
+1，在 LeetCode 中，「岛屿问题」是一个系列系列问题，比如：
+
+```
+L200. 岛屿数量 （Easy）
+463. 岛屿的周长 （Easy）
+695. 岛屿的最大面积 （Medium）
+827. 最大人工岛 （Hard）
+```
+
+我们所熟悉的 DFS（深度优先搜索）问题通常是在树或者图结构上进行的。而我们今天要讨论的 DFS 问题，是在一种「网格」结构中进行的。岛屿问题是这类网格 DFS 问题的典型代表。网格结构遍历起来要比二叉树复杂一些，如果没有掌握一定的方法，DFS 代码容易写得冗长繁杂。
+
+本文将以岛屿问题为例，展示网格类问题 DFS 通用思路，以及如何让代码变得简洁。
+
+2，网格类问题的 DFS 遍历方法-网格问题的基本概念：
+
+我们首先明确一下岛屿问题中的网格结构是如何定义的，以方便我们后面的讨论。
+
+网格问题是由 m ×n 个小方格组成一个网格，每个小方格与其上下左右四个方格认为是相邻的，要在这样的网格上进行某种搜索。
+
+岛屿问题是一类典型的网格问题。每个格子中的数字可能是 0 或者 1。我们把数字为 0 的格子看成海洋格子，数字为 1 的格子看成陆地格子，这样相邻的陆地格子就连接成一个岛屿。
+
+![岛屿问题示例](lcof.assets/c36f9ee4aa60007f02ff4298bc355fd6160aa2b0d628c3607c9281ce864b75a2.jpg)
+
+在这样一个设定下，就出现了各种岛屿问题的变种，包括岛屿的数量、面积、周长等。不过这些问题，基本都可以用 DFS 遍历来解决。
+
+3，DFS 的基本结构：
+
+网格结构要比二叉树结构稍微复杂一些，它其实是一种简化版的图结构。要写好网格上的 DFS 遍历，我们首先要理解二叉树上的 DFS 遍历方法，再类比写出网格结构上的 DFS 遍历。我们写的二叉树 DFS 遍历一般是这样的：
+
+```java
+void traverse(TreeNode root) {
+    // 判断 base case
+    if (root == null) {
+        return;
+    }
+    // 访问两个相邻结点：左子结点、右子结点
+    traverse(root.left);
+    traverse(root.right);
+}
+```
+
+可以看到，二叉树的 DFS 有两个要素：「访问相邻结点」和「判断 base case」。
+
+第一个要素是**访问相邻结点**。二叉树的相邻结点非常简单，只有左子结点和右子结点两个。二叉树本身就是一个递归定义的结构：一棵二叉树，它的左子树和右子树也是一棵二叉树。那么我们的 DFS 遍历只需要递归调用左子树和右子树即可。
+
+第二个要素是 **判断 base case**。一般来说，二叉树遍历的 base case 是 root == null。这样一个条件判断其实有两个含义：一方面，这表示 root 指向的子树为空，不需要再往下遍历了。另一方面，在 root == null 的时候及时返回，可以让后面的 root.left 和 root.right 操作不会出现空指针异常。
+
+对于网格上的 DFS，我们完全可以参考二叉树的 DFS，写出网格 DFS 的两个要素：
+
+首先，网格结构中的格子有多少相邻结点？答案是上下左右四个。对于格子 (r, c) 来说（r 和 c 分别代表行坐标和列坐标），四个相邻的格子分别是 (r-1, c)、(r+1, c)、(r, c-1)、(r, c+1)。换句话说，网格结构是「四叉」的。
+
+![网格结构中四个相邻的格子](lcof.assets/63f5803e9452ccecf92fa64f54c887ed0e4e4c3434b9fb246bf2b410e4424555.jpg)
+
+其次，网格 DFS 中的 base case 是什么？从二叉树的 base case 对应过来，应该是网格中不需要继续遍历、grid[r][c] 会出现数组下标越界异常的格子，也就是那些超出网格范围的格子。
+
+![网格 DFS 的 base case](lcof.assets/5a91ec351bcbe8e631e7e3e44e062794d6e53af95f6a5c778de369365b9d994e.jpg)
+
+这一点稍微有些反直觉，坐标竟然可以临时超出网格的范围？这种方法我称为「先污染后治理」—— 甭管当前是在哪个格子，先往四个方向走一步再说，如果发现走出了网格范围再赶紧返回。这跟二叉树的遍历方法是一样的，先递归调用，发现 root == null 再返回。
+
+这样，我们得到了网格 DFS 遍历的框架代码：
+
+```java
+void dfs(int[][] grid, int r, int c) {
+    // 判断 base case
+    // 如果坐标 (r, c) 超出了网格范围，直接返回
+    if (!inArea(grid, r, c)) {
+        return;
+    }
+    // 访问上、下、左、右四个相邻结点
+    dfs(grid, r - 1, c);
+    dfs(grid, r + 1, c);
+    dfs(grid, r, c - 1);
+    dfs(grid, r, c + 1);
+}
+
+// 判断坐标 (r, c) 是否在网格中
+boolean inArea(int[][] grid, int r, int c) {
+    return 0 <= r && r < grid.length 
+        	&& 0 <= c && c < grid[0].length;
+}
+```
+
+4,如何避免重复遍历:
+
+网格结构的 DFS 与二叉树的 DFS 最大的不同之处在于，遍历中可能遇到遍历过的结点。这是因为，网格结构本质上是一个「图」，我们可以把每个格子看成图中的结点，每个结点有向上下左右的四条边。在图中遍历时，自然可能遇到重复遍历结点。
+
+这时候，DFS 可能会不停地「兜圈子」，永远停不下来，如下图所示：
+
+![DFS 遍历可能会兜圈子（动图）](lcof.assets/7fec64afe8ab72c5df17d6a41a9cc9ba3879f58beec54a8791cbf108b9fd0685.gif)
+
+如何避免这样的重复遍历呢？答案是标记已经遍历过的格子。以岛屿问题为例，我们需要在所有值为 1 的陆地格子上做 DFS 遍历。每走过一个陆地格子，就把格子的值改为 2，这样当我们遇到 2 的时候，就知道这是遍历过的格子了。也就是说，每个格子可能取三个值：
+
+- 0 —— 海洋格子
+- 1 —— 陆地格子（未遍历过）
+- 2 —— 陆地格子（已遍历过）
+
+我们在框架代码中加入避免重复遍历的语句：
+
+```java
+void dfs(int[][] grid, int r, int c) {
+    // 判断 base case
+    if (!inArea(grid, r, c)) {
+        return;
+    }
+    // 如果这个格子不是岛屿，直接返回
+    if (grid[r][c] != 1) {
+        return;
+    }
+    grid[r][c] = 2; // 将格子标记为「已遍历过」
+    
+    // 访问上、下、左、右四个相邻结点
+    dfs(grid, r - 1, c);
+    dfs(grid, r + 1, c);
+    dfs(grid, r, c - 1);
+    dfs(grid, r, c + 1);
+}
+
+// 判断坐标 (r, c) 是否在网格中
+boolean inArea(int[][] grid, int r, int c) {
+    return 0 <= r && r < grid.length 
+        	&& 0 <= c && c < grid[0].length;
+}
+```
+
+![标记已遍历的格子](lcof.assets/20fe202fb5e5fc5048e140c29310c1bcbb17661860d2441e8a3feb1236a2e44d.gif)
+
+这样，我们就得到了一个岛屿问题、乃至各种网格问题的通用 DFS 遍历方法。以下所讲的几个例题，其实都只需要在 DFS 遍历框架上稍加修改而已。
+
+> 小贴士：
+>
+> 在一些题解中，可能会把「已遍历过的陆地格子」标记为和海洋格子一样的 0，美其名曰「陆地沉没方法」，即遍历完一个陆地格子就让陆地「沉没」为海洋。这种方法看似很巧妙，但实际上有很大隐患，因为这样我们就无法区分「海洋格子」和「已遍历过的陆地格子」了。如果题目更复杂一点，这很容易出 bug。
+
+5，代码：
+
+```java
+class Solution {
+    private int res;
+    public int numIslands(char[][] grid) {
+        res = 0;
+        for (int i = 0; i < grid.length; i ++) {
+            for (int j = 0; j < grid[0].length; j ++) {
+                if (grid[i][j] == '1') {//处理每一个还没被处理的岛屿
+                    dfsGrid(grid, i, j);//从当前节点登录岛屿，把岛屿的每个方格标记为2，避免重复处理节点
+                    res ++;//每遍历到一个还没被处理的岛屿就把结果加一
+                }
+            }
+        }
+        return res;
+    }
+
+    //本函数的功能主要从岛屿的“登录节点”开始把整个岛屿标记为2
+    private void dfsGrid(char[][] grid, int row, int col) {
+        if (row >= grid.length || col >= grid[0].length || row < 0 || col < 0) {//先污染后治理，如果发现坐标超过数组边界就退回
+            return;
+        }
+
+        if (grid[row][col] != '1') {//如果当前节点不是可处理的节点，就退回
+            return;
+        }
+
+        grid[row][col] = '2';
+        dfsGrid(grid, row - 1, col);//递归地把当前节点所属岛屿的所有节点标记为2
+        dfsGrid(grid, row + 1, col);
+        dfsGrid(grid, row, col - 1);
+        dfsGrid(grid, row, col + 1);
+    }
+}
+```
+
+#### 即时再战成功
+
+```java
+class Solution {
+    int res=0;
+    public int numIslands(char[][] grid) {
+        /**
+        经典的数组构成的岛屿问题。使用dfs处理：
+        1. 遍历节点，一旦发现1就在1处登录该岛屿，并用dfs把整个岛屿标记为2
+        2. 每遍历到一个1个岛屿，就给岛屿计数加一
+         */
+        
+        //遍历每个节点
+        for(int i=0;i<grid.length;i++){
+            for(int j=0;j<grid[0].length;j++){
+                //如果当前节点是一个岛屿的登录点，登录！并且增加计数
+                if(grid[i][j]=='1'){
+                    dfs(grid,i,j);
+                    res++;
+                }
+                //如果不是登录点就查看下一个遍历元素
+            }
+        }
+
+        return res;
+    }
+
+    public void dfs(char[][] grid,int i,int j){
+        //判断是否超过了数组边界,超过了就返回。避免后续出现超过数组边界的异常。
+        if(i<0||i>=grid.length||j<0||j>=grid[0].length){
+            return;
+        }
+
+        //判断当前节点是否为可处理的1，如果不是1则不用处理直接返回
+        if(grid[i][j]!='1')return;
+
+        //处理本节点：标记本节点为2表示处理过+dfs对四个方向递归
+        grid[i][j]='2';
+        dfs(grid,i-1,j);
+        dfs(grid,i+1,j);
+        dfs(grid,i,j-1);
+        dfs(grid,i,j+1);
+    }
+}
+```
+
+
+
 
 
 ## 动态规划(简单)
@@ -8819,7 +9440,161 @@ class Solution {
 
 
 
+### [88. 合并两个有序数组](https://leetcode.cn/problems/merge-sorted-array/)
 
+#### 首战寄
+
+题目推荐用O(m+n)来实现，没有很好的思路。
+
+我本来是想两个指针，把前m和n两个数组里最小的前m个数放到nums1的前m个数字处，然后把nums2中有序的n个数挪到nums1的末尾；但是发现没法实现。
+
+#### 官方-双指针
+
+解题思路：
+
+1. 几个月后重刷此题，感觉还是有点进步的
+2. 思路的重点一个是从后往前确定两组中该用哪个数字
+3. 另一个是结束条件以第二个数组全都插入进去为止
+
+画图理解：
+
+![image-20220515214934953](lcof.assets/image-20220515214934953.png)
+
+![image-20220515214946356](lcof.assets/image-20220515214946356.png)
+
+![image-20220515215007979](lcof.assets/image-20220515215007979.png)
+
+![image-20220515215028186](lcof.assets/image-20220515215028186.png)
+
+![image-20220515215045421](lcof.assets/image-20220515215045421.png)
+
+![image-20220515215057051](lcof.assets/image-20220515215057051.png)
+
+![image-20220515215107875](lcof.assets/image-20220515215107875.png)
+
+![image-20220515215119011](lcof.assets/image-20220515215119011.png)
+
+代码：
+
+```java
+/** 
+     楼主的解法，比官方的逆向双指针解法更高效  -- nums2都塞到nums1之后，就不用再继续处理了。<br/>
+     但是“交换”感觉没有  “比较两个数组，选择一个最大的塞到nums1的尾部”  好理解。<br/>
+     下面[@秋明杉](/u/qiu-ming-shan-w/) 的if else去掉了内层while循环，感觉又简化了一些.不过nums1[(m+n+1)]的写法不如单独定义一个i变量 <br/>
+     又参考了下面 @Quaint 的 nums1[--i]，替换掉nums[i--]
+  */
+class Solution {
+    public void merge(int[] nums1, int m, int[] nums2, int n) {
+         int i = nums1.length ;
+
+        while (n > 0) {
+            if (m > 0 && nums1[m-1] > nums2[n-1]) {
+                nums1[--i] = nums1[--m]; 
+                //替代swap，参考官方题解“逆向双指针解法”的公式
+            }else{
+                nums1[--i] = nums2[--n]; 
+                //替代swap，参考官方题解“逆向双指针解法”的公式
+            }
+          
+        }
+    }
+    
+}
+```
+
+- 我：nums1数组的后部分是空的，所以可以直接覆盖不影响结果。
+- 我：i和m之前相差的数总是n的值；所以不用担心在nums1的后面的i位置填入值时，会覆盖到m位置及之前的值；因为i和m重合时，说明m==0，那么也就没有数需要填了，也就不会被覆盖！！
+
+我：复杂度：
+
+- 空间复杂度：O(1)。只有变量i占用了额外的空间。
+- 时间复杂度：O(m+n)。最多把m+n个数复制到nums1的末尾的i处
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public void merge(int[] nums1, int m, int[] nums2, int n) {
+        /**
+        因为nuns1数组的后面是空的，所以可以把nums1和nums2的数值区最后的的较大的数放入nums1的0区，然后指针前移动
+        因为m和nums1.length的差别就是n，所以n为0的时候表示nums2完全合并进了nums1
+         */
+        
+        //因为m和n都是给定的长度，所以需要减一后才是真正的坐标；因此i也设置为-1后才为真正坐标的值；那么使用坐标时就得先“减”再用
+        int i=nums1.length;
+
+        while(n>=1){//n最小为1，表示允许处理的nums2的最小坐标为0
+            /**
+            如果nums1的待排序数的最后一个大于nums2的待排序数的最后一个。
+            
+            ！！注意while进来时只控制了n>=1，没控制m是否>=1，所以如果m=0，即nums1的待排序数为0，但是nums2待排序树不为0的话，尝试找nums1[m-1]会导致超过数组边界。所以要先判断m是否>=1，如果不是则直接把nums2的n处的值移入i。
+             */
+            if(m>=1&&nums1[m-1]>nums2[n-1]){
+                nums1[--i]=nums1[--m];
+            }else{
+                nums1[--i]=nums2[--n];
+            }
+        }
+
+    }
+}
+```
+
+### [160. 相交链表](https://leetcode.cn/problems/intersection-of-two-linked-lists/)
+
+和剑指52相同
+
+#### 首战成功
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) {
+ *         val = x;
+ *         next = null;
+ *     }
+ * }
+ */
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        /**
+        你走过我来时的路！！！
+        
+        因为skipA和akipB不一定相等，所以一条链表走完后要走另一条链表，让两者路径相等，这样才有机会让两个指针相交于同一个节点
+         */
+        //如果没有找到res就返回null。这里要强制初始化为null，否则编译不通过。。
+        ListNode res=null;
+        
+        //初始化指针
+        ListNode a=headA,b=headB;
+        //两个指针同时为null的话说明遍历完毕了,只要有一个不是null就可以执行循环
+        while(a!=null||b!=null){
+            //当一个指针走到结尾，另一个指针在链表中时，就把当前指针指向另一条队列的队头
+            if(a==null)a=headB;//不用担心移动的时候多走一步，因为另一个指针移动到头节点也会多走一步，就抵消了。
+            if(b==null)b=headA;
+
+            //走到这一步时，可以保证两个节点都不是空的
+            
+            //判断左右指针是否指向相等节点
+            if(a==b){
+                res=a;
+                break;
+            }
+
+            //当前两个指针互不相等的话，移动指针
+            a=a.next;
+            b=b.next;
+
+        }
+
+        return res;
+        
+    }
+}
+```
 
 
 
