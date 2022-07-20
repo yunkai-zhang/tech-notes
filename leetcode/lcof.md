@@ -6,7 +6,10 @@
 - 半寄：有思路且代码基本写对了，但是在不该错的地方debug，最后de出来了或者放弃本思路
 - 寄：有思路但是没完全写出来，或者完全没思路
 
+剑指和主站题目的摆放问题：
 
+- 如果主站题目和剑指重合，那么会放到一个单元中
+- 如果主站题目和剑指不重合，那么就放到对应标签的最大难度单元里。
 
 ## 基础知识
 
@@ -2428,6 +2431,50 @@ public class Solution {
 
 ![image-20220515153802000](lcof.assets/image-20220515153802000.png)
 
+### [23. 合并K个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)
+
+#### 首战
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        /**
+        如果列表包含的链表个数小于1，那么就不需要在列表内部进行链表合并。
+        
+        ????返回的[]是null吗
+         */
+        if(lists.length==0)return null;
+        else if(lists.length==1)return lists[0];
+
+        //走到这步说明lists中至少有两条链表，可以进行合并；我们指定one为第i-1条链表，two为第i条链表；
+        ListNode one=lists[0],two=lists[1];
+        //不断合并链表
+        for(int i=1;i<lists.length;i++){
+            //合并one two后更新one two。
+            one=merged(one,two);
+            if(i<lists.length-1)two=lists[i+1];//更新two的时候要防止超过数组边界
+        }
+
+        //返回one，one是最后合并后的链表
+        return one;
+    }
+
+    public ListNode merged(ListNode one,ListNode two){
+        
+    }
+}
+```
+
 
 
 ## 111111字符串(简单)
@@ -2953,6 +3000,146 @@ class Solution {
 - 我：字符相减，可以得到数字字符的差值
 
 ### [5. 最长回文子串](https://leetcode.cn/problems/longest-palindromic-substring/)
+
+#### 首战寄
+
+没什么好思路
+
+#### 官方-动态规划
+
+思路与算法：
+
+![image-20220522110207343](lcof.assets/image-20220522110207343.png)
+
+代码：
+
+```java
+public class Solution {
+
+    public String longestPalindrome(String s) {
+        int len = s.length();
+        if (len < 2) {
+            return s;
+        }
+
+        int maxLen = 1;
+        int begin = 0;
+        // dp[i][j] 表示 s[i..j] 是否是回文串
+        boolean[][] dp = new boolean[len][len];
+        // 初始化：所有长度为 1 的子串都是回文串
+        for (int i = 0; i < len; i++) {
+            dp[i][i] = true;
+        }
+
+        char[] charArray = s.toCharArray();
+        // 递推开始
+        // 先枚举子串长度
+        for (int L = 2; L <= len; L++) {
+            // 枚举左边界，左边界的上限设置可以宽松一些。因为就算j越界也会直接退出本轮循环
+            for (int i = 0; i < len; i++) {
+                // 由 L 和 i 可以确定右边界，即 j - i + 1 = L 得
+                int j = L + i - 1;
+                // 如果右边界越界，就可以退出当前循环
+                if (j >= len) {
+                    break;
+                }
+
+                if (charArray[i] != charArray[j]) {
+                    dp[i][j] = false;
+                } else {
+                    if (j - i < 3) {//回文核心是单个字符时，j-i==2；回文核心是两个字符时，j-i==1；
+                        dp[i][j] = true;
+                    } else {
+                        dp[i][j] = dp[i + 1][j - 1];
+                    }
+                }
+
+                // 只要 dp[i][L] == true 成立，就表示子串 s[i..L] 是回文，此时记录回文长度和起始位置
+                if (dp[i][j] && j - i + 1 > maxLen) {
+                    maxLen = j - i + 1;
+                    begin = i;
+                }
+            }
+        }
+        return s.substring(begin, begin + maxLen);
+    }
+}
+```
+
+复杂度分析：
+
+![image-20220522110300711](lcof.assets/image-20220522110300711.png)
+
+- 题目提示“s的最大长度为1000”，所以设计一个on2的算法是合理的。
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public String longestPalindrome(String s) {
+        /**
+        回文的特点是，拿掉左右两侧的字符后，剩下的字符还是回文；这就是动态规划的特点：
+        1. 针对不同的数组长度，以不同的字符开始，尝试判断当前字符串是否是回文
+        2. 大回文串的确定依赖于小回文串的结果；小回文串的结果记录与数组中。
+         */
+
+        int len=s.length();
+        
+        //处理特殊情况
+        if(len<=1)return s;
+
+        //s至少有两个字符才会使用逻辑处理
+        int maxLen=1;
+        int begin=0;
+
+        /**
+        动态规划必须保留结果，根据小结果推出大结果；所以创建用于保存结果的数组。
+        
+        dp[i][j]表示字符串的[i,j]部分是不是回文
+
+        由于i<j，所以二维数组的左下半不会被处理，会是默认的false。本函数只会处理对角线右上半。
+         */
+        boolean[][] dp=new boolean[len][len];
+        //由于动态规划依赖于触底，即依赖于最短的回文；所以显式设置最短回文[i,i]为true
+        for(int i=0;i<len;i++){
+            dp[i][i]=true;
+        }
+
+        //对每个回文长度做遍历。最外层遍历为len从小到大，保证了求较大len结果时总要较小len的结果做支撑。
+        for(int tempLen=1;tempLen<=len;tempLen++){
+            //在确定回文长度的前提下，让每个字符做起点来判断回文
+            for(int i=0;i<len;i++){
+                //根据i和templen可以求出j
+                int j=i+tempLen-1;
+                //如果j超过dp数组的边界，就直接退出对当前i的遍历
+                if(j>=len)break;
+
+                //判断dp[i][j]是否是回文字符串
+                if(s.charAt(i)!=s.charAt(j)){//如果ij位置的字符不同，肯定不是回文
+                    dp[i][j]=false;
+                }else{
+                    if(tempLen<=3){//如果ij位置字符相同，且当前子字符串长度为2或3，那么当前子字符串就是回文
+                        dp[i][j]=true;
+                    }else{//如果当前子字符串长度长于3，那么回文与否与[i+1,j-1]相同；同时因为子字符串长度长于3，所以dp[i+1][j-1]的时候仍在数组的右上半部(画图可看出)
+                        dp[i][j]=dp[i+1][j-1];
+
+                    }
+                }
+
+                //针对每个templen和i的组合，如果是回文的话，看看能否更新历史最大回文长度
+                if(dp[i][j]&&tempLen>maxLen){
+                    maxLen=tempLen;
+                    begin=i;
+                }
+            }
+        }
+
+        //on2处理完成后，返回结果。注意substring是左闭右开的。
+        return s.substring(begin,begin+maxLen);
+
+    }
+}
+```
 
 
 
@@ -6855,8 +7042,7 @@ class Solution {
         return list.toArray(new String[list.size()]);
     }
 
-    private void dfs(int x) {
-        //当递归函数到达第三层，就返回，因为此时第二第三个位置已经发生了交换
+    private void dfs(int x) {数到达第三层，就返回，因为此时第二第三个位置已经发生了交换
         if (x == c.length - 1) {
             //将字符数组转换为字符串
             list.add(String.valueOf(c));
@@ -6897,7 +7083,7 @@ class Solution {
 }
 ```
 
-- 网友点评：通过交换来固定某个位置的元素这个思路真的太棒了，就 abc 这个字符串来说，第一个位置可以放 a 或者 b 或者 c，但是如果确定要放某个字符，比如第一个位置放 a，那么第二个位置就只能放 b 或者 c；如果第一个位置放 b，那么第二个位置就只能放 a 或者 c；如果第一个位置放 c，那么第二个位置就只能放 a 或者 b；当把某个字符移动到第一位以后，暂时第一位的字符就固定住了，这时再去确定第二个位置的元素，并且此时第一个位置的元素不会再出现在后面的位置上，依次类推直到确定所有位置的元素，再往前回溯确定每个位置上其他可能出现的元素。
+- 网友点评：通过交换来固定某个位置的元素这个思路真的太棒了，就 abc 这个字符串来说，第一个位置可以放 a 或者 b 或者 c，但是如果确定要放某个字符，比如第一个位置放 a，那么第二个位置就只能放 b 或者 c；如果第一个位置放 b，那么第二个位置就只能放 a 或者 c；如果第一个位置放 c，那么第二个位置就只能放 a 或者 b；当把某个字符移动到第一位以后，暂时第一位的字符就**固定住**了，这时再去确定第二个位置的元素，并且此时第一个位置的元素不会再出现在后面的位置上，依次类推直到确定所有位置的元素，再往前回溯确定每个位置上其他可能出现的元素。
 
 - 网友解释递归中必须恢复字符串的原因：
 
@@ -7148,7 +7334,100 @@ class Solution {
 }
 ```
 
+### [46. 全排列](https://leetcode.cn/problems/permutations/)
 
+与[剑指 Offer 38. 字符串的排列](https://leetcode.cn/problems/zi-fu-chuan-de-pai-lie-lcof/)类似。
+
+#### 首战告捷
+
+```java
+class Solution {
+    Integer[] globalNums;//!!!!注意必须要设置为Integer，不然Arrays.toList(array)时会把整个int[]看做一个对象；参考：https://www.cnblogs.com/tina-smile/p/5056174.html
+    List<List<Integer>> res;
+    public List<List<Integer>> permute(int[] nums) {
+        /**
+        使用剑指38的回溯法
+         */
+        
+        //让传入的数组可以全局使用
+        globalNums=new Integer[nums.length];//一定要先给globalNums内存，不然把nums的值赋值给globalNums时会空指针异常
+        for(int i=0;i<nums.length;i++){
+            globalNums[i]=nums[i];//自动装箱
+        }
+        //构建用于存储结果的列表
+        res=new ArrayList<>();
+
+        //深度递归查找组合
+        dfs(0);
+
+        return res;
+
+    }
+
+    //深度递归
+    public void dfs(int x){
+        //设置触底，即什么时候把单条结果存入res
+        if(x==globalNums.length-1){
+            /**
+            Arrays.asList返回的不是真正的List，一般最好用new ArrayList包裹一下；并且包裹的时候最好用泛型<>指定类型。
+
+            ！！！注意:
+            字符串转化为字符数组：string.toCharArray();
+            列表转化为数组：list.toArray(new T[0]);
+            数组转化为列表：Arrays.asList(array);
+             */
+            //System.out.println("此时得到的结果是：");
+            //printNums();
+            res.add(new ArrayList<Integer>(Arrays.asList(globalNums)));
+
+            return;
+        }
+
+        //如果还没触底，说明globalnums从前往后固定还在进行中
+
+        //把globalnums的“x位置及之后”的每个数字都依次放到x的位置固定住
+        for(int i=x;i<globalNums.length;i++){
+            //交换globalnums的第i和x个元素，即固定globalnums的第x位元素
+            swap(i,x);
+            
+            //固定好第x层后，去固定第x+1层
+            dfs(x+1);
+
+            //dfs后要swap回来，这样不会影响本层的其他深度递归
+            swap(i,x);
+        }
+    }
+
+    public void swap(int i,int x){
+        int temp=globalNums[i];
+        globalNums[i]=globalNums[x];
+        globalNums[x]=temp;
+    }
+
+    // public void printNums(){
+    //     for(int num:globalNums){
+    //         System.out.print(num);
+    //     }
+    //     System.out.println("");
+    // }
+}
+```
+
+- ！！注意点（踩坑）：
+
+  - Arrays.toList(array)的array必须是对象数组，否则如果array是int[]的话会把整个int[]看做一个对象；所以要把传入的int[]转化成Integer[]参考：https://www.cnblogs.com/tina-smile/p/5056174.html
+
+  - Arrays.asList返回的不是真正的List，一般最好用new ArrayList包裹一下；并且包裹的时候最好用泛型<>指定类型
+
+  - 常见转换：
+
+    ```java
+    字符串转化为字符数组：string.toCharArray();
+    列表转化为数组：list.toArray(new T[0]);
+    数组转化为列表：Arrays.asList(array);
+    ```
+
+    
 
 
 
