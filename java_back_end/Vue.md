@@ -1031,6 +1031,8 @@ v-model是一个双向数据绑定，映射关系：View接受的数据,传给mo
 #### 单个复选框实现双向绑定
 
 - label组件的for属性显式绑定label组件和input组件，用label的值提示用户应该在input输入什么
+  - [参考文章](http://t.csdn.cn/1WHOv)
+
 - 本例复选框的check结果绑定了data.checked；label的value绑定了data.checked
 
 ```html
@@ -1234,7 +1236,7 @@ v-model是一个双向数据绑定，映射关系：View接受的数据,传给mo
 
 ![image-20211121210531388](Vue.assets/image-20211121210531388.png)
 
-#### 自定义组件使用`props`属性传递参数
+#### !!!!!!!!!!!!!!!!!!!!!!!!!!!自定义组件使用`props`属性传递参数
 
 如何理解props：
 
