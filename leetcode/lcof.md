@@ -13323,7 +13323,7 @@ class Solution {
   - 新建空数组的方式:`new int[0];`
   - 新建数组不要忘记new关键字
 
-## 11111数学(中等)
+## 数学(中等)
 
 ### [剑指 Offer 14- I. 剪绳子](https://leetcode-cn.com/problems/jian-sheng-zi-lcof/)
 
@@ -13481,6 +13481,8 @@ class Solution {
 ![image-20220415204353222](lcof.assets/image-20220415204353222.png)
 
 - 注意：官方这里说 滑动窗口一般左闭右开，但是实战中也可以自己实现两个都闭的方法，如本题。
+  - 我：左闭右开，让我想到了二分查找的经典写法。
+
 
 如何用滑动窗口解这道题：
 
@@ -13606,7 +13608,7 @@ class Solution {
             }
         }
 
-        return resultList.toArray(new int[resultList.size()][]);
+        return resultList.toArray(new int[0][]);
     }
 }
 ```
@@ -13635,6 +13637,8 @@ codetop 27
 O(n^2)的时间复杂度
 
 ![image-20220415235803966](lcof.assets/image-20220415235803966.png)
+
+- 我：时间复杂度为Omn是因为，一共有n个节点，每删掉一个节点都要走m步，所以综合删到最后一个节点的时间复杂度是Omn
 
 ![image.png](lcof.assets/0a7538f213070b64cac8427d453de6e305fb63c99e9585948f52a116e0558ddc-image.png)
 
@@ -13678,7 +13682,7 @@ class Solution {
 ```java
 class Solution {
     public int lastRemaining(int n, int m) {
-        int ans = 0;
+        int ans = 0;//我：初始化为0是因为最后一轮推演完成后只剩下第0个位置上有数
         // 最后一轮剩下2个人，所以从2开始反推
         for (int i = 2; i <= n; i++) {
             ans = (ans + m) % i;
@@ -13698,7 +13702,32 @@ codetop=1
 
 #### 首战寄
 
-没思路
+尝试直接在剪绳子I的基础上修改代码，失败：
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        double[] dp = new double[n + 1];
+        dp[2] = 1;
+        for(int i = 3; i < n + 1; i++){
+            for(int j = 2; j < i; j++){
+                dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j]));
+            }
+        }
+        return (int)(dp[n]%1000000007);//n==120时，输出953271157，期待953271190//我：这里针对求余后的double强转为int，损失较小。但是还是有损失，应该是中间某个dp超过int边界导致的。
+        //return (int)dp[n]%1000000007;//n==120时，输出147483633，期待953271190 //我：这个只转化了dp，对double强转为int导致损失较大
+    }
+}
+```
+
+1，我：本题和剪绳子I不同的点就是：
+
+1. n的范围扩大了！现在n可以是1000，那么比如1000且成10个100，那么就是100^10>整数范围约2*10^9。那么就会造成整数的溢出，会导致数字变成在最小整数基础上增大。[参考](http://t.csdn.cn/SVbdE)。所以在比较前就得取余才能避免整数溢出。
+
+2. 但是在比较之前取余的话，可能导致更小的数在取余后反而更大。比如`(1e9+8)%1e9+7==1`，小于`(1e9+6)%1e9+7==1e9+6`。
+3. math.max只接受double long int float类型的数据，[参考](http://t.csdn.cn/Ggwc4)
+
+- 综合以上3点，既不能只在结果处取余，也不能在过程中取余；所以得使用大数运算BigInteger来解决问题
 
 #### 大佬-贪心
 
@@ -13724,9 +13753,56 @@ class Solution {
 }
 ```
 
+#### 大佬-dp
+
+1，大佬1：这一题已经不能用动态规划了，取余之后max函数就不能用来比大小了。
+
+- 我和网友问：为什么不可以比较？return dpn的时候取余不就可以了？
+
+- 我：dp中不能存mod后的结果，否则无法比较大小；比如`(1e9+8)%1e9+7==1`，小于`(1e9+6)%1e9+7==1e9+6`。
+
+2，大佬2：可以使用动态规划+大数运算。剪绳子II，代码逻辑和I一样，只是把求最大值和求模写成大数的运算：
+
+```java
+//我：注意要引入这个包
+import java.math.BigInteger;
+class Solution {
+    public int cuttingRope(int n) {
+        BigInteger dp[] = new BigInteger[n + 1];
+        Arrays.fill(dp, BigInteger.valueOf(1));
+        for (int i = 3; i <= n; i++) {
+            for (int j = 1; j < i; j++) {
+                dp[i] = dp[i].max(BigInteger.valueOf(j * (i - j))).max(dp[i - j].multiply(BigInteger.valueOf(j)));
+            }
+        }
+        return  dp[n].mod(BigInteger.valueOf(1000000007)).intValue();
+    }
+}
+```
+
+- 我：注意biginteger里，max multiply valueof mod等的用法；所有的数都要转化成biginteger才能处理。
+- 我：java基础知识里，BigDecimal用于精准处理大数（比如和钱相关的），提到过"推荐使用它的`BigDecimal(String val)`构造方法或者 `BigDecimal.valueOf(double val)` 静态方法来创建对象",就不会丢失进度。这里区分BigDecimal和biginteger；decimal指的是十进制，是允许小数的；而Biginteger只处理整数；[参考](http://t.csdn.cn/BRCAL)
+
 #### 即时再战
 
 本题频率低，且普适性一般，暂放
+
+```java
+class Solution {
+    public int cuttingRope(int n) {
+        long[] dp = new long[n + 1];
+        dp[2] = 1;
+        for(int i = 3; i < n + 1; i++){
+            for(int j = 2; j < i; j++){
+                dp[i] = Math.max(dp[i], Math.max(j * (i - j), j * dp[i - j]));
+            }
+        }
+        return (dp[n])%(1e9+7);
+    }
+}
+```
+
+
 
 ### [剑指 Offer 43. 1～n 整数中 1 出现的次数](https://leetcode-cn.com/problems/1nzheng-shu-zhong-1chu-xian-de-ci-shu-lcof/)
 
@@ -13794,6 +13870,8 @@ class Solution {
 ```
 
 ### [剑指 Offer 44. 数字序列中某一位的数字](https://leetcode-cn.com/problems/shu-zi-xu-lie-zhong-mou-yi-wei-de-shu-zi-lcof/)
+
+codetop==2
 
 #### 首战寄
 
