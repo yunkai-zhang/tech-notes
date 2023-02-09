@@ -23,13 +23,15 @@
 
 1，计算参考：时间复杂度是总运算次数表达式中受n的变化影响最大的那一项(不含系数)。[详情参考](https://blog.csdn.net/firefly_2002/article/details/8008987)。
 
-### 输入输出
+### 输入输出+ACM
 
 #### 前言
 
-1，Java的常用输入输出语句https://www.cainiaojc.com/java/java-basic-input-output.html
+1，大厂一般用牛客做笔试，使用acm模式，即是空白版让写。这时候就要自己建名为Main的类，在里面写main方法，然后操作。 
 
-2，scanner简单一点：https://www.runoob.com/java/java-scanner-class.html
+2，Java的常用输入输出语句https://www.cainiaojc.com/java/java-basic-input-output.html
+
+3，scanner简单一点：https://www.runoob.com/java/java-scanner-class.html；（但是推荐用bufferreader）。
 
 ```java
 //以输入int为例
@@ -58,20 +60,25 @@ public class Main {
 
 牛客输入输出联系[网址](https://ac.nowcoder.com/acm/contest/5657#question)。
 
-- 推荐bufferreader，速度快
+- 推荐bufferreader，速度快，并且不会有吞回车的情况
 - 我：不需要都练习，直接练习“真实ACM练习”一道题即可
 
 #### 真实ACM练习
 
-1，ACM模式下的各种输入的[接收方式](https://blog.csdn.net/qq_39144436/article/details/124152391)：
+1，ACM模式下的两种输入的[接收方式](https://blog.csdn.net/qq_39144436/article/details/124152391)，着重看BufferReader的方式：
 
 - 引入`import java.io.*`
 - 类名限定`public class Main{}`
+  - 我：注意类名前的class小写
+
 - 主方法限定`public static void main(String[] args) throws IOException {}`
   - 注意main函数的入参String数组
   - 注意`throws IOException`
 - BufferedReader的创建方式`new BufferedReader(new InputStreamReader(System.in));`
-  - 尤其是BufferedReader的构造函数中输入了InputStreamReader
+  - 尤其是Buffer**ed**Reader的构造函数中输入了InputStream**Reader**，并且要给InputStreamReader传入System.in
+- BufferReader的接收中，常用`Integer.parseInt(br.readLine())`得到一行单个整数；` String[] ops=br.readLine().trim().split(" ")`处理一行多个参数的情况；
+  - 注意：split中要有**" "**
+
 
 2，大厂一般都用牛客的ACM模式出题，可以[练习这一题目](https://ac.nowcoder.com/acm/problem/13883),题目来自[牛客ACM竞赛](https://ac.nowcoder.com/acm/problem/list):
 
@@ -291,6 +298,32 @@ public class Main{
 ```
 
 - 注意：类名后无括号；main的小括号中有String[]args；main函数要throws IOException；
+
+练习[一道简单的](https://ac.nowcoder.com/acm/contest/5657/A?&headNav=acm)：
+
+```java
+import java.io.*;
+
+public class Main{
+    public static void main(String [] args) throws IOException{
+        BufferedReader br=new BufferedReader(new InputStreamReader(System.in));
+        
+        String line=br.readLine();
+        //只要还有输入就继续处理。
+        while(line!=null&&!line.isEmpty()){//isempty不能判断null。我：其实isempty没必要，因为要不读到有数据的行，要不就是读完了返回null。
+            String[] lineSplited=line.trim().split(" ");
+            int a=Integer.parseInt(lineSplited[0]);
+            int b=Integer.parseInt(lineSplited[1]);
+            System.out.println(a+b);
+            
+            //再尝试读一行
+            line=br.readLine();
+        }
+    }
+} 
+```
+
+- 我：这里用while循环自己实现了Scanner中hasNext的功能。这也可以看到，所有行的输入都读取完后，readLine拿到的是null，[参考](https://www.cnblogs.com/feizai-java/p/16193296.html)
 
 ### 类型转换
 
