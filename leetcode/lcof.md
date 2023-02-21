@@ -756,15 +756,30 @@ class Solution {
 
 - 参考：https://www.zhihu.com/question/36662980。
 
-## 111111栈与队列(简单)
+## 栈与队列(简单)
 
 ### 知识
 
 #### Queue和Deque用法
 
-1，[参考](http://t.csdn.cn/h7UcY)。尽量只用双向队列deque，它可以实现栈和队列；而且为了不抛异常，应该用`offer poll peek`,结合first和last。
+1，[参考](http://t.csdn.cn/h7UcY)。尽量只用双向队列deque，它可以实现栈和队列；
 
-### [剑指 Offer 09. 用两个栈实现队列](https://leetcode-cn.com/problems/yong-liang-ge-zhan-shi-xian-dui-lie-lcof/)
+- 为了不抛异常，应该用`offer poll peek`,结合first和last。
+- deque本身是可以直接当成栈使用的，可以调用push() pop() peek() 这三个栈的关键方法。
+
+#### 集合
+
+1，linkedlist一般用来实现list接口，linkedlist中：
+
+- 删除：有remove(int index)和remove(Object obj)，这两个方法是linkedlist自己的而不是从别的类或接口继承的，区分这两可以[参考](https://www.cnblogs.com/CCTVCHCH/p/14778299.html)
+- 增加：boolean add(E e)在链表末尾增加指定元素，从collection deque list queue AbstractList继承过来的；void add(int index,E e)在指定位置添加元素，从List接口实现的。
+  - 以上增加和删除提到的四个函数，在arraylist也完全一样用法。
+
+2，PriorityQueue从AbstractQueue继承了remove(Object obj)，但是并没有remove(int index)
+
+### [剑指
+
+### [ Offer 09. 用两个栈实现队列](https://leetcode-cn.com/problems/yong-liang-ge-zhan-shi-xian-dui-lie-lcof/)
 
 #### 首战寄
 
@@ -1031,7 +1046,9 @@ class MinStack {
 本题难点： 将 min() 函数复杂度降为 O(1)，可通过建立辅助栈实现；
 
 - 数据栈 A： 栈 A用于存储所有元素，保证入栈 push() 函数、出栈 pop() 函数、获取栈顶 top() 函数的正常逻辑。
-- 辅助栈 B ： 栈 B 中存储栈 A 中所有 非严格降序 的元素，则栈 A中的最小元素始终对应栈 B的栈顶元素，即 min() 函数只需返回栈 B 的栈顶元素即可。
+- 辅助栈 B ： 栈 B 中存储栈 A 中所有 非严格降序（） 的元素，则栈 A中的最小元素始终对应栈 B的栈顶元素，即 min() 函数只需返回栈 B 的栈顶元素即可。
+  - 我：非降序是 “非降-序”,而不是 “非-降序”，表示序列是增的样式；非严格降序，就是在大体是增的排序上，允许出现相连的相等的数。
+
 
 因此，只需设法维护好 栈 B的元素，使其保持非严格降序，即可实现 min() 函数的 O(1)复杂度。
 
@@ -1089,7 +1106,7 @@ class MinStack {
 ```
 
 - 我：重申，栈用deque实现！
-- 我：单调队列是o1拿到队列窗口内部的最值，是队列问题，队列是先进先出；本题是栈遵循先进后出，所以与单调队列问题相区别一下！所以本题实现o1拿到栈中最小值很简单，只需要辅助栈；但是窗口队列想o1拿到最小值就只能用单调队列实现了！
+- 我：单调队列（比如“剑指 Offer 59 - I. 滑动窗口的最大值”用到的）是o1拿到队列窗口内部的最值，是队列问题，队列是先进先出；本题是栈遵循先进后出，所以与单调队列问题相区别一下！所以本题实现o1拿到栈中最小值很简单，只需要辅助栈；但是窗口队列想o1拿到最小值就只能用单调队列实现了！
 
 ## 栈与队列(困难)
 
@@ -1123,8 +1140,12 @@ class Solution {
 ```
 
 - 网友评价：虽然时间复杂度是 nlogk ，但胜在思想和编写都简单。
-- 我：因为PQ内部会把元素排序，不是先进先出，而是保证最值先出；所以得用remove(val)来删除指定元素；用poll则每次把PQ的最大值移除了，不合理。
-- [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)
+  - 我：因为logk可以大于1，所以k比较大的时候，时间复杂度比单调队列还是差不少
+
+- 我：因为PQ内部会把元素排序，不是先进先出，而是保证最值先出；所以得用remove(Object obj)来删除指定元素；用poll则每次把PQ的最大值移除了，不合理。
+  - [javadoc官方描述PQ](https://docs.oracle.com/javase/8/docs/api/)：PQ只有remove(obj)，没有remove(index)
+
+- [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)，
 
 #### 官方-单调队列
 
@@ -1157,7 +1178,7 @@ class Solution {
         //队列按从大到小放入
         //如果首位值（即最大值）不在窗口区间，删除首位
         //如果新增的值小于队列尾部值，加到队列尾部
-        //如果新增值大于队列尾部值，删除队列中比新增值小的值，如果在把新增值加入到队列中
+        //如果新增值大于队列尾部值，删除队列中比新增值小的值，再把新增值加入到队列中
         //如果新增值大于队列中所有值，删除所有，然后把新增值放到队列首位，保证队列一直是从大到小
         if (nums.length == 0)   return nums;
 
@@ -1182,7 +1203,7 @@ class Solution {
             //删除队列中比当前值小的值
             while (!deque.isEmpty() && nums[i] > deque.peekLast())  deque.removeLast();
             //把当前值添加到队列中
-            deque.addLast(nums[i]);
+            deque.addLast(nums[i]);//我：总是要加入当前值；当前值可能会在下一个值被插入时删掉（如果当前值比下一个值小的话）
             //把队列的首位值添加到arr数组中
             arr[index++] = deque.peekFirst();
         }
@@ -1243,7 +1264,7 @@ class Solution {
 }
 ```
 
-### [剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
+### 11111[剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
 
 codetop 5
 
@@ -3720,6 +3741,101 @@ class Solution:
 
 下次再算这道题，用同向指针的快排法来写。
 
+
+
+### [19. 删除链表的倒数第 N 个结点](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        /**
+        1，建立伪头节点，从而保存头结点，并可以删除一个节点的情况；
+        2，双指针定位倒数，让f到末尾节点时，s停在要删掉的节点前面；
+        3，然后做简单的节点删除
+         */
+        ListNode dummyHead=new ListNode();
+        dummyHead.next=head;
+        ListNode s=dummyHead,f=dummyHead;
+        //让s和f之间相差n
+        while(n>0){
+            f=f.next;
+            n--;
+        }
+
+        //让f和s同步移动，f到达最后一个节点时，s在要删除节点的前一位
+        while(f.next!=null){
+            f=f.next;
+            s=s.next;
+        }
+
+        //删除节点：
+        s.next=s.next.next;
+
+        //return head;//如果链表只有[1]，那么return head就把被删掉的节点返回了；应该返回dummyHead.next才是真正的删除节点后链表头部
+        return dummyHead.next;
+    }
+}
+```
+
+- 我补充：倒数的思想，就要想到“双指针定位”，或者“栈后进先出”。栈需要On的时间复杂度，所以这里用双指针是最佳做法。
+
+#### 官方-栈
+
+代码：
+
+```java
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        ListNode dummy = new ListNode(0, head);
+        Deque<ListNode> stack = new LinkedList<ListNode>();
+        ListNode cur = dummy;
+        while (cur != null) {
+            stack.push(cur);
+            cur = cur.next;
+        }
+        for (int i = 0; i < n; ++i) {
+            stack.pop();
+        }
+        ListNode prev = stack.peek();
+        prev.next = prev.next.next;
+        ListNode ans = dummy.next;
+        return ans;
+    }
+}
+```
+
+
+
+复杂度分析
+
+- 时间复杂度：O(L)，其中 L是链表的长度。
+- 空间复杂度：O(L)，其中 L是链表的长度。主要为栈的开销。
+
+
+
+#### 官方-双指针
+
+代码：
+
+- 和我的一模一样，略
+
+复杂度：
+
+- 时间复杂度：O(L)，其中 L*L* 是链表的长度。
+- 空间复杂度：O(1)。
+
 ## 字符串(简单)
 
 ### [剑指 Offer 05. 替换空格](https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/)
@@ -5634,6 +5750,13 @@ class Solution {
   - 求mid的防止溢出的写法推荐为`mid=left+(right-left)/2;`，因为这样mid可以和left重合，左闭右开中基本都这么做。
 
 ## 搜索与回溯算法(简单)
+
+### 知识点
+
+1，搜索算法里有bfs和dfs，以树为例
+
+- 树的dfs算法有：前序 中序 后序遍历。用栈实现，这个栈可以是递归函数调用过的形式，也可以是Deque集合
+- 树的bfs算法有：层序遍历。用队列实现
 
 ### [剑指 Offer 32 - I. 从上到下打印二叉树](https://leetcode-cn.com/problems/cong-shang-dao-xia-da-yin-er-cha-shu-lcof/)
 
@@ -9126,6 +9249,184 @@ class Solution {
 
 - 我：对照官方代码，写了反思的注释，注释以“！！！反思”开头
 
+
+
+### [94. 二叉树的中序遍历](https://leetcode.cn/problems/binary-tree-inorder-traversal/)
+
+#### 首战递归略
+
+- 递归算法很简单，不写了。
+- 题目优化说用迭代的方式写，用迭代在树遍历领域的两个应用场景：
+  - 层序遍历：使用队列。不断迭代，直到队列为空
+  - 深度遍历：使用栈（Deque）。迭代的时候不断压栈弹栈，直到队列为空
+    - 这种一般是**先序**遍历，即先处理节点值，然后把左右子节点压入栈。
+
+#### 首战迭代寄
+
+一般都是用栈实现先序遍历。
+
+但是实现中序遍历就碰到问题了：
+
+- 节点第一次被访问的时候，左子树还没被加入结果，那么不能把当前节点的内容放进结果。那么当前结果该扔掉吗还是怎么处理呢？
+- 又尝试思路把结果先放入结果，然后处理左子树的时候把结果从list头部add，处理右子树的时候把结果从list尾部add。但是这样很乱，实现起来十分困难。
+
+失败的代码：
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    public List<Integer> inorderTraversal(TreeNode root) {
+        /**
+        挑战一下迭代算法：
+        1，使用栈存储数据
+        2，不断压栈弹栈，直到队列为空就遍历完了
+         */
+
+        //处理特殊情况
+        if(root==null) return null;
+
+        List<Integer> res=new LinkedList<>();
+        Deque<TreeNode> stack=new LinkedList<>();//双向队列Deque接口是支持push pop peek这些栈的函数的
+
+        //把首节点压入栈，便于迭代处理
+        stack.push(root);
+
+        while(!stack.isEmpty()){//list接口有isempty方法，deque的实现类linkedlist也实现了list接口
+            TreeNode cur=stack.pop();
+            //中序遍历先处理左子树
+            if(cur.left!=null)stack.push(cur.left);
+            
+        }
+
+        
+
+
+    }
+}
+```
+
+解决访问到当前节点时不能立刻存入res的问题：
+
+- 大佬的方法就用颜色区分了节点是第1次，还是第2次访问到当前节点。如果是第一次访问，就把当前节点和左右节点入栈，先处理左子树把左子树上的节点先放入res；如果是第二次访问，说明左子树的节点都被处理完了，就可以把当前节点加入res。
+
+#### 大佬-颜色标记法
+
+> 思路：
+
+官方题解中介绍了三种方法来完成树的中序遍历，包括：
+
+- 递归
+- 借助栈的迭代方法
+- 莫里斯遍历
+
+在树的深度优先遍历中（包括前序、中序、后序遍历），递归方法最为直观易懂，但**考虑到效率，我们通常不推荐使用递归**。
+
+栈迭代方法虽然提高了效率，但其嵌套循环却非常烧脑，不易理解，容易造成 “一看就懂，一写就废” 的窘况。而且对于不同的遍历顺序（前序、中序、后序），循环结构差异很大，更增加了记忆负担。
+
+因此，我在这里介绍一种 “颜色标记法” （瞎起的名字……），兼具栈迭代方法的高效，又像递归方法一样简洁易懂，更重要的是，这种方法对于前序、中序、后序遍历，能够写出完全一致的代码。
+
+其核心思想如下：
+
+- 使用颜色标记节点的状态，新节点为白色，已访问的节点为灰色。
+- 如果遇到的节点为白色，则将其标记为灰色，然后将其右子节点、自身、左子节点依次入栈。
+- 如果遇到的节点为灰色，则将节点的值输出。
+
+> 解释一下为什么需要“右子节点、自身、左子节点依次入栈”
+
+我们有一棵二叉树：
+
+```undefined
+      			中
+              /  \
+             左   右
+```
+
+前序遍历：中，左，右
+中序遍历：左，中，右
+后序遍历：左，右，中
+
+本题需要中序遍历。
+
+栈是一种 `先进后出`的结构，出栈顺序为`左，中，右`
+那么入栈顺序必须调整为倒序，也就是`右，中，左`
+
+同理，如果是前序遍历，入栈顺序为 `右，左，中`；后序遍历，入栈顺序`中，右，左`
+
+> 代码：
+
+使用这种方法实现的中序遍历如下：
+
+```java
+class Solution {
+    class ColorNode {
+        TreeNode node;
+        String color;
+        
+        public ColorNode(TreeNode node,String color){
+            this.node = node;
+            this.color = color;
+        }
+    }
+    public List<Integer> inorderTraversal(TreeNode root) {
+        if(root == null) return new ArrayList<Integer>();
+            
+        List<Integer> res = new ArrayList<>();
+        Stack<ColorNode> stack = new Stack<>();
+        stack.push(new ColorNode(root,"white"));
+        
+        while(!stack.empty()){
+            ColorNode cn = stack.pop();
+            
+            if(cn.color.equals("white")){
+                if(cn.node.right != null) stack.push(new ColorNode(cn.node.right,"white"));
+                stack.push(new ColorNode(cn.node,"gray"));
+                if(cn.node.left != null)stack.push(new ColorNode(cn.node.left,"white"));
+            }else{
+                res.add(cn.node.val);
+            }
+        }
+        
+        return res;
+    }
+}
+```
+
+- 我：这种做法没有把null值存入stack，因为stack类不像linkedlist类支持元素为null。
+
+```java
+class Solution:
+    def inorderTraversal(self, root: TreeNode) -> List[int]:
+        WHITE, GRAY = 0, 1
+        res = []
+        stack = [(WHITE, root)]
+        while stack:
+            color, node = stack.pop()
+            if node is None: continue
+            if color == WHITE:
+                stack.append((WHITE, node.right))
+                stack.append((GRAY, node))
+                stack.append((WHITE, node.left))
+            else:
+                res.append(node.val)
+        return res
+```
+
+- 我：另一个网友用python写法实现了，他这里把null也存入栈了。java用deque接口去引用linkedlist类，也可以存null；但是没必要存null，存了还得在取的时候判断一下，更麻烦。
+
 ## 动态规划(简单)
 
 ### [剑指 Offer 10- I. 斐波那契数列](https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/)
@@ -10484,6 +10785,145 @@ class Solution {
     }
 }
 ```
+
+### [72. 编辑距离](https://leetcode.cn/problems/edit-distance/)
+
+困难
+
+#### 首战寄
+
+无好的思路，困难题。。
+
+#### 大佬-动态规划
+
+> 思路：
+
+`dp[i][j]` 代表 `word1` 前 `i `个字母转换成` word2 `前` j `个字母需要最少步数
+
+所以，
+
+当 `word1[i] == word2[j]`，`dp[i][j] = dp[i-1][j-1]`；
+
+当 `word1[i] != word2[j]`，`dp[i][j] = min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]) + 1`
+
+其中，`dp[i-1][j-1]` 表示替换操作，`dp[i-1][j]` 表示删除操作，`dp[i][j-1]` 表示插入操作。
+
+- 对`dp[i-1][j-1] 表示替换操作，dp[i-1][j] 表示删除操作，dp[i][j-1] 表示插入操作。`的补充理解：
+
+  ```
+  以 word1 为 "horse"，word2 为 "ros"，且 dp[5][3] 为例，即要将 word1的前 5 个字符转换为 word2的前 3 个字符，也就是将 horse 转换为 ros，因此有：
+  
+  (1) dp[i-1][j-1]，即先将 word1 的前 4 个字符 hors 转换为 word2 的前 2 个字符 ro，!!!然后将第五个字符 word1[4]（因为下标基数以 0 开始） 由 e 替换为 s（即替换为 word2 的第三个字符，word2[2]）
+  
+  (2) dp[i][j-1]，即先将 word1 的前 5 个字符 horse 转换为 word2 的前 2 个字符 ro，!!!然后在末尾补充一个 s，即插入操作
+  
+  (3) dp[i-1][j]，即先将 word1 的前 4 个字符 hors 转换为 word2 的前 3 个字符 ros，!!!然后删除 word1 的第 5 个字符
+  ```
+
+  - 我：上面文段中"!!!然后"的操作，就代表了表达式中min后`+1`的操作。
+
+注意，针对第一行，第一列要单独考虑，我们引入 `''` 下图所示：
+
+![Snipaste_2019-05-29_15-28-02.png](lcof.assets/76574ab7ff2877d63b80a2d4f8496fab3c441065552edc562f62d5809e75e97e-Snipaste_2019-05-29_15-28-02.png)
+
+第一行，是 `word1 `为空变成` word2` 最少步数，就是插入操作
+
+第一列，是 `word1`变成空的`word2` 需要的最少步数，就是删除操作
+
+> 解释为什么要引入空元素，即dp必须使n+1的大小
+
+```
+  r 
+h 1
+o 2
+r 3
+```
+
+如上面的例子，如果不引入空字符串的话，word1到word2递推的话，r行对应的不该是3，而应该是2（删除ho）；这时候第一列和第一行的更新逻辑也不能一味+1了，也得参考当前对应值是否相等。
+
+修改代码为如下：
+
+```
+class Solution {
+    public int minDistance(String word1, String word2) {
+        /**
+        `dp[i][j]` 代表 `word1` 到 `i `位置转换成` word2 `到` j `位置需要最少步数；位置即index，范围为[0,String.length()-1]
+         */
+        int n1 = word1.length();
+        int n2 = word2.length();
+        //处理特殊空字符串的特殊情况
+        if(n1==0||n2==0) return n1==0?n2:n1;
+
+        int[][] dp = new int[n1][n2];
+        //最左上角的元素
+        dp[0][0]=word1.charAt(0)==word2.charAt(0)?0:1;//如果
+        // 第一行
+        for (int j = 1; j <n2; j++) {
+            if(word1.charAt(0)==word2.charAt(j)){
+                dp[0][j] = dp[0][j - 1];
+            }else{
+                dp[0][j]=dp[0][j - 1]+1;
+            }
+        }
+        // 第一列
+        for (int i = 1; i <n1; i++) {
+            if(word1.charAt(i)==word2.charAt(0)){
+                dp[i][0] = dp[i-1][0];
+            }else{
+                dp[i][0]=dp[i-1][0]+1;
+            }
+        }
+
+        for (int i = 1; i < n1; i++) {
+            for (int j = 1; j < n2; j++) {
+                if (word1.charAt(i) == word2.charAt(j)) dp[i][j] = dp[i - 1][j - 1];
+                else dp[i][j] = Math.min(Math.min(dp[i - 1][j - 1], dp[i][j - 1]), dp[i - 1][j]) + 1;
+            }
+        }
+        return dp[n1-1][n2-1];  
+    }
+}
+
+```
+
+这个代码通过了1143 / 1146个记录，但是无法通过下面这个案例：
+
+```
+"pneumonoultramicroscopicsilicovolcanoconiosis"
+"ultramicroscopically"
+```
+
+- 问问问：为什么无法通过？
+
+所以还是老实按照官方的思路，构建dp为前n个位置的转移，而不是index n及之前的转移。
+
+> 代码-自底向上:
+
+```java
+class Solution {
+    public int minDistance(String word1, String word2) {
+        int n1 = word1.length();
+        int n2 = word2.length();
+        int[][] dp = new int[n1 + 1][n2 + 1];
+        // 第一行
+        for (int j = 1; j <= n2; j++) dp[0][j] = dp[0][j - 1] + 1;
+        // 第一列
+        for (int i = 1; i <= n1; i++) dp[i][0] = dp[i - 1][0] + 1;
+
+        for (int i = 1; i <= n1; i++) {
+            for (int j = 1; j <= n2; j++) {
+                if (word1.charAt(i - 1) == word2.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1];
+                else dp[i][j] = Math.min(Math.min(dp[i - 1][j - 1], dp[i][j - 1]), dp[i - 1][j]) + 1;
+            }
+        }
+        return dp[n1][n2];  
+    }
+}
+```
+
+- 注意题目要求里有说：字符串长度可能为0，即可能输入空字符串。
+
+
 
 
 
