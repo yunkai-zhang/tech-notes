@@ -529,6 +529,29 @@ class Solution {
         return nums;
 
     }
+    
+    //递归的让左右两半的数组归并排序为有序数组，然后把有序的左右数组合并成大的有序数组
+    public void merge_sort(int[] nums,int left,int right,int[] temp){
+        //不停分割数组，直到最后数组中只存在两个数的时候才开始做归并
+        if(left<right){
+            //获取当前数组的位置中点;使用防整数溢出的写法
+            int mid=left+(right-left)/2;
+            /**
+            对数组左右继续分割，让他们从底层开始归并排序。
+            
+            mid必须放在左半边，因为划分到最后的index为left==0且right==1，此时mid==0，
+            如果mid放在右边那么右边的下一层递归的数组范围为[mid,right]即[0,1]没有缩小范围，
+            会一直递归下去导致栈溢出。
+             */
+            merge_sort(nums,left,mid,temp);
+            merge_sort(nums,mid+1,right,temp);
+
+            //把mid左右的已有序的数组合并成一个大的有序数组
+            merge(nums,left,mid,right,temp);
+        }
+        //如果没进入上面的if，说明数组已经分割为了单个元素，那么直接返回上一层递归，把左右两个元素合并为一个长度为2的有序数组
+
+    }
 
     //把有序的左右数组合并成大的有序数组
     public void merge(int[] nums,int left,int mid,int right,int[] temp){
@@ -560,29 +583,6 @@ class Solution {
         while(left<=right){
             nums[left++]=temp[t++];
         }
-    }
-
-    //递归的让左右两半的数组归并排序为有序数组，然后把有序的左右数组合并成大的有序数组
-    public void merge_sort(int[] nums,int left,int right,int[] temp){
-        //不停分割数组，直到最后数组中只存在两个数的时候才开始做归并
-        if(left<right){
-            //获取当前数组的位置中点;使用防整数溢出的写法
-            int mid=left+(right-left)/2;
-            /**
-            对数组左右继续分割，让他们从底层开始归并排序。
-            
-            mid必须放在左半边，因为划分到最后的index为left==0且right==1，此时mid==0，
-            如果mid放在右边那么右边的下一层递归的数组范围为[mid,right]即[0,1]没有缩小范围，
-            会一直递归下去导致栈溢出。
-             */
-            merge_sort(nums,left,mid,temp);
-            merge_sort(nums,mid+1,right,temp);
-
-            //把mid左右的已有序的数组合并成一个大的有序数组
-            merge(nums,left,mid,right,temp);
-        }
-        //如果没进入上面的if，说明数组已经分割为了单个元素，那么直接返回上一层递归，把左右两个元素合并为一个长度为2的有序数组
-
     }
 }
 ```
@@ -1264,7 +1264,7 @@ class Solution {
 }
 ```
 
-### 11111[剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
+### [剑指 Offer 59 - II. 队列的最大值](https://leetcode-cn.com/problems/dui-lie-de-zui-da-zhi-lcof/)
 
 codetop 5
 
@@ -1611,8 +1611,7 @@ class Solution {
 
 - 我和一些网友理解：递归本质就是栈的使用，隐式使用了JVM栈
 - 我这方法比官方还好，没有占用额外空间；时间复杂度一致；最高赞非官方解用的也是递归。
-  - 我补充：这里递归也要占有栈空间，最大深度时n，所以空间复杂度也是O(n)
-
+  - 我补充：这里递归也要占有栈空间，最大深度时n，所以空间复杂度也是O(n)；这么一看还是栈的方法好，可以避免stackoverflow。
 - 我20220426：递归函数传参容易把自己弄混，一般最好使用全局变量和数组；不过本题递归用到了本地变量deep倒序记录递归层级，所以这里不推荐使用全局变量。
 
 ---
@@ -2286,7 +2285,7 @@ public class LRUCache {
             if (size > capacity) {
                 // 如果超出容量，删除双向链表的尾部节点
                 DLinkedNode tail = removeTail();
-                // 删除哈希表中对应的项
+                // 删除哈希表中对应的项//我：参考https://www.runoob.com/java/java-hashmap-remove.html
                 cache.remove(tail.key);
                 --size;
             }
@@ -2936,16 +2935,16 @@ class Solution {
             return null;
         }
 
-        ListNode dummyHead = new ListNode(0);
+        ListNode dummyHead = new ListNode(0);//创建结果链表
         ListNode curr = dummyHead;
-        PriorityQueue<ListNode> pq = new PriorityQueue<>(new Comparator<ListNode>() {
+        PriorityQueue<ListNode> pq = new PriorityQueue<>(new Comparator<ListNode>() {//我：创建小顶堆
             @Override
             public int compare(ListNode o1, ListNode o2) {
                 return o1.val - o2.val;
             }
         });
 
-        for (ListNode list : lists) {
+        for (ListNode list : lists) {//我：每个链表都把首结点放入PQ
             if (list == null) {
                 continue;
             }
@@ -2953,13 +2952,14 @@ class Solution {
         }
 
         while (!pq.isEmpty()) {
-            ListNode nextNode = pq.poll();
-            curr.next = nextNode;
+            ListNode nextNode = pq.poll();//我：取出最小的节点
+            curr.next = nextNode;//我：把堆中最小的节点放入结果中
             curr = curr.next;
-            if (nextNode.next != null) {
+            if (nextNode.next != null) {//我：从PQ取出的节点如果有后续节点，就把后续节点补充进PQ
                 pq.add(nextNode.next);
             }
         }
+        //我：走到这就说明PQ为空即所有链表都处理完了；返回结果即可
         return dummyHead.next;
     }
 }
@@ -2970,6 +2970,7 @@ class Solution {
   - 我：这里注意复习一下PQ声明排序的方式，我个人也推荐使用lamda表达式。小顶堆即默认的升序，使用lamda表达式为`PriorityQueue<ListNode> pq = new PriorityQueue<>((o1,o2)->(o1.val-o2.val));`，已测验通过。
     - 注意lamda表达式：两个小括号夹一个箭头，右边小括号没有return，表达式传入构造函数
     - 注意PQ的构造函数：这里`<>`中不需要声明o1和o2的类型，因为等号左边的引用已经声明了。
+    - 我：Comparator的compare(o1,o2)方法返回值大于0（为true）时，交换o1和o2；保证“o1 o2”从左往右是递增的
 
 复杂度分析：
 
@@ -3836,7 +3837,7 @@ class Solution {
 - 时间复杂度：O(L)，其中 L*L* 是链表的长度。
 - 空间复杂度：O(1)。
 
-## 字符串(简单)
+## 11111字符串(简单)
 
 ### [剑指 Offer 05. 替换空格](https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/)
 
@@ -3904,6 +3905,10 @@ class Solution {
 ```
 
 - 我：` s.toCharArray()`可以把字符串转化为字符数组。
+
+- 我：SB.append可以附加 char int String：
+
+  ![image-20230222132454561](lcof.assets/image-20230222132454561.png)
 
 #### 官方2-字符数组
 
@@ -4142,6 +4147,33 @@ class Solution {
 
 - 我：尝试把null赋值给char会导致编译时报错`java: 不兼容的类型: <nulltype>无法转换为char`
 - 我：Deque接口本身就有push和pop，peek，可以直接做栈使用；不需要自己定义last为栈顶然后用offerlast和polllast
+
+#### 大佬-栈（且避免判断边界）
+
+1，我首战的写法类似官方的，但是我和官方都要判断边界条件，万一遗忘会导致错误。
+
+2，大佬还是用了栈的思想，但是避免了额外判断边界条件：
+
+```java
+public boolean isValid(String s) {
+    if(s.isEmpty())
+        return true;
+    Stack<Character> stack=new Stack<Character>();
+    for(char c:s.toCharArray()){
+        if(c=='(')
+            stack.push(')');
+        else if(c=='{')
+            stack.push('}');
+        else if(c=='[')
+            stack.push(']');
+        else if(stack.empty()||c!=stack.pop())//我：边界判断作为pop的前提，没有额外被处理。
+            return false;
+    }
+    return stack.isEmpty();
+}
+```
+
+
 
 ### 相关题目
 
@@ -4460,7 +4492,7 @@ class Solution {
         
         dp[i][j]表示字符串的[i,j]部分是不是回文
 
-        由于i<j，所以二维数组的左下半不会被处理，会是默认的false。本函数只会处理对角线右上半。
+        由于i<j，所以二维数组的左下半不会被处理，会是默认的false。本函数只会处理对角线右上半。即会不断处理j比大1，j比i大2....。
          */
         boolean[][] dp=new boolean[len][len];
         //由于动态规划依赖于触底，即依赖于最短的回文；所以显式设置最短回文[i,i]为true
