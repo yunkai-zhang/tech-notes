@@ -1147,6 +1147,13 @@ class Solution {
 
 - [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)，
 
+- 我**注意**：这里是本文目前第一次出现**lamda表达式**实现函数式接口，我总结下lamda表达式的用法：
+  - 正规lamda表达式是()->{}，但是只有一行的时候`{}`可以省略，省略{}后必须省略`return`和`;`；省略return后，return的内容可以用小括号包裹增加可读性，也可以不用。下面罗列可以or不可以的写法：
+    - 可以：`(o1,o2)-> {return o2-o1;}`，`(o1,o2)-> o2-o1`，`(o1,o2)-> (o2-o1)`，
+    - 不可以：`(o1,o2)-> {return o2-o1}`，`(o1,o2)-> {o2-o1}`，`(o1,o2)-> return o2-o1`，`(o1,o2)-> return o2-o1;`
+    - 总结规律：`{}return;`三者必须同存亡
+
+
 #### 官方-单调队列
 
 解题思路：
@@ -3837,7 +3844,7 @@ class Solution {
 - 时间复杂度：O(L)，其中 L*L* 是链表的长度。
 - 空间复杂度：O(1)。
 
-## 11111字符串(简单)
+## 字符串(简单)
 
 ### [剑指 Offer 05. 替换空格](https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/)
 
@@ -4492,7 +4499,7 @@ class Solution {
         
         dp[i][j]表示字符串的[i,j]部分是不是回文
 
-        由于i<j，所以二维数组的左下半不会被处理，会是默认的false。本函数只会处理对角线右上半。即会不断处理j比大1，j比i大2....。
+        由于i<j，所以二维数组的左下半不会被处理，会是默认的false。本函数只会处理对角线右上半。即会不断处理j比i大1，j比i大2....。
          */
         boolean[][] dp=new boolean[len][len];
         //由于动态规划依赖于触底，即依赖于最短的回文；所以显式设置最短回文[i,i]为true
@@ -6202,6 +6209,7 @@ class Solution {
 
 - 因为奇数层时从first拿，从last加；偶数层是从last拿，从first加；两者分别从两端拿。所以可以处理完奇数层后紧接着就处理偶数层。
 - 本题，奇数层从双端队列的左边拿数，偶数层从双端队列的右边拿数。
+- 我：打印奇数层和偶数层中，在加入子节点后，都是让left在靠近first的地方，right在靠近last的地方。
 
 
 
@@ -7973,6 +7981,7 @@ class Solution {
 - 学习剪枝思想。用返回值为-1剪枝是没想到的；自己写的时候一直想在树节点处记录信息，在递归查询的时候查询节点的历史记录来剪枝。
 - 我认为思想：求深度的函数，不单单是求深度了，在求每个节点的深度时，还会求已本节点为顶点的二叉树是否为完全二叉树。
 - java.lang.Math包的常用函数：`max,min,abs`
+- 20230224我：先看左子树是不是平衡二叉树，再看右子树是不是平衡二叉树，最后看当前节点为根节点的树是不是平衡二叉树。高度为-1（自底向上出现了不平衡）或真实高度（自底向上一直平衡）
 
 #### 官方2-先序遍历 + 判断深度 （从顶至底）
 
@@ -8224,6 +8233,7 @@ class Solution {
 ```
 
 - 核心：抓住二叉搜索树的特性！
+- 20230224我：当前节点第一次出现在pq之间时，当前就是最近公共祖先的位置。而且不需要考虑触底条件，因为从根节点往下二叉搜索寻找的时候，一定能在到达根节点之前找到目标公共祖先（题目说pq都存在）
 
 ### [剑指 Offer 68 - II. 二叉树的最近公共祖先](https://leetcode-cn.com/problems/er-cha-shu-de-zui-jin-gong-gong-zu-xian-lcof/)
 
@@ -8765,6 +8775,10 @@ class Solution {
 
 - 我：感觉这个方法更好理解；思路和我首战自己写的基本一样，但是优雅很多！
 
+- 我：注意`collection.toArray(new T[0])`可以把集合转化为数组，toArray方法来自于collection接口所以下面这些实现了collection接口的类都能使用toArray方法：
+
+  ![image-20230224131359793](lcof.assets/image-20230224131359793.png)
+
 ### [200. 岛屿数量](https://leetcode.cn/problems/number-of-islands/)
 
 #### 首战寄
@@ -9280,6 +9294,7 @@ class Solution {
 ```
 
 - 我：对照官方代码，写了反思的注释，注释以“！！！反思”开头
+- 我：因为dfs定义是“求以输入节点为起点的最大路径和”，和官方函数maxPathSum的定义不一样；所以虽然两者输入输出类型是一样的，但是定义不一样就是不能合并成一个函数。
 
 
 
@@ -9558,6 +9573,7 @@ class Solution {
 ```
 
 - 第一次提交的时候，忽略了处理n==1和0的情况；for循环无法处理n<2的情况，所以要做面对n==1和0的情况时的特殊处理。如上处理后就提交成功了。
+- 20230224我：pre1和pre2不需要在计算的时候求余，因为除了第一次计算，其他时候pre1和pre2本身就是求余后的值。
 
 
 
@@ -10739,7 +10755,7 @@ class Solution {
 #### 首战寄
 
 - 我：[0,n]的最长严格递增子序列，可以由[0,n-1]的最长严格递增子序列推得。可以考虑使用二维数组，用`num[i][j]`表示从第i个元素到第j个元素的最长严格递增序列的长度。核心是[0,n-1]的最长严格递增子序列的最后一位，最好要比第n位的数据小，这样才能延长序列。
-- 我：题目要求nlogn的时间复杂度（这是二分查找的时间复杂度），结合题目找的是递增，可以往二分查找的思路去想。
+- 我：题目要求nlogn的时间复杂度（logn是二分查找的时间复杂度），结合题目找的是递增，可以往二分查找的思路去想。
 
 没啥思路
 
@@ -11686,6 +11702,10 @@ class Solution {
 }
 ```
 
+- 我：尝试`Arrays.sort(nums,(o1,o2)->(o1-o2));`显式指定升序排序会报错`Arrays.<T#1>sort(T#1[],Comparator<? super T#1>) is not applicable (inference`。
+  - 原因：[参考](https://stackoverflow.com/questions/63963247/no-suitable-method-found-for-sort)，`public static <T> void Arrays.sort(T[] a, Comparator<? super T> c)`。You can't sort `int[]` array with comparator. Only `Integer[]`. So, your snippet could be rewritten with:`Arrays.sort(Arrays.stream(intIdx).boxed().toArray(), (a, b) -> intervals[a][0] - intervals[b][0]);`。即不能对int[]使用Comparator来排序，必须要对Integer！
+  - 修改：对基本类型数组的排序可以[参考](http://t.csdn.cn/GhGNP)
+
 #### 即时再战成功
 
 ```java
@@ -12275,6 +12295,8 @@ class Solution {
 - Arrays.sort方法使用，[参考](https://blog.csdn.net/ted_cs/article/details/82713706)；本例用的是Comparator接口做外部比较器，并用lamda表达式表达了comparator接口。
   - 我看官方的sort接口是传入Comparator接口的实现类，我还是安装java官方的来吧，即自己传Comparator。
   - 我：字符串形式的数字大小比较,`A.compareTo(B)`的正负性，与`Integer.parseInt(A)-Integer.parseInt(B)`相同，[参考](http://t.csdn.cn/RBmoj)
+  - 我：注意Arrays.sort(T[],Comparator)不能排序基本数据类型数组，比如int[]；想排序的话得转化为Integer数组再排序
+    - Arrays.sort(T[])是可以排序基本数据类型数组的，但是只能是升序，不能通过Comparator降序。
   
 - [Java中java.util.Comparator用法](https://www.cnblogs.com/XDU-Lakers/p/13985258.html)
   - 重写方法`public int compare(String o1, String o2) `，凡是返回1或者大于0的正数的时候就要交换位置
@@ -12447,7 +12469,7 @@ class Solution {
 
 - 我和网友：max - min < 5的思路很赞！这样效率就比我硬执行高。
 
-## 排序(中等)
+## 1111111排序(中等)
 
 ### [剑指 Offer 40. 最小的k个数](https://leetcode-cn.com/problems/zui-xiao-de-kge-shu-lcof/)
 
