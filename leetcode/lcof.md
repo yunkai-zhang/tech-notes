@@ -414,16 +414,43 @@ class Solution {
 1，排序的稳定性：
 
 - 参考：https://zhuanlan.zhihu.com/p/116046849
+  - 不稳定：堆排序，快速排序
+  - 稳定：归并排序，冒泡排序
+
 
 2，排序的复杂度：
 
-- 参考：http://t.csdn.cn/03x0P，留意快排 归并 堆 冒泡（冒泡因为太基础基本不会考）即可
+- [参考](http://t.csdn.cn/61jWc)，留意快排 归并 堆 冒泡（冒泡因为太基础基本不会考）即可
+  - 快排：时间（最好nlogn 平均nlogn 最坏n2），空间（平均logn 最坏n）
+  - 归并：时间（最好nlogn 平均nlogn 最坏nlogn），空间（平均n 最坏n）
+  - 堆排序：时间（最好nlogn 平均nlogn 最坏nlogn），空间（平均1 最坏1）
+  - 冒泡排序：时间（最好n 平均n2 最坏n2），空间（平均1 最坏1）
+
+
+3，排序对比，[参考](https://www.cnblogs.com/wwp666/p/15977170.html)：
+
+- 快速排序：
+  - 优点：时间复杂度的常数项是最低的（所以平均来说是**最快**）
+  - 缺点：最差时间复杂度可能n2（但尤其是大数据量下很难出现这种情况）
+- 归并排序：
+  - 优点：唯一满足**稳定性**的top3排序；并且时间复杂度总是nlogn能保证不会慢。
+  - 缺点：空间复杂度n是top3排序里最高的（所以排序大量数据的时候不推荐使用）
+- 堆排序：
+  - 优点：**空间复杂度**是o1为top3排序里最小的；时间复杂度总是nlogn能保证不慢
+  - 缺点：[实验效果](https://www.cnblogs.com/FengZeng666/p/14446495.html)看是top3排序里最慢的（虽然三者时间复杂度都是nlogn）
 
 #### 快速排序
 
 1，思路参考https://www.runoob.com/w3cnote/quick-sort.html。
 
 - 时间空间复杂度分析：https://blog.csdn.net/zrh_CSDN/article/details/81178125。
+
+1，快速排序优化[参考](http://t.csdn.cn/F7KfG)：
+
+- 三数取中法优化
+  上述算法采用将区间的最后一个元素作为关键字进行进一步的排序，但为了防止出现每次选择到最值元素这种最坏情况，引入三数取中法对算法进行优化。
+  三数取中法是取区间的第一个、最后一个和中间元素相比较，选择出大小居中的元素作为关键字。
+  引入了三数取中法之后，可以将最坏情况即原始序列有序的情况转换为最好情况，即每一次取到序列的中值元素，即每一次划分完全平均的二分迭代的最好情况。
 
 2，实战手撕成功：
 
@@ -5788,6 +5815,18 @@ class Solution {
 - 反思：
   - 求mid的防止溢出的写法推荐为`mid=left+(right-left)/2;`，因为这样mid可以和left重合，左闭右开中基本都这么做。
 
+### [4. 寻找两个正序数组的中位数](https://leetcode.cn/problems/median-of-two-sorted-arrays/)
+
+#### 首战寄
+
+看到要求时间复杂度是log(m+n)就想到要使用二分查找，但是后续没有思路
+
+#### 官方
+
+hard难度的先略
+
+
+
 ## 搜索与回溯算法(简单)
 
 ### 知识点
@@ -9474,6 +9513,115 @@ class Solution:
 
 - 我：另一个网友用python写法实现了，他这里把null也存入栈了。java用deque接口去引用linkedlist类，也可以存null；但是没必要存null，存了还得在取的时候判断一下，更麻烦。
 
+### [199. 二叉树的右视图](https://leetcode.cn/problems/binary-tree-right-side-view/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    public List<Integer> rightSideView(TreeNode root) {
+
+        //处理特殊情况
+        if(root==null)return new ArrayList();
+
+        //能走到这说明至少有一个节点
+        Deque<TreeNode> queue=new LinkedList<>();
+        List<Integer> res=new ArrayList<>();//保存层序遍历的每层最后一个节点
+        //从last进，从first出
+        queue.offerLast(root);
+        while(!queue.isEmpty()){//collection类都尽量用isempty判断空而不是size
+            for(int i=queue.size();i>0;i--){//对每层分层处理，只拿每层的最后一个节点
+                //先对当前节点进行处理，再把当前节点的左右子节点入队
+                TreeNode cur=queue.pollFirst();
+                if(i==1)res.add(cur.val);//该层的最后一个节点值会被放入res
+                if(cur.left!=null)queue.offerLast(cur.left);
+                if(cur.right!=null)queue.offerLast(cur.right);
+            }
+        }
+
+        return res;
+
+
+    }
+}
+```
+
+- 我：右视图其实就是每一层的展示，自然就想到层序遍历
+
+性能还不错：
+
+```
+执行用时：
+1 ms
+, 在所有 Java 提交中击败了
+81.62%
+的用户
+内存消耗：
+40.3 MB
+, 在所有 Java 提交中击败了
+45.59%
+的用户
+通过测试用例：
+216 / 216
+```
+
+#### 官方-bfs
+
+和我一模一样
+
+#### 官方-dfs
+
+思路： 我们按照 「根结点 -> 右子树 -> 左子树」 的顺序访问，就可以保证每层都是最先访问最右边的节点的。（与先序遍历 「根结点 -> 左子树 -> 右子树」 正好相反，先序遍历每层最先访问的是最左边的节点）
+
+时间复杂度： O(N)，每个节点都访问了 1 次。
+空间复杂度： O(N)，因为这不是一棵平衡二叉树，二叉树的深度最少是 logN, 最坏的情况下会退化成一条链表，深度就是 N，因此递归时使用的栈空间是 O(N)的。
+
+代码：
+
+```java
+class Solution {
+    List<Integer> res = new ArrayList<>();
+
+    public List<Integer> rightSideView(TreeNode root) {
+        dfs(root, 0); // 从根节点开始访问，根节点深度是0
+        return res;
+    }
+
+    private void dfs(TreeNode root, int depth) {
+        if (root == null) {
+            return;
+        }
+        // 先访问 当前节点，再递归地访问 右子树 和 左子树。
+        if (depth == res.size()) {   // 如果当前节点所在深度还没有出现在res里，说明在该深度下当前节点是第一个被访问的节点，因此将当前节点加入res中。
+            res.add(root.val);
+        }
+        depth++;
+        dfs(root.right, depth);
+        dfs(root.left, depth);
+    }
+}
+
+```
+
+- 我：感觉bfs更好理解
+
+
+
 ## 动态规划(简单)
 
 ### [剑指 Offer 10- I. 斐波那契数列](https://leetcode-cn.com/problems/fei-bo-na-qi-shu-lie-lcof/)
@@ -9734,7 +9882,11 @@ class Solution {
 }
 ```
 
+### [70. 爬楼梯](https://leetcode.cn/problems/climbing-stairs/)
 
+与剑指 Offer 10- II. 青蛙跳台阶问题，相同。
+
+略。
 
 ## 动态规划(中等)
 
@@ -12843,6 +12995,142 @@ class MedianFinder {
 
     <img src="lcof.assets/image-20220409010830512.png" alt="image-20220409010830512" style="zoom:50%;" />
 
+### [56. 合并区间](https://leetcode.cn/problems/merge-intervals/)
+
+#### 首战寄
+
+思路：把interval按照第一个元素升序，然后把interval内部数组两两合并
+
+```
+class Solution {
+    public int[][] merge(int[][] intervals) {
+        //把基本数据类型转化为包装类
+        Arrays.sort(intervals,(o1,o2)->(o1[0]-o2[0]));//把二维数组转化为按照内维第一个元素升序排列
+        //System.out.println(intervals[0][0]);
+        List<int[]>res=new ArrayList<>();
+        int i=0;
+        while(i<intervals.length-1){//保证至少有两个元素没被处理
+            //合并i和i+1的数组，直到无法再合并
+            while(i<intervals.length-1){
+                if(intervals[i][1]<=intervals[i+1][0]){//合并两者
+                    intervals[i+1][0]=intervals[i][0];
+                    intervals[i+1][1]=Math.max(intervals[i][1],intervals[i+1][1]);
+                    i++;
+                }else{
+                    //当前i位置对应的数组可以放入res
+                    res.add(intervals[i]);
+                    i++;
+                    break;//不能合并就退出当前死循环
+                }
+            }
+            
+        }
+        int[][] res1=new int[res.size()][2];
+        for(int j=0;j<res.size();j++){
+            res1[j][0]=res.get(j)[0];
+            res1[j][1]=res.get(j)[1];
+        }
+        return res1;
+    }
+}
+```
+
+- 我表扬：能自定义排序。虽然基本数据类型数组`int[]`是不能排序，但是`int[][]`是可以自定义排序的，因为`int[][]`的元素是`int[]`并不是基础数据类型。
+- 我反思：结尾尝试用`return res.toArray(new int[0])`来直接返回，但是toArray输入的应该是最终的格式即`new int[0][]`；toArray中输入的数组不需要体现完整的长度。
+- 我反思：我这里合并的思路是混乱的，官方解答的合并思路很清晰；看官方的吧。
+
+测试的有问题
+
+```
+输入
+[[8,10],[2,6],[1,3],[15,18]]
+输出
+[[1,3]]
+预期结果
+[[1,6],[8,10],[15,18]]
+```
+
+#### 官方-排序
+
+> 思路
+
+如果我们按照区间的左端点排序，那么在排完序的列表中，可以合并的区间一定是连续的。如下图所示，标记为蓝色、黄色和绿色的区间分别可以合并成一个大区间，它们在排完序的列表中是连续的：
+
+![56-2.png](lcof.assets/50417462969bd13230276c0847726c0909873d22135775ef4022e806475d763e-56-2.png)
+
+> 算法
+
+我们用数组 merged 存储最终的答案。
+
+首先，我们将列表中的区间按照左端点升序排序。然后我们将第一个区间加入 merged 数组中，并按顺序依次考虑之后的每个区间：
+
+- 如果当前区间的左端点在数组 merged 中最后一个区间的右端点之后，那么它们不会重合，我们可以直接将这个区间加入数组 merged 的末尾；
+
+- 否则，它们重合，我们需要用当前区间的右端点更新数组 merged 中最后一个区间的右端点，将其置为二者的较大值。
+
+> 正确性证明
+
+![image-20230228214116863](lcof.assets/image-20230228214116863.png)
+
+> 代码
+
+```java
+class Solution {
+    public int[][] merge(int[][] intervals) {
+        if (intervals.length == 0) {
+            return new int[0][2];
+        }
+        Arrays.sort(intervals, new Comparator<int[]>() {
+            public int compare(int[] interval1, int[] interval2) {
+                return interval1[0] - interval2[0];
+            }
+        });
+        List<int[]> merged = new ArrayList<int[]>();
+        for (int i = 0; i < intervals.length; ++i) {//针对每个intervel处理，要不直接加入merged，要不合并进merged的最近加入的区间
+            int L = intervals[i][0], R = intervals[i][1];
+            if (merged.size() == 0 || merged.get(merged.size() - 1)[1] < L) {
+                merged.add(new int[]{L, R});
+            } else {
+                merged.get(merged.size() - 1)[1] = Math.max(merged.get(merged.size() - 1)[1], R);
+            }
+        }
+        return merged.toArray(new int[merged.size()][]);//我：亲测，这里toArray中不用输入完整长度的数组，用new int[0][]即可
+    }
+}
+```
+
+- 我：comparator接口建议像我“首战”一样写成lamda格式
+- 我：注意这里toArray要写成列表被转化成的最终格式，而不是写成list的每个元素被塞入什么结构中；并且要在列表的维度（本例中列表的维度对应数组的第一维）给数组赋予象征性的内存。在本例中，list中的int[]会被塞入int[]中形成`int[][]`；所以要输入`int[0][]`
+
+> 复杂度分析
+
+- 时间复杂度：O(nlogn)，其中 n为区间的数量。除去排序的开销，我们只需要一次线性扫描，所以主要的时间开销是排序的 O(nlogn)。
+
+- 空间复杂度：O(logn)，其中 n 为区间的数量。这里计算的是存储答案之外，使用的额外空间。O(logn) 即为排序所需要的空间复杂度。
+
+### [31. 下一个排列](https://leetcode.cn/problems/next-permutation/)
+
+#### 首战寄
+
+思路：
+
+1. 先获取当前数组的全排列（[剑指 Offer 38. 字符串的排列](https://leetcode.cn/problems/zi-fu-chuan-de-pai-lie-lcof/)），把全排列的各个结果加入一个数组列表（`List<int[]>`）
+2. 然后把列表中的每个数组都转化为字符串，得到一个字符串列表（`List<String>`）
+3. 把字符串列表按从小到大排序（[剑指 Offer 45. 把数组排成最小的数](https://leetcode-cn.com/problems/ba-shu-zu-pai-cheng-zui-xiao-de-shu-lcof/)）
+   - 注意，因为字符串长度最大为`100*3==300`位远超过常用基本数据类型的范围，这里要使用字符串的s1.compareTo(s2)去判断两个数值型字符串的大小（按字典顺序比较两个字符串，正负性等价于(int)s1-(int)s2），而不能用Integer.valueOf()把字符串转化为整数后再比较了
+4. 把输入的nums转化为字符串，遍历排序后的字符串列表，就可以找到指定nums的字符串格式的下一个排列
+5. 把字符串转化为数组
+
+但这思路不可行，因为：
+
+1. 数组最长为100，要求长为100的数组的全排列是很耗时，且占用内存的，因为全排列很多。剑指38能全排列是因为限制字符串长度为8
+2. 对全排列（A100 100）个字符串做排序，也是耗时的
+
+综上我这思路不是最好的思路，也不是可行的思路
+
+#### 官方
+
+https://leetcode.cn/problems/next-permutation/solution/xia-yi-ge-pai-lie-suan-fa-xiang-jie-si-lu-tui-dao-/
 
 ## 分治算法(中等)
 
@@ -12969,7 +13257,7 @@ class Solution {
         TreeNode cur=new TreeNode(rootValue);
 
         /*
-        递归创建当前节点的左右子节点：
+        递归创建当前节点的左右子树：
         1.根据先序遍历数组的特点可知，左子节点（即左子树的根节点）的pre_root_idx即为当前pre_root_idx+1，右子节点（即右子树的根节点）的pre_root_idx即为当前pre_root_idx+左子树节点个数+1(加1是为了越过左子树而到达右子树)
         2.根据中序遍历数组的特点可知，中序遍历中，左子树的左边界为in_left_idx，左子树的右边界为in_root_index-1;
                                                   右子树的左边界为in_root_index+1，右子树的右边界为in_right_idx
@@ -13088,6 +13376,7 @@ class Solution {
   - 网友答：因为32位int是补码形式，正数是和原码相同，范围是0到2的31次方-1，但是对于负数，需要反码+1，范围是负2的31次方到0，负数要比正数多一个数字。如果传进来的int刚好是负2的32次方，取相反数之后就超过int32类型的取值范围了，所以需要用long来扩大取值范围。不好意思啊，评论区数学公式不太好打。
     - 我：题目要求里`-2^31 <= n <= 2^31-1`也可以看出n的取值时整个整数范围，换算成十进制约为`-2*10^9~2*10^9`。
   - 注意：有符号的话有个符号站位，就级数是2的31次方；如果没有正负号，就所有位都用来保存数字，级数就为2的32次方。
+- 我：带符号右移`>>`的话，正数在高位补0，负数在补码的高位补1；不带符号右移`>>>`的话，正数在高位补0，负数也在补码的高位补0
 
 #### 即时再战成功
 
@@ -13132,7 +13421,7 @@ class Solution {
 
 
 
-### [剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
+### 1111111[剑指 Offer 33. 二叉搜索树的后序遍历序列](https://leetcode-cn.com/problems/er-cha-sou-suo-shu-de-hou-xu-bian-li-xu-lie-lcof/)
 
 codetop==12
 
