@@ -3871,6 +3871,175 @@ class Solution {
 - 时间复杂度：O(L)，其中 L*L* 是链表的长度。
 - 空间复杂度：O(1)。
 
+### [82. 删除排序链表中的重复元素 II](https://leetcode.cn/problems/remove-duplicates-from-sorted-list-ii/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode() {}
+ *     ListNode(int val) { this.val = val; }
+ *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+ * }
+ */
+class Solution {
+    public ListNode deleteDuplicates(ListNode head) {
+        /**
+        因为链表是排序的，所以重复的节点都在一起，on的时间复杂度遍历删除
+         */
+
+        //处理特殊情况
+        if(head==null||head.next==null)return head;
+        
+        //建立伪头节点，方便删除第一个元素
+        ListNode dummyHead=new ListNode();
+        dummyHead.next=head;
+
+        ListNode cur=head,prev=dummyHead;
+        int gap=0;
+        //on时间复杂度遍历链表
+        while(cur!=null&&cur.next!=null){//之前处理了链表长度为0和1的情况，所以走到这的链表长度至少为2//!!!注意：完成删除后cur可能是null，所以外循环得先保证cur不为null；外循环保证cur不为null后内循环就不用管cur是否为null了，因为内循环自己会在curnext为空的时候停下来
+            //如果cur和curnext相同的话就一直略过，相同的段会被删除
+            while(cur.next!=null&&cur.val==cur.next.val){//对cur.next取val前一定要保证cur.next非空，否则会空指针异常
+                cur=cur.next;
+                gap++;
+            }
+            //走到这说明cur和curnext不同
+            if(gap>0){//如果cur滑过的gap大于0，调整prev的指向从而实现“prev的下一位是cur.next”
+                prev.next=cur.next;
+                cur=cur.next;//!!!注意，因为(prev,cur]的节点都被删除了，所以删除后cur得后移动一位才为prevnext
+                gap=0;
+            }else{//如果cur没有划过任何值，说明while执行前cur和curnext不同，prev和cur都后移一位
+                prev=prev.next;
+                cur=cur.next;
+            }
+        }
+        //走到这说明cur是最后一个节点了，已经不需要和curnext比较了
+        return dummyHead.next;
+
+    }
+}
+```
+
+- 我：提交不是一次成功的，修改了几个bug，留意注释里的“!!!注意”
+- 网友：这种题就是迭代很难，相当于中等，递归才是简单。
+
+#### 大佬-递归
+
+- 我：看到这道题的时候第一时间就想到迭代的方法，但是迭代的边界处理是容易出错的；大佬的这种递归方法思路简单且不容易错。不过我迭代的空间复杂度o1比递归的on好。
+
+链表和树的问题，一般都可以有递归和迭代两种写法。对于本题一定记住是有序链表，值相同的节点会在一起。
+
+> 1.1 递归函数定义
+
+递归最基本的是要明白递归函数的定义！ 我反复强调过这一点。
+
+递归函数直接使用题目给出的函数 deleteDuplicates(head) ，它的含义是 删除以 head 作为开头的有序链表中，值出现重复的节点。
+
+> 1.2 递归终止条件
+
+终止条件就是能想到的基本的、不用继续递归处理的case。
+
+- 如果 head 为空，那么肯定没有值出现重复的节点，直接返回 head；
+- 如果 head.next 为空，那么说明链表中只有一个节点，也没有值出现重复的节点，也直接返回 head。
+
+> 1.3 递归调用
+
+什么时候需要递归呢？我们想一下这两种情况：
+
+- 如果 head.val != head.next.val ，说明头节点的值不等于下一个节点的值，所以当前的 head 节点必须保留；但是 head.next 节点要不要保留呢？我们还不知道，需要对 head.next 进行递归，即对 head.next 作为头节点的链表，去除值重复的节点。所以 head.next = self.deleteDuplicates(head.next).
+- 如果 head.val == head.next.val ，说明头节点的值等于下一个节点的值，所以当前的 head 节点必须删除，并且 head 之后所有与 head.val 相等的节点也都需要删除；删除到哪个节点为止呢？需要用 move 指针一直向后遍历寻找到与 head.val 不等的节点。此时 move 之前的节点都不保留了，因此返回 deleteDuplicates(move);
+
+> 1.4 返回结果
+
+题目让我们返回删除了值重复的节点后剩余的链表，结合上面两种递归调用的情况。
+
+- 如果 head.val != head.next.val ，头结点需要保留，因此返回的是 head；
+- 如果 head.val == head.next.val ，头结点需要删除，需要返回的是deleteDuplicates(move);。
+
+> 图示
+
+对链表 1 -> 2 -> 2 -> 3 递归的过程如下。
+
+![82.001.jpeg](lcof.assets/1616650335-dUWxLB-82.001.jpeg)
+
+>代码
+
+```java
+public ListNode deleteDuplicates(ListNode head) {
+    // 没有节点或者只有一个节点，必然没有重复元素
+    if (head == null || head.next == null) return head;
+
+    // 当前节点和下一个节点，值不同，则head的值是需要保留的，对head.next继续递归
+    if (head.val != head.next.val) {
+        head.next = deleteDuplicates(head.next);
+        return head;
+    } else {
+        // 当前节点与下一个节点的值重复了，重复的值都不能要。
+        // 一直往下找，找到不重复的节点。返回对不重复节点的递归结果
+        ListNode notDup = head.next.next;
+        while (notDup != null && notDup.val == head.val) {
+            notDup = notDup.next;
+        }
+        return deleteDuplicates(notDup);
+    }
+}
+```
+
+> 复杂度分析
+
+- 时间复杂度：O(N)，每个节点访问了一次。
+- 空间复杂度：O(N)，递归调用的时候会用到了系统的栈。
+
+#### 大佬-迭代
+
+- 我：和我的思路差不多
+
+> 思路
+
+这里说的一次遍历，是说**一边遍历、一边统计相邻节点的值是否相等，如果值相等就继续后移找到值不等的位置，然后删除值相等的这个区间**。
+
+其实思路很简单，跟递归方法中的 **while 语句跳过所有值相等的节点**的思路是一样的：如果 cur.val == cur.next.val  说明两个相邻的节点值相等，所以继续后移，一直找到 cur.val != cur.next.val  ，此时的 cur.next  就是值不等的节点。
+
+- 比如： 1 -> 2 -> 2 -> 2 -> 3，我们用一个 pre 指向 1；当 cur 指向第一个 2 的时候，发现 cur.val == cur.next.val  ，所以出现了值重复的节点啊，所以 cur 一直后移到最后一个 2 的时候，发现 cur.val != cur.next.val  ，此时 cur.next = 3 ，所以 pre.next = cur.next ，即让1 的 next 节点是 3，就把中间的所有 2 都删除了。
+
+代码中用到了一个常用的技巧：**dummy 节点**，也叫做 哑节点。它在链表的迭代写法中非常常见，因为对于本题而言，我们可能会删除头结点 head，为了维护一个不变的头节点，所以我们添加了 dummy，让dummy.next = head，这样即使 head 被删了，那么会操作 dummy.next 指向新的链表头部，所以最终返回的也是 dummy.next。
+
+> 代码
+
+```java
+class Solution {
+   public ListNode deleteDuplicates(ListNode head) {
+       if(head==null||head.next==null) return head;
+		 //维护一个不变的结点guard
+	ListNode guard=new ListNode();
+	guard.next=head;
+        ListNode pre=guard;
+	ListNode cur=head;
+	while(cur!=null){
+            //如果出现重复的情况如下
+			//相等的结点则跳过,走到相同值元素的最后一步
+	    while(cur.next!=null&&cur.next.val==cur.val) cur=cur.next;
+            //如果pre和cur之间没有重复节点，pre后移
+            if(pre.next==cur)  pre=pre.next;
+            //将cur的前指针向后移动一位
+            else pre.next=cur.next;
+			cur=cur.next;
+	}
+		 return guard.next;	 
+    }
+}
+```
+
+> 复杂度分析
+
+- 时间复杂度：O(N)，对链表每个节点遍历了一次；
+- 空间复杂度：O(1)，只使用了常量的空间。
+
 ## 字符串(简单)
 
 ### [剑指 Offer 05. 替换空格](https://leetcode-cn.com/problems/ti-huan-kong-ge-lcof/)
@@ -13235,6 +13404,46 @@ class Solution {
   - 网友答： 因为题目要求，如果不存在下一个更大的排列，则将数字升序排列
 - 我：Arrays.sort排序基本类型和对象[参考](http://t.csdn.cn/B3FIQ)。
 - 我：`Arrays.sort(T[] a,int formIndex, int toIndex) `的区间是针对index的左闭右开。
+
+#### 即时再战成功
+
+```java
+class Solution {
+    public void nextPermutation(int[] nums) {
+        /**
+        从右往左看，尽量找到第一个比nums大的排列
+         */
+        
+        //因为要尽可能接近nums原排列，所以从右往左遍历
+        for(int i=nums.length-1;i>0;i--){//!!!注意：i必须大于0，这样i-1才不会超过数组边界
+            //找到第一个递增的位置，这样才有逆转递增从而让数更大的机会
+            if(nums[i]>nums[i-1]){
+                //让[i,end)有序
+                Arrays.sort(nums,i,nums.length);
+                //交换i-1和[i,end)中第一个比i-1位置更大的数
+                for(int j=i;j<nums.length;j++){
+                    if(nums[j]>nums[i-1]){
+                        //交换j和i-1位置上的元素
+                        int temp=nums[j];
+                        nums[j]=nums[i-1];
+                        nums[i-1]=temp;
+                        return;//！！！注意：保证最小的交换完后就退出。这里是return而不要误写成break
+                    }
+                }
+
+
+            }
+        }
+
+        //根据题意，如果序列是递减的，就返回递增
+        Arrays.sort(nums);
+        return;
+
+    }
+}
+```
+
+- 我：留意代码注释中的"!!!注意"，这是在本次写代码时疏忽的地方
 
 ## 分治算法(中等)
 
