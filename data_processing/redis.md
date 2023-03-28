@@ -1971,7 +1971,7 @@ OK
 
 - 20230220我指出错误：redis是单线程操作数据的，同时处理多个客户端的请求是通过io多路复用，不会有线程问题。这里用watch实现乐观锁，避免事务执行期间有别的客户端连接修改关注的值，[参考](https://www.jianshu.com/p/935e3a06d0bb?ivk_sa=1024320u)
 
-## 1111111Jedis
+## Jedis
 
 jedis是使用Java来操作Redis的中间件，Jedis是Redis官方推荐使用的Java连接redis的客户端。
 
@@ -2711,7 +2711,7 @@ redis工具类`RedisUtil.java`位置如下，和代码图示如下。代码太�
 
 
 
-## Redis.conf详解
+## 11111Redis.conf详解
 
 启动redisserver的时候就通过Redis.conf来启动。
 

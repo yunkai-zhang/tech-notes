@@ -375,7 +375,11 @@ Content-Type: text/html;charset=utf-8
 
    由此maven诞生了
 
+### 5.0，maven问题事项
 
+1，新clone一个springboot项目时出现问题，1）点击maven的clean报错`No valid Maven installation found. Either set the home directory in the configuration dialog`，2）springboot项目java类都是未识别的橙色，main/java目录不是蓝色，main/resource目录不是橙色，springboot启动类没有叶子（表示本项目没有被springboot识别成功）。
+
+- 解决：新项目打开时的`maven home path`没有配置好，配置正确的路径后就一切正常了，[参考](https://blog.csdn.net/ex_6450/article/details/127649213)
 
 ### 5.1，maven项目架构管理工具
 

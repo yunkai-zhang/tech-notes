@@ -3519,7 +3519,15 @@ export default {
 
 
 
+## 实战解决问题
 
+1，js数组绑定的数据ooda表的a行，和实际展示的不一样，感觉是灵异事件。
+
+- 解决：后端传的一个图片是vue的icon中不存在的，所以vue在处理a行会报错，所以导致a行无法正确展示，并保持展示了清空ooda表之前的数据。把icon放入vue项目，vue就正常展示啦。
+
+2，修改json结构前后console，但是发现console的结果一致
+
+- 解决：[参考](https://www.cnblogs.com/ww01/p/12344753.html)，把打印的json结构包裹一层`JSON.stringify()`即可
 
 
 
