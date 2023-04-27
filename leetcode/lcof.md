@@ -387,7 +387,7 @@ public class Main{
         String[] strs=br.readLine().trim().split(" ");//!!!注意：输入strs时是给了一行空格分开的字符串，而不是若干行字符串
 
         //我：idea提示了lamda可以省略，因为sort默认升序。但是字符串排序毕竟不直观，我还是显示用lamda排序指明排序方法。
-        //我：s1.compareTo(s2)的值相当于s1-s2，即比较字符串s1和s2的字典大小
+        //我：s1.compareTo(s2)即比较字符串s1和s2的字典大小。字符串长度相等且都是数字时，其值相当于s1-s2，
         Arrays.sort(strs,(o1, o2)->(o1.compareTo(o2)));
 
         StringBuilder sb=new StringBuilder();
@@ -437,7 +437,15 @@ public class Main{
 2，set遍历及效率：[参考](https://www.cnblogs.com/east7/p/16115176.html)
 
 - 可以看到使用增强型for就不错，但是这种方式不能修改set的值[参考](https://wenku.baidu.com/view/f3786de0b84cf7ec4afe04a1b0717fd5360cb221.html?_wkts_=1676015652834)
+
 - 我：如果想在遍历的时候修改值，那么可以用steam.forEach方法`set.stream().forEach(item -> { // System.out.println(item); });`
+
+  ```java
+  //手打练习板
+  //set.stream.forEach(item->{item.val=xxx;});
+  ```
+
+  
 
 ### 查找
 
@@ -957,7 +965,7 @@ class Solution {
 
 2，使用数组容易超过边界，尤其是递归遍历数组的时候；如果发现当前位置超过边界就得返回，不能继续处理。
 
-3，Arrays.toList(array)的array必须是对象数组。Arrays.asList返回的不是真正的List，一般最好用new ArrayList包裹一下。Arrays.sort(Array,lamda)传入的得是对象数组才能使用lamda排序，基本数据类型只能默认升序而不能用lamda
+3，Arrays.asList(array)的array必须是对象数组。Arrays.asList返回的不是真正的List，一般最好用new ArrayList包裹一下。Arrays.sort(Array,lamda)传入的得是对象数组才能使用lamda排序，基本数据类型只能默认升序而不能用lamda
 
 ## 栈与队列(简单)
 
@@ -1355,7 +1363,7 @@ class Solution {
   - 我：因为logk可以大于1，所以k比较大的时候，时间复杂度比单调队列还是差不少
 
 - 我：因为PQ内部会把元素排序，不是先进先出，而是保证最值先出；所以得用remove(Object obj)来删除指定元素；用poll则每次把PQ的最大值移除了，不合理。
-  - [javadoc官方描述PQ](https://docs.oracle.com/javase/8/docs/api/)：PQ只有remove(obj)，没有remove(index)，
+  - [javadoc官方描述PQ](https://docs.oracle.com/javase/8/docs/api/)：**PQ只有remove(obj)**，没有remove(index)，
     - 我：虽然手撕PQ实现的时候，底层用到了数组去承载堆；但是PQ在使用时没有index的概念，而是根or非根的概念。
   
 - [PriorityQueue详解](https://blog.csdn.net/hellokitty136/article/details/105831884)，
@@ -1707,7 +1715,7 @@ class Solution {
 }
 ```
 
-- 我：尝试把null赋值给char会导致编译时报错`java: 不兼容的类型: <nulltype>无法转换为char`
+- 我：尝试把null赋值给char会导致编译时报错`java: 不兼容的类型: <nulltype>无法转换为char`。无论是数组还是集合，取数之前判断数组或集合是否为空，且索引不能超过边界，牢记！
 - 我：Deque接口本身就有push和pop，peek，可以直接做栈使用；不需要自己定义last为栈顶然后用offerlast和polllast
 
 #### 大佬-栈（且避免判断边界）
@@ -1982,6 +1990,8 @@ class Solution {
     }
 ```
 
+- 我：因为i位置是右括号才可能存在有效括号以i结尾；所以针对每个右括号尝试拿到最长子串的长度。
+
 > 复杂度分析
 
 - 时间复杂度： O(n)，其中 n 为字符串的长度。我们只需遍历整个字符串一次，即可将 dp 数组求出来。
@@ -2005,7 +2015,7 @@ class Solution {
             if (s.charAt(i)=='(') {
                 stack.push(i);
             }else {
-                if (stack.isEmpty()) {
+                if (stack.isEmpty()) {//当前右括号没有匹配的左括号，所以有效括号子串的左侧至少是i+1
                     start = i+1;
                 }else {
                     stack.pop();
@@ -2019,6 +2029,8 @@ class Solution {
         }
         return max;
 ```
+
+- 我：感觉思路不如dp好理解
 
 > 复杂度分析
 
@@ -2218,7 +2230,129 @@ class Solution {
 
 
 
+### 摩根斯坦利笔试-最少会议室数目
 
+#### 题目
+
+- 来源于 LeetCode 第 252 号问题：会议室。这是一道题目很好理解，解法也比较多的题目，可以很好的复习 最小堆 这种数据结构。
+
+> 题目描述
+
+给定一个会议时间安排的数组，每个会议时间都会包括开始和结束的时间  [[ s1 , e1 ] ，[ s2 , e2 ]，…] (si < ei) ，为避免会议冲突，同时要考虑充分利用会议室资源，请你计算至少需要多少间会议室，才能满足这些会议安排。
+
+示例 1:
+
+输入: [[0, 30],[5, 10],[15, 20]]
+输出: 2
+示例 2:
+
+输入: [[7,10],[2,4]]
+输出: 1
+
+#### 大佬-小顶堆记录已开会的结束时间
+
+- [参考](https://blog.csdn.net/kexuanxiu1163/article/details/101442114)
+
+> 思路
+
+题目描述是这样的：给定一堆会议的起始和终止时间，问最少需要多少间会议室，比如输入为 [[0, 30],[5, 10],[15, 20]]，输出为 2，输入为 [[7,10],[2,4]]，输出为 1。
+
+拿到一道题先不要急忙着去找最优解，想一想可能的思路有哪些。
+
+随着我们做题数量的增加，往往我们会存在固定思维，习惯用之前的经验快速理解并解决一道题，但是这样其实并不能很好地练习思维发散，我们更应该关注的是一个思路是如何一步步想到的，而不是为了赶紧快速地解决这道题。
+
+一个最直观但是往往不会尝试去想的思路是，取出这里面出现的最大值还有最小值，然后根据这两个值之差建立一个数组，然后计算每个时间点会被多少个会议涵盖，找出最大值即可。
+
+当然上面提到的这种解法在这道题目上时间肯定是不允许的，因为最大值和最小值差距会很大，但是看一道题的时候可以不带着这些限制，这样你可以想出很多有趣的思路和想法。
+
+还是回到这道题，我们现在以区间为基准点来看看怎么解决。一堆会议时间是杂乱无章的，为了让其有序，我们可以将其排序，那么问题是以起始时间排序还是以终止时间排序？
+
+对于这道题，我们需要知道的是，“**当一个会议要开始的时候，需不需要另外安排会议室**？”，你可以看到，按照这个思路来说，我们考虑的顺序是按照会议开始的时间，因此这里**按照会议起始的时间来排序**。
+
+排完序之后又遇到一个问题就是，有的会议长有的会议短，当新的一个会议开始的时候，我们要怎么确定这个时候是否有之前空出来的会议室？
+
+因此我们还要对会议的结束时间进行统计，每当一个会议开始，我们就去检查在这个会议之前开始的会议的结束时间的最小值，到这里，你应该能想到堆这个数据结构，没错，我们可以维护一个最小堆用于记录结束时间，这样可以保证整个解的时间复杂度是 O(nlogn) 的。
+
+> 代码
+
+```java
+public int minMeetingRooms(int[][] intervals) {
+    //处理特殊情况
+    if (intervals == null || intervals.length == 0) {
+        return 0;
+    }
+ 
+    //按照开始时间升序排序。如果给的是二维list，可以考虑转换成二维数组来排序
+    Arrays.sort(intervals, (int[] a, int[] b) -> (a[0] - b[0]));
+ 
+    //保存当前会议开始前，预订过的所有会议室。比如开始有4个会议同时进行，那么就预订四个会议室；在第五个会议进来的时候，pq的大小就是4
+    PriorityQueue<Integer> pq = new PriorityQueue<>();
+ 
+    //第一个开始的会议需要开一个会议室
+    pq.offer(intervals[0][1]);
+ 
+    //按照会议开始的顺序，针对每个新开的会议判断是否需要额外的会议室
+    for (int i = 1; i < intervals.length; ++i) {
+        //如果当前会议开始时，之前预订的会议室里最早能结束的会议已经结束了，说明会议室空出来了。
+        if (pq.peek() <= intervals[i][0]) {
+            //把结束的会议从pq删除，表示会议室空出来准备给当前会议用
+            pq.poll();
+        }
+        //如果当前会议开始时，之前预订的会议室里最早能结束的会议都还没结束，说明pq现有的会议室都得保留，不能删除
+        
+ 
+        //不论之前有没有会议室空出来（即被从pq删掉），当前会议要占用一个会议室，就得往pq中塞入会议室结束当前会议的时间。
+        pq.offer(intervals[i][1]);
+    }
+ 
+    //pq大小是只增不减的，并且只在pq已有会议室不够的时候才增加；所以pq的大小就是历史上同一时刻需要最多会议室的数量
+    return pq.size();
+}
+```
+
+> 我改写
+
+我：个人感觉要更直观的思路。即用pq表示当前正在使用的会议室（而不是使用过的）。这样每次一个新会议进来，用`while(peek)`把pq中已经结束的会议删除，并加入当前会议；pq加入当前会议后统计`pq.size`，同时用一个变量pqsizemax保存历史最大pqsize；pqsizemax就是全局来看需要的最多会议室数目。
+
+```java
+public int minMeetingRooms(int[][] intervals) {
+    //处理特殊情况
+    if (intervals == null || intervals.length == 0) {
+        return 0;
+    }
+ 
+    //按照开始时间升序排序。如果给的是二维list，可以考虑转换成二维数组来排序
+    Arrays.sort(intervals, (int[] a, int[] b) -> (a[0] - b[0]));
+ 
+    //保存当前会议开始时，还在使用的会议室
+    PriorityQueue<Integer> pq = new PriorityQueue<>();
+ 
+    //第一个开始的会议需要开一个会议室
+    pq.offer(intervals[0][1]);
+ 
+    //按照会议开始的顺序，针对每个新开的会议判断是否需要额外的会议室
+    int hisMax=1;
+    for (int i = 1; i < intervals.length; ++i) {
+        //把当前会议开始时已经结束的会议从pq弹出
+        while(!pq.isEmpty()&&pq.peek() <= intervals[i][0]) {
+            pq.poll();
+        }
+        
+        //当前会议需要占用一个会议室
+        pq.offer(intervals[i][1]);
+        
+        //如果当前会议开启后会议室的数目超过历史最大数目，就更新历史最大数目
+        hisMax=MAth.max(hisMAx,pq.size());
+    }
+ 
+    //返回历史上同一时间需要的最大的会议室数目
+    return hisMax;
+}
+```
+
+#### 大佬-差分法
+
+不容易理解，暂时不考虑
 
 ## 链表(简单)
 
@@ -2354,7 +2488,7 @@ class Solution {
 
 #### 首战寄
 
-```java
+```
 /**
  * Definition for singly-linked list.
  * public class ListNode {
@@ -2947,7 +3081,7 @@ public class LRUCache {
         DLinkedNode node = cache.get(key);
         if (node == null) {
             return -1;
-        }5
+        }
         // 如果 key 存在，先通过哈希表定位，再移到头部
         moveToHead(node);
         return node.value;
@@ -3009,7 +3143,7 @@ public class LRUCache {
     - 双向链表：记录元素的访问顺序，存储数据
 
   - 注意点：node是双向链表；并且node要同时存kv，因为容量超过限制时要根据tailnode中的key去map中做删除。
-  - size的处理最好放在removeNode和addToHead中增减，这样不容易记混记错。
+  - size的处理最好放在removeNode和addToHead中增减，这样不容易记混记错（我阿里手撕的时候就是这么做的）。
 
 - 我讲解remove：
   - `hashmap.remove(Object key)`可以删掉hashmap中的一个键值对
@@ -4919,6 +5053,8 @@ public class Main链表分组交换 {
 
 2，想看字符串数字中的小数点(或者斜杠之类的)的位置，可以使用`s.lastIndexOf(char)`
 
+- 我：时间复杂度高，慎用。
+
 3，char之间可以做减法，为字典距离
 
 4，比较两个字符串的字典大小，可以用s1.compareTo(s2)；如果s1和s2**长度相等**且都是整数，那么比较结果等于Integer.parseInt(s1)-Integer.parseInt(s2)
@@ -4968,6 +5104,7 @@ class Solution {
 
 - 注意：字符串判断内容相等要用equals
 - charAt可以得到字符串某位置的字符；String.valueOf()可以把字符转化为字符串存入堆中的字符串常量池。
+- 我：推荐使用效率更高的StringBuilder，而不是字符串加法。
 
 
 
@@ -5647,6 +5784,8 @@ public class Main {
 
     public static boolean judge(char[] s, char[] t) {
         //!!!我：这里应该加一句if (s.length() < t.length()) return judge(t, s);保证长字符串总是位于两个输入的左边那个
+        
+        //记录s中每个字符出现的次数
         Map<Character, Integer> records = new HashMap<>();
         records.put('m', 0);
         records.put('h', 0);
@@ -5656,6 +5795,8 @@ public class Main {
             count++;
             records.put(s[i], count);
         }
+        
+        //用t中的字符消去s中出现过的字符
         for (int i = 0; i < t.length; i++) {
             if (records.containsKey(t[i])) {
                 Integer count = records.get(t[i]);
@@ -5671,15 +5812,17 @@ public class Main {
                 return false;
             }
         }
+        
         // s中有多的非mhy字符 不能转换
         for (Character key : records.keySet()) {
             if (key != 'm' && key != 'h' && key != 'y') {
                 return false;
             }
         }
-        // m h y 三个字符的相差数必须相等
+        
+        //s和t中的 m h y 三个字符的相差数必须相等；即t消掉了s中的mhy后，s中剩余的mhy三者数目必须相等
         return records.get('m').equals(records.get('h')) && records.get('h').equals(records.get('y'))
-                && records.get('m').equals(records.get('y'));
+                && records.get('m').equals(records.get('y'));//我：第三个equals可以不要。注意包装类判断相等要用equals
     }
 }
 ```
@@ -5785,9 +5928,9 @@ aaaabb
 
 2. 字符串的开头为仅包含'a'或者'A'的连续子串。
 
-3. 在该子串后面,为仅包含"或者'L'的连续子串。
+3. 在该子串后面,为仅包含'l'或者'L'的连续子串。
 
-4. 在该子串后面,为仅包含i或者T的连续子串。该子串结束后将直接到达字符串的结尾。
+4. 在该子串后面,为仅包含i或者I的连续子串。该子串结束后将直接到达字符串的结尾。
 
 例如,"AAaLlLLIi"是"ali"型字符串,而"aL”，“ail"、"alial”则不是"ali"型字符串
 
@@ -5871,7 +6014,7 @@ public class Main{
 
 - 我：代码思想很好，抓住了去重去解决问题！而没有死磕原字符串的各个字符的起点和终点的位置。
 - 注意：
-  - 大小写26位字母之间的ascii差距是32，[参考](https://blog.csdn.net/coderinchina/article/details/95501425)
+  - 大小写26位字母之间的ascii差距是32，[参考](https://blog.csdn.net/coderinchina/article/details/95501425)；并且ascii中，小写字母在大写字母的后面。
   - 通过判断字符位置是否在`A Z`或`a z`之间可以知道是不是26个英文字符之一，Z比A大，这也是字典顺序规定好的。
 
 ### [8. 字符串转换整数 (atoi)](https://leetcode.cn/problems/string-to-integer-atoi/)
@@ -6116,6 +6259,8 @@ class Solution {
 
 ```
 
+- 我：字符串相乘或者相加时，因为carry的存在，就不能在原数位处理完后就退出循环；所以可以参考本代码的写法`int n1 = j < 0 ? 0 : num1.charAt(j) - '0';`，让原数位处理完后的值为0，使得`(n1 * n2 + carry)`实际上只处理了carry。
+
 > 复杂度分析
 
 - 时间复杂度：*O*(*M N*)。*M*,*N* 分别为 `num1` 和 `num2` 的长度。
@@ -6224,6 +6369,7 @@ class Solution {
 - 我这种方法，如果nums的内容很大，可能会超过int的范围，这样来说还是官方的更安全
   - int的取值范围为： -2^31——2^31-1，即-2147483648——2147483647，这约是2*10^9。
   - 不过本题中的”限制“说2 <= n <= 100000，那么不会击穿。做题一定要看示例下的**“提示”**或**”限制“**
+- 20230404我：不需要把整个数组遍历完，再从doc中找重复的数字；在往doc中设置值时，如果发现值不为0，那么就可以直接返回当前字符。
 
 #### 官方-方法一：遍历数组
 由于只需要找出数组中任意一个重复的数字，因此遍历数组，遇到重复的数字即返回。为了判断一个数字是否重复遇到，使用集合存储已经遇到的数字，如果遇到的一个数字已经在集合中，则当前的数字是重复数字。算法：
@@ -7535,7 +7681,8 @@ class Solution {
 }
 ```
 
-
+- 我：因为int范围约为`2*10^9`，那么int的平方约为`4*10^18`；但是long最大约为`9*10^18`，所以int的平方应该不会超过long；这里平方比较改为除法比较时为了保险。
+  - 类比：2^2==4，2^4==16，那么4^2<=16；int是4字节，long是8字节，所以int的平方不可能超过long。
 
 ### 腾讯音乐笔试-小红的字符串切分
 
@@ -8060,7 +8207,7 @@ public class Solution {
 
 
 
-## *搜索与回溯算法(简单)
+## 11111111*搜索与回溯算法(简单)
 
 ### 知识点
 
@@ -13483,9 +13630,143 @@ class Solution {
 
 - 前序遍历是dfs要用递归，用队列的话是bfs按层遍历。
 
+### [129. 求根节点到叶节点数字之和](https://leetcode.cn/problems/sum-root-to-leaf-numbers/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    //函数返回int，所以用int承载就够了
+    int sum=0;
+    public int sumNumbers(TreeNode root) {
+        /**
+        使用int记载路径，到叶子节点时使用long去计算和
+         */
+        recur(root,0);
+
+        return sum;
+
+    }
+
+    public void recur(TreeNode root,int num){
+        if(root==null)return;
+        //走到这说明root不为空
+
+        num=num*10+root.val;
+
+        //叶子节点收割
+        if(root.left==null&&root.right==null){
+            sum+=num;
+        }
+
+        //不是叶子节点就继续递归
+        recur(root.left,num);
+        recur(root.right,num);
+    }
+}
+```
+
+- 我：本来想用字符串拼接去构建num，但是想到每次乘10就可以构建。
+
+#### dfs-高赞回答
+
+```java
+    public int sumNumbers(TreeNode root) {
+        return helper(root, 0);
+    }
+
+    public int helper(TreeNode root, int i){
+        if (root == null) return 0;
+        int temp = i * 10 + root.val;
+        if (root.left == null && root.right == null)
+            return temp;
+        return helper(root.left, temp) + helper(root.right, temp);
+    }
+```
+
+- 思路和我类似，但是没有使用全局变量，会更安全。
+  - 不过使用全局变量会让逻辑更简单，不用考虑返回值。我个人还是倾向于算法时用全局变量。
 
 
-## 111111*动态规划(简单)
+
+### [543. 二叉树的直径](https://leetcode.cn/problems/diameter-of-binary-tree/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    int res=0;
+    public int diameterOfBinaryTree(TreeNode root) {
+        recur(root);
+        return res;
+    }
+
+    public int recur(TreeNode root){
+        if(root==null)return 0;
+
+        //后序遍历避免重复计算，先拿到左右子树的深度
+        int left=recur(root.left);
+        int right=recur(root.right);
+
+        //以本节点为根节点，尝试更新res。有一边有深度，就可以尝试更新。经过当前节点为根节点的直径是左右子树深度和。
+        if(left>0||right>0) res=Math.max(res,left+right);
+
+        //返回本子树的深度
+        return Math.max(left,right)+1;
+    }
+}
+```
+
+```
+执行用时：
+0 ms
+, 在所有 Java 提交中击败了
+100.00%
+的用户
+内存消耗：
+41.1 MB
+, 在所有 Java 提交中击败了
+53.60%
+的用户
+通过测试用例：
+104 / 104
+```
+
+
+
+
+
+## 0315111111*动态规划(简单)
 
 ### 知识
 
@@ -15460,6 +15741,85 @@ int main() {
 #### 首战寄
 
 看题解比较绕，先放弃背包这一类了，先把热门题写了。
+
+
+
+### 阿里手撕-青蛙跳台阶升级版
+
+#### 题目
+
+一只青蛙一次可以跳上一级台阶，也可以跳上二级台阶……，**也可以跳n级**，求该青蛙跳上一个n级的台阶总共需要多少种跳法。
+
+
+
+#### 首战寄
+
+想到了`dp[i]=dp[i-1]+dp[i-2]+...+dp[1]+1`，但是时间有限制，没空思考了。
+
+
+
+#### 大佬
+
+> 思路
+
+一只青蛙要想跳到n级台阶，可以从一级，二级……，也就是说可以从任何一级跳到n级：
+
+![在这里插入图片描述](lcof.assets/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA6aOe5ZCR5pif55qE5a6i5py6,size_14,color_FFFFFF,t_70,g_se,x_16.png)
+
+所以有`dp[i]=dp[i-1]+dp[i-2]+...+dp[1]+1`，其中的`+1`是指从起点直接跳到n级台阶。
+
+那么可以做如下数学公式的推导：
+
+![image-20230404214202537](lcof.assets/image-20230404214202537.png)
+
+> 递归代码
+
+```c
+int jump(int n)
+{
+    if (n == 1)
+    {
+        return 1;
+    }
+    else
+    {
+        return 2 * jump(n - 1);
+    }
+}
+
+int main()
+{
+    int num = 0;
+    printf("请输入一个台阶数:> ");
+    scanf("%d", &num);
+
+    int ret = jump(num);
+
+    printf("小青蛙有 %d种 跳法\n", ret);
+    return 0;
+}
+
+```
+
+> 等比数列代码
+
+```java
+int jump(int n)
+{
+    //if (n == 1)
+    //{
+   //     return 1;
+    //}
+    //else
+        return (int)Math.pow(2,n-1); //因为n==1也满足这个公式，所以不需要额外针对n==1做判断。
+
+}
+
+```
+
+
+
+
 
 ## 双指针(简单)
 
@@ -20210,6 +20570,27 @@ codetop==2
 #### 官方
 
 暂略
+
+### [470. 用 Rand7() 实现 Rand10()](https://leetcode.cn/problems/implement-rand10-using-rand7/)
+
+#### 首战寄
+
+没有很好的思路
+
+#### 大佬
+
+[参考](https://leetcode.cn/problems/implement-rand10-using-rand7/solution/cong-zui-ji-chu-de-jiang-qi-ru-he-zuo-dao-jun-yun-/)
+
+```java
+class Solution extends SolBase {
+    public int rand10() {
+        while(true) {
+            int num = (rand7() - 1) * 7 + rand7(); // 等概率生成[1,49]范围的随机数
+            if(num <= 40) return num % 10 + 1; // 拒绝采样，并返回[1,10]范围的随机数
+        }
+    }
+}
+```
 
 
 
