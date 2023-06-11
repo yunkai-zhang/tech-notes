@@ -615,7 +615,7 @@ spec:
 
 
 
-## 11111111Service
+## Service
 
 - 我：service和deployment的关系[参考](https://zhuanlan.zhihu.com/p/358916098)。
   - 两者可以互相独立，也可以互相依存；一般都是互相依存使用，即先用deployment把多个pod跑起来，然后用sevice绑定pod，解决了deployment章节结尾存在的三个问题。
@@ -1514,6 +1514,484 @@ spec:
 
 3，进容器看看代码：
 
-https://www.bilibili.com/video/BV1Tg411P7EB/?p=7&spm_id_from=pageDriver&vd_source=8be62db2c8e19174231a64770292e191
+因为现在pod中有两个容器，一个是testk8s，一个是init容器（即mongodb容器），所以进入pod后会提示进入了默认的testk8s容器：
 
-9.41
+![image-20230611145717204](k8s.assets/image-20230611145717204.png)
+
+![image-20230611145810691](k8s.assets/image-20230611145810691.png)
+
+如果想进pod中指定的容器的话，就可以用`-c`参数：
+
+![image-20230611150011244](k8s.assets/image-20230611150011244.png)
+
+进入指定的web容器（即testk8s容器）后，再看看app.js的代码：
+
+![image-20230611150126865](k8s.assets/image-20230611150126865.png)
+
+4，在pod中（我：也即是在pod的某容器中）输出环境变量，可以看到环境变量都设置成功了：
+
+![image-20230611150605711](k8s.assets/image-20230611150605711.png)
+
+5，借助临时的mongodb的客户端，尝试访问mongodb客户端：
+
+![image-20230611151257484](k8s.assets/image-20230611151257484.png)
+
+- 因为客户端在连接mongo服务端的时候，没有输入用户名和密码，所以无法访问mongo服务端
+
+6，退出当前mongodb客户端的连接，重新携带用户名和密码登录mongodb的服务端：
+
+![image-20230611151523194](k8s.assets/image-20230611151523194.png)
+
+- 这回登录进来后就能看到mongo服务端有多个可用数据库
+
+7，在windows本地的minikube设置端口转发：
+
+![image-20230611151628067](k8s.assets/image-20230611151628067.png)
+
+- 如果使用service并在service中配置了端口映射，就不用显式做端口转发了。但是本课程只在云端的三台裸机做了service，并没有在windows本地的minikube做service，所以minikube中得映射端口，把容器端口暴露给集群，这样才能在集群内部访问容器。
+
+8，使用web服务注册一个用户：
+
+![image-20230611152035267](k8s.assets/image-20230611152035267.png)
+
+可以看到数据库中多了一个数据库，且新增数据库中有注册的用户的信息：
+
+![image-20230611152142476](k8s.assets/image-20230611152142476.png)
+
+9，使用web的登录功能，因为mongodb中有了注册的用户，所以能登录成功：
+
+![image-20230611152416937](k8s.assets/image-20230611152416937.png)
+
+- 说明数据库和web是连接成功的
+
+## Helm & 命名空间
+
+### 介绍
+
+`Helm`类似 npm，pip，docker hub, 可以理解为是一个软件库，可以方便快速的为我们的集群安装一些第三方软件。
+使用 Helm 我们可以非常方便的就搭建出来 MongoDB / MySQL 副本集群，YAML 文件别人都给我们写好了，直接使用。[官网](https://helm.sh/zh/)，[应用中心](https://artifacthub.io/)
+
+- 网友：这个是利器，要好好学
+
+> 本文档课件需配套 [视频](https://www.bilibili.com/video/BV1Tg411P7EB?p=8) 一起学习
+
+#### 回顾
+
+1，之前自己搭建了mongodb，那么不少yaml文件都是自己去写的。我们创建了3个副本，但是他们都是独立的，没有配置好主从，这个配置主从也比较麻烦。
+
+2，我们现在就可以用helm来做这件事情。因为monngodb的安装 配置，yaml文件都是差不多的，只是某些参数不一样，所以我们可以用helm来安装。
+
+### 安装 Helm
+
+安装 [文档](https://helm.sh/zh/docs/intro/install/)
+`curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash`
+
+### 安装 MongoDB 示例
+
+1，搜索到一个mongodb的文件，这是别人提供好的：
+
+![image-20230611154052879](k8s.assets/image-20230611154052879.png)
+
+看template就是别人写好的yaml文件，比如服务名的配置：
+
+![image-20230611154257174](k8s.assets/image-20230611154257174.png)
+
+看default value就是一些本项目的默认值：
+
+![image-20230611154348301](k8s.assets/image-20230611154348301.png)
+
+2，按照安装指引来安装helm中的mongodb：
+
+```bash
+# 安装
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install my-mongo bitnami/mongodb
+
+```
+
+可以看到安装完成：
+
+![image-20230611154842948](k8s.assets/image-20230611154842948.png)
+
+- 第一个红框：告诉了怎么连接mongodb，即mongodb的地址
+- 第二个红框：告诉怎么获得密码
+
+3，查看pod，可以看到已经创建好了一个pod：
+
+![image-20230611155046980](k8s.assets/image-20230611155046980.png)
+
+- pod是单副本的
+- service用的是clusterip
+- 因为只有一个pod，所以用的是deployment
+
+4，在artifacthub可以看到本heml能做各种diy的配置：
+
+架构有两个值，默认是单副本：
+
+![image-20230611155642183](k8s.assets/image-20230611155642183.png)
+
+密码和用户名也可以自己设置：
+
+![image-20230611155730946](k8s.assets/image-20230611155730946.png)
+
+5，因为不想只有一个pod，所以删除他，然后做一些配置：
+
+```bash
+# 删除
+helm ls
+helm delete my-mongo
+```
+
+![image-20230611155458567](k8s.assets/image-20230611155458567.png)
+
+6，使用diy参数的方式 用helm安装mongodb；这次指定创建的是一个有副本的mongodb集群，并且指定密码：
+
+```bash
+# 指定密码和架构
+helm install my-mongo bitnami/mongodb --set architecture="replicaset",auth.rootPassword="mongopass"
+```
+
+![image-20230611160029709](k8s.assets/image-20230611160029709.png)
+
+7，新开一个页面来查看效果：
+
+![image-20230611160237551](k8s.assets/image-20230611160237551.png)
+
+- 因为现在有多个副本，所以不是用deployment方式起的pod，而是statefulset方式起的pod。这是因为只有一个pod的时候不用考虑不同pod的数据的状态性，但是有多个pod时就得考虑不同pod的状态不一样了。
+
+- 三个pod，其中一个是仲裁者（arbitor）
+
+8，数据的持久盘也有默认值，也可以自己配置；下面展示的就是挂载目录：
+
+![image-20230611160540980](k8s.assets/image-20230611160540980.png)
+
+9，查看密码：
+
+```bash
+# 查看密码
+kubectl get secret my-mongo-mongodb -o json
+kubectl get secret my-mongo-mongodb -o yaml > secret.yaml
+```
+
+![image-20230611162054764](k8s.assets/image-20230611162054764.png)
+
+密码是base64的，解码后可以看到就是启动helm mongo时设定的密码：
+
+![image-20230611162141990](k8s.assets/image-20230611162141990.png)
+
+10，运行一个mongo的客户端去连接数据库：
+
+```bash
+# 临时运行一个包含 mongo client 的 debian 系统
+kubectl run mongodb-client --rm --tty -i --restart='Never' --image docker.io/bitnami/mongodb:4.4.10-debian-10-r20 --command -- bash
+```
+
+11，用mongo客户端去连接mongo服务端集群：
+
+启动helm mongodb的时候有告诉两个pod的地址：
+
+![image-20230611162259250](k8s.assets/image-20230611162259250.png)
+
+连接第一个pod：
+
+![image-20230611162537356](k8s.assets/image-20230611162537356.png)
+
+- 连接成功，可以看到primary是主节点。
+
+```
+# 进去 mongodb
+mongo --host "my-mongo-mongodb" -u root -p mongopass
+```
+
+- 视频与课件不一致，以视频截图为准
+
+12，可以看到之前持久化的数据，因为用了持久盘，可以看到之前往盘里写的数据：
+
+![image-20230611162940812](k8s.assets/image-20230611162940812.png)
+
+13，连接mongo集群的从节点看看：
+
+![image-20230611163245933](k8s.assets/image-20230611163245933.png)
+
+- 网友：改成集群模式后，mongodb-client连接报认证失败
+
+现在在从节点上是操作不了的，因为他是只读节点：
+
+![image-20230611163406320](k8s.assets/image-20230611163406320.png)
+
+14，看看持久盘，会自动为我们创建持久盘。每个pod都有自己持久盘：
+
+![image-20230611163639121](k8s.assets/image-20230611163639121.png)
+
+这些都不需要我们配置了，之前要写很多的yaml文件；helm mongo帮我们都自动高配置好了，不用我们去管：
+
+![image-20230611163606592](k8s.assets/image-20230611163606592.png)
+
+15，可以转发集群里的端口到宿主机访问 mongodb
+
+先拿到service的名字：
+
+![image-20230611164446580](k8s.assets/image-20230611164446580.png)
+
+本地的27018端口转发到服务的27017中：
+
+![image-20230611164638874](k8s.assets/image-20230611164638874.png)
+
+```bash
+# 也可以转发集群里的端口到宿主机访问 mongodb
+kubectl port-forward svc/my-mongo-mongodb 27017:27018
+```
+
+- 课件和教程不一致，以课程截图为准
+
+16，转发端口到宿主机后，可以使用Robo去通过宿主机访问mongodb：
+
+连接时记得配置用户名root和密码mongopass：
+
+![image-20230611165007462](k8s.assets/image-20230611165007462.png)
+
+连接进来后可以在数据库中看到数据，说明转发端口成功：
+
+![image-20230611165049599](k8s.assets/image-20230611165049599.png)
+
+### 命名空间
+
+- 我：个人感觉这个功能不是很重要
+
+如果一个集群中部署了多个应用，所有应用都在一起，就不太好管理，也可以导致名字冲突等。
+我们可以使用 namespace 把应用划分到不同的命名空间，跟代码里的 namespace 是一个概念，只是为了划分空间。
+
+```bash
+# 创建命名空间
+kubectl create namespace testapp
+# 部署应用到指定的命名空间
+kubectl apply -f app.yml --namespace testapp
+# 查询的时候也要指定命名空间
+kubectl get pod --namespace kube-system
+```
+
+可以用 [kubens](https://github.com/ahmetb/kubectx) 快速切换 namespace
+
+```bash
+# 切换命名空间
+kubens kube-system
+# 回到上个命名空间
+kubens -
+# 切换集群
+kubectx minikube
+```
+
+![image.png](https://sjwx.easydoc.xyz/46901064/files/kwudup5z.png)
+
+## Ingress
+
+### 介绍
+
+Ingress 为外部访问集群提供了一个 **统一** 入口，避免了对外暴露集群端口；
+功能类似 Nginx，可以根据域名、路径把请求转发到不同的 Service。
+可以配置 https
+
+> 本文档课件需配套 [视频](https://www.bilibili.com/video/BV1Tg411P7EB?p=9) 一起学习
+
+**跟 LoadBalancer 有什么区别？**
+LoadBalancer 需要对外暴露端口，不安全；
+无法根据域名、路径转发流量到不同 Service，多个 Service 则需要开多个 LoadBalancer；
+功能单一，无法配置 https
+
+![2.png](k8s.assets/kwhd6dc8.png)
+
+- loadbalancer是云服务商提供的
+- ingress+conttroller支持使用根据域名 路径 把请求发到不同的service。
+
+### 使用
+
+1，
+
+要使用 Ingress，需要一个负载均衡器 + Ingress Controller
+如果是裸机（bare metal) 搭建的集群，你需要自己安装一个负载均衡插件，可以安装 [METALLB](https://metallb.universe.tf/)
+如果是云服务商，会自动给你配置，否则你的外部 IP 会是 “pending” 状态，无法使用。
+
+文档：[Ingress](https://kubernetes.io/zh/docs/concepts/services-networking/ingress/)
+Minikube 中部署 Ingress Controller：[nginx](https://kubernetes.io/zh/docs/tasks/access-application-cluster/ingress-minikube/)
+
+- 因为要下载国外的一些内容，本文章里“启用ingress控制器”的`minikube addons enable ingress`安装不起来
+
+Helm 安装： [Nginx](https://kubernetes.github.io/ingress-nginx/deploy/#quick-start)
+
+2，ingress的配置文件如下
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-example
+spec:
+  ingressClassName: nginx
+  rules: # 配置了一些转发的规则
+  - host: tools.fun
+    http:
+      paths:
+      - path: /easydoc # 如果是这个路径，就转发到service1服务
+        pathType: Prefix
+        backend:
+          service:
+            name: service1
+            port:
+              number: 4200
+      - path: /svnbucket
+        pathType: Prefix
+        backend:
+          service:
+            name: service2
+            port:
+              number: 8080
+```
+
+### 腾讯云配置 Ingress 演示
+
+#### 预备操作
+
+1，先创建好一个k8s集群，有两个节点：
+
+![image-20230611172154458](k8s.assets/image-20230611172154458.png)
+
+2，创建一个secret，给数据库用。点击新建-》把yaml内容黏贴进去即可创建：
+
+![image-20230611221503453](k8s.assets/image-20230611221503453.png)
+
+- 点击“更新配置”，就可以方便的可视化的更新一些配置；配置可见明文，会被腾讯云自动转码成base64。
+
+3，同理创建configmap：
+
+![image-20230611221554726](k8s.assets/image-20230611221554726.png)
+
+- 都很简单，都是可视化的操作。
+
+3，先新建一个数据库，我们要搭建一个完整地有数据库有web的集群：
+
+![image-20230611172227264](k8s.assets/image-20230611172227264.png)
+
+![image-20230611172341026](k8s.assets/image-20230611172341026.png)
+
+mongodb的镜像从dockerhub选取，并从secret拿到环境变量：
+
+![image-20230611222025623](k8s.assets/image-20230611222025623.png)
+
+- 高级设置暂时不用管
+
+![image-20230611222225319](k8s.assets/image-20230611222225319.png)
+
+走到这就算把mongodb创建好了
+
+4，创建pvc：
+
+![image-20230611222551242](k8s.assets/image-20230611222551242.png)
+
+可以看到正在创建：
+
+![image-20230611222608080](k8s.assets/image-20230611222608080.png)
+
+5，往部署好的mongodb中挂载数据盘：
+
+![image-20230611222709205](k8s.assets/image-20230611222709205.png)
+
+![image-20230611222756043](k8s.assets/image-20230611222756043.png)
+
+挂在`/data/db`，因为mongodb的数据就在这个位置；挂载好后，`/data/db`的数据就会被同步到外界磁盘的数据卷中。
+
+![image-20230611222832717](k8s.assets/image-20230611222832717.png)
+
+6，部署web服务：
+
+在deployment栏，用复制yaml的方式启动web：
+
+![image-20230611223122689](k8s.assets/image-20230611223122689.png)
+
+![image-20230611223137381](k8s.assets/image-20230611223137381.png)
+
+可以看到正在创建：
+
+![image-20230611223204311](k8s.assets/image-20230611223204311.png)
+
+web deployment的pod配置中，可以看到环境变量也已经自动配置好了（我：应该是解析yaml后填入的）：
+
+![image-20230611223252482](k8s.assets/image-20230611223252482.png)
+
+7，看云服务器：
+
+这就是集群的两个节点
+
+![image-20230611223407701](k8s.assets/image-20230611223407701.png)
+
+8，登录第一个节点：
+
+![image-20230611223813797](k8s.assets/image-20230611223813797.png)
+
+![image-20230611223825466](k8s.assets/image-20230611223825466.png)
+
+连接成功后，可以看到在集群部署的 mongodb web：
+
+![image-20230611223959927](k8s.assets/image-20230611223959927.png)
+
+- 因为service把服务暴露到节点的31000端口，所以可以用节点访问web服务
+
+9，访问web，成功：
+
+![image-20230611224159414](k8s.assets/image-20230611224159414.png)
+
+![image-20230611224219706](k8s.assets/image-20230611224219706.png)
+
+10，更新pod数量，手动调节为5：
+
+![image-20230611224301947](k8s.assets/image-20230611224301947.png)
+
+![image-20230611224317930](k8s.assets/image-20230611224317930.png)
+
+#### 使用ingress
+
+1，新建：
+
+![image-20230611224640591](k8s.assets/image-20230611224640591.png)
+
+![image-20230611224823678](k8s.assets/image-20230611224823678.png)
+
+- 我们没有负载均衡器，腾讯云会帮我们创建
+- 网友：建议直接出一个腾讯云教程、阿里云教程就好了，前面的都省了
+
+2，查看负载均衡器：
+
+![image-20230611225422486](k8s.assets/image-20230611225422486.png)
+
+可以看到负载均衡器转发到下面两个节点：
+
+![image-20230611225451719](k8s.assets/image-20230611225451719.png)
+
+3，尝试通过ingress访问服务：
+
+拿到负载均衡器的ip
+
+![image-20230611225640547](k8s.assets/image-20230611225640547.png)
+
+这个负载均衡器的ip其实就是ingress的ip，会把请求转发到后端的指定服务：
+
+![image-20230611225800063](k8s.assets/image-20230611225800063.png)
+
+4，测试：
+
+通过ingress的ip可以成功使用web的注册功能：
+
+![image-20230611225930619](k8s.assets/image-20230611225930619.png)
+
+通过ingress的ip可以成功使用web的登录功能：
+
+![image-20230611230019312](k8s.assets/image-20230611230019312.png)
+
+#### 其他
+
+1，可以看到买的两个worker节点：
+
+![image-20230611230149533](k8s.assets/image-20230611230149533.png)
+
+- 之前配置的5个pod就分散在两个节点上
+
+2，如果访问量大了，还可以新建节点，然后加入到k8s集群，就可以应对大的流量的请求了；流量低谷的时候就可以把一些节点移除掉。
