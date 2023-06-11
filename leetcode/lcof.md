@@ -576,7 +576,7 @@ class Solution {
 
 1，排序的稳定性：
 
-- 参考：https://zhuanlan.zhihu.com/p/116046849
+- 假定在待排序的记录序列中，存在多个具有相同的关键字的记录，若经过排序，这些记录的相对次序保持不变，即在原序列中，A1=A2，且A1在A2之前，而在排序后的序列中，A1仍在A2之前，则称这种排序算法是稳定的；否则称为不稳定的。[参考](https://zhuanlan.zhihu.com/p/116046849)
   - 不稳定：堆排序，快速排序
   - 稳定：归并排序，冒泡排序
 
@@ -620,14 +620,14 @@ class Solution {
 ```java
 class Solution {
     public int[] sortArray(int[] nums) {
-        quick_sort(nums,0,nums.length-1);
+        quick_sort(nums,0,nums.length-1);//index是左闭右闭
         return nums;
     }
     
     public void quick_sort(int[] nums,int left,int right){
         //[left,right]区间内，有至少两个元素时，才会进行递归快排
         if(left<right){
-            int i=getMid(nums,left,right);
+            int i=getMid(nums,left,right);//这个i不一定是left和right间的中点；getMid只是让i左边的元素都比i小，且i右边的元素都比i大。
             quick_sort(nums,left,i-1);
             quick_sort(nums,i+1,right);
         }
@@ -889,7 +889,7 @@ class Solution {
         int len=nums.length;//输入的数组的长度
         int beginIndex=(len>>1)-1;//从完全二叉树的第一个非叶子节点开始往前堆化，堆化就是让以本节点为根的树的所有根节点大于自己的左右子树中的所有节点
         for(int i=beginIndex;i>=0;i--){//把数组转化成大顶堆的格式
-            maxHeapify(nums,i,len-1);//传入size是固定的
+            maxHeapify(nums,i,len-1);//传入size是固定的。因为beginindex用的len是从1开始的长度，所以传入maxHeapify的len得减一表示从0开始
         }
 
         //排序，把堆顶不停放置到堆的末尾，达到升序排序
@@ -957,7 +957,7 @@ class Solution {
 1，整数加法乘法的时候，容易超过整数边界，推荐使用long（int加大版 整数），double（float加大版 可以带小数的实数），或者bigdecimal（使用字符串格式的小数初始化避免精度丢失 具体用法可以看idea提示）
 
 - java基本数据类型字节大小：byte占1字节,short占2字节,int占4字节,long占8字节,float占4字节,double占8字节,char占2字节,boolean占1字节
-  - 我：汉字占两字节，所以java的char可以存储汉字
+  - 我：java的char用utf16编码，utf16中汉字占两字节，所以java的char可以存储汉字
 
 - java常见基本数据类型边界：
   - int（因为四字节所以范围-2^31~2^31-1；约为+-2*10^9；有补码即正数比负数少一个）
@@ -1872,7 +1872,7 @@ class Solution {
                 int leftHeight=height[left];
                 int rightHeight=height[right];
                 int bottomHeight=height[bottom];
-                water+=(right-left-1)*(Math.min(leftHeight,rightHeight)-bottomHeight);
+                water+=(right-left-1)*(Math.min(leftHeight,rightHeight)-bottomHeight);//left高度==bottom高度时，water不会增加；water会在碰到更高的left后一并增加。
             }
 
             stack.push(right);
@@ -1956,7 +1956,7 @@ class Solution {
     public static int longestValidParentheses(String s) {
         if (s == null || s.length() < 2) return 0;
 
-        int[] dp = new int[s.length()]; // dp[i]：严格以i位置结尾，形成的有效括号子串最长长度是多少
+        int[] dp = new int[s.length()]; // dp[i]：严格以i（0开头）位置结尾，形成的有效括号子串最长长度是多少。dp数组长度和原字符串长度要相同，这样原字符串的每个字符都对应dp数组的一个位置。
         int max = 0; // 最终的答案
 
         // dp[0] = 0; // 默认
@@ -2342,7 +2342,7 @@ public int minMeetingRooms(int[][] intervals) {
         pq.offer(intervals[i][1]);
         
         //如果当前会议开启后会议室的数目超过历史最大数目，就更新历史最大数目
-        hisMax=MAth.max(hisMAx,pq.size());
+        hisMax=Math.max(hisMAx,pq.size());
     }
  
     //返回历史上同一时间需要的最大的会议室数目
@@ -2354,7 +2354,22 @@ public int minMeetingRooms(int[][] intervals) {
 
 不容易理解，暂时不考虑
 
-## 链表(简单)
+### 最大栈
+
+- 类似于“包含min函数的栈”
+- 亚马逊2023年暑期面试考过
+
+#### 首战
+
+略
+
+#### 大佬解法-双栈
+
+[参考](https://blog.csdn.net/qq_21201267/article/details/107102162)
+
+
+
+## 111111111链表(简单)
 
 ### 知识点
 
@@ -6447,7 +6462,7 @@ class Solution {
 }
 ```
 
-- 本题条件是“排序数组”，这个方法没用上这个条件；排序数组应该用双指针解决。
+- 本题条件是“排序数组”，这个方法没用上这个条件；排序数组应该用二分查找解决。
 
 #### 首战告捷-双指针
 
@@ -7499,7 +7514,7 @@ class Solution {
                     //!!!不必担心left++和right--同时执行，导致left和right重合，进而导致无法退出while。因为这里是ifelse的关系，left++或right--后会走到while处判断是否还满足left!=right
                 }else if(nums[left]<nums[mid]){//此时left在数组范围内，且mid在左半边，即[left,mid]单调递增
                     //如果target在有序区就在有序区查找
-                    if(target<nums[mid]&&target>=nums[left]){
+                    if(target<nums[mid]&&target>=nums[left]){//之前已经判断过target不等于nums[mid]，所以这里小于号就行
                         right=mid;
                     }else{//target不在有序区就去无序区尝试寻找
                         left=mid;
@@ -8207,7 +8222,7 @@ public class Solution {
 
 
 
-## 11111111*搜索与回溯算法(简单)
+## *搜索与回溯算法(简单)
 
 ### 知识点
 
@@ -8732,6 +8747,7 @@ class Solution {
         return isSubStructure(A.left, B) || isSubStructure(A.right, B);
     }
 
+    //判断root1树是否能覆盖root2树
     private boolean helper(TreeNode root1, TreeNode root2) {
         //必须要先判断root2，再判断root1；这样如题干中B树的4号节点的右子树为空，但是A树的4号节点的右子树不为空，先判断B树为空才能返回true。
         if (root2 == null) {
@@ -9663,7 +9679,9 @@ class Solution {
 
 ### [剑指 Offer 34. 二叉树中和为某一值的路径](https://leetcode-cn.com/problems/er-cha-shu-zhong-he-wei-mou-yi-zhi-de-lu-jing-lcof/)
 
-codetop==15
+codetop==15+68
+
+本题与主站 113 题相同：https://leetcode-cn.com/problems/path-sum-ii/
 
 #### 首战告捷
 
@@ -13764,9 +13782,107 @@ class Solution {
 
 
 
+### [98. 验证二叉搜索树](https://leetcode.cn/problems/validate-binary-search-tree/)
+
+#### 首战告捷
+
+```java
+/**
+ * Definition for a binary tree node.
+ * public class TreeNode {
+ *     int val;
+ *     TreeNode left;
+ *     TreeNode right;
+ *     TreeNode() {}
+ *     TreeNode(int val) { this.val = val; }
+ *     TreeNode(int val, TreeNode left, TreeNode right) {
+ *         this.val = val;
+ *         this.left = left;
+ *         this.right = right;
+ *     }
+ * }
+ */
+class Solution {
+    boolean asc=true;
+    long prev=Long.MIN_VALUE;//因为节点值可以是最小整数，必须让prev的初始值比最小整数小，这样中序遍历第一个节点是最小整数的时候才能不出错
+    public boolean isValidBST(TreeNode root) {
+        /**
+        中序遍历，总是当前值比上一值大，即可以保证全局递增。
+         */
+
+        in_order(root);
+        
+        return asc;
+        
+
+    }
 
 
-## 0315111111*动态规划(简单)
+    public void in_order(TreeNode root){
+
+        //剪枝，不升序就不递归了
+        if(!asc)return;
+
+        //触底条件
+        if(root==null)return;
+
+        //中序遍历
+        in_order(root.left);
+
+        if(root.val<=prev) asc=false;
+        prev=root.val;//整数被自动升级为long，扩大数字范围是不会报错的；缩小数字范围才可能出错。
+
+        in_order(root.right);
+    }
+}
+```
+
+```
+执行用时：
+0 ms
+, 在所有 Java 提交中击败了
+100.00%
+的用户
+内存消耗：
+42.9 MB
+, 在所有 Java 提交中击败了
+5.01%
+的用户
+通过测试用例：
+82 / 82
+```
+
+- 内存消耗有点大，应该是我用dfs在找到结果后不能立即返回，还是得每个函数入栈后再剪枝返回。
+
+#### 大佬-中序遍历
+
+- 和我的思路类似，但是没有用两个函数。函数更简洁了，但是直观度略有下降。
+
+```java
+class Solution {
+    long pre = Long.MIN_VALUE;
+    public boolean isValidBST(TreeNode root) {
+        if (root == null) {
+            return true;
+        }
+        // 访问左子树
+        if (!isValidBST(root.left)) {
+            return false;
+        }
+        // 访问当前节点：如果当前节点小于等于中序遍历的前一个节点，说明不满足BST，返回 false；否则继续遍历。
+        if (root.val <= pre) {
+            return false;
+        }
+        pre = root.val;
+        // 访问右子树
+        return isValidBST(root.right);
+    }
+}
+```
+
+
+
+## *动态规划(简单)
 
 ### 知识
 
@@ -15505,6 +15621,10 @@ class Solution {
 
 - 时间复杂度o（MN）
 - 空间复杂度o（MN）
+
+#### 附加思考
+
+- 原题是寻找最长子序列，变种题目是寻找最长子字符串。最长子字符串可以参考`leetcode 718`。   
 
 ### 阿里笔试-探照灯总分数
 

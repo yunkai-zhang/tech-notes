@@ -1,5 +1,7 @@
 SpringCloud
 
+- 20230523我：现在不推荐使用了springcloud netflix了。**简单分布式可以用dubbo+zk（应掌握）**；复杂分布式可以用springcloud alibaba
+
 ## 前言
 
 ### 该阶段该如何学习
@@ -259,6 +261,8 @@ SpringCloud是分布式微服务架构下的一站式解决方案，是各个微
 #### Springboot和Sprigcloud的关系
 
 - springboot和springcloud是渐进性的关系。boot用来构建微服务，cloud用来协调微服务。
+  - 20230522我：单个springboot只是微服务整体的一个单元，个人感觉得称为单体；多个springboot项目用rpc组合起来的整体才能叫微服务。
+
 - SpringBoot专注于快速方便的开发单个个体微服务（说白了就是jar包）。
 - SpringCloud是关注全局的微服务协调整理治理框架，它将SpringBoot开发的一个个单体微服务整合并管理起来，为各个微服务之间提供:配置管理，服务发现，断路器，路由，微代理，事件总线，全局锁，决策竞选，
   分布式会话等等集成服务。
@@ -305,6 +309,8 @@ Dubbo和springcloud对比:
 - **最大区别: SpringCloud抛弃了Dubbo的RPC通信，采用的是基于HTTP的REST方式。**
   严格来说，这两种方式各有优劣。虽然从一定程度上来说，后者牺牲了服务调用的性能，但也避免了上面提到的原生RPC带来的问题。而且REST相比RPC更为灵活，服务提供方和调用方的依赖只依靠一纸契约，不存在代码级别的强依赖，这在强调快速演化的微服务环境下，显得更加合适。
 
+  - 我：[参考](https://zhuanlan.zhihu.com/p/110424162)，RPC是自定义数据格式，基于原生TCP；HTTP是一种应用层协议。
+  
 - 品牌机与组装机的区别
   很明显，Spring Cloud的功能比DUBBO更加强大，涵盖面更广，而且作为Spring的拳头项目，它也能够与SpringFramework、Spring Boot、Spring Data、Spring Batch等其他Spring项目完美融合，这些对于微服务而言是至关重要的。使用Dubbo构建的微服务架构就像组装电脑，各环节我们的选择自由度很高，但是最终结果很有可能因为一条内存质量不行就点不亮了，总是让人不怎么放心，但是如果你是一名高手，那这些都不是问题;而SpringCloud就像品牌机，在Spring Source的整合下，做了大量的兼容性测试，保证了机器拥有更高的稳定性，但是如果要在使用非原装组件外的东西，就需要对其基础有足够的了解。
 
@@ -565,7 +571,7 @@ Dubbo和springcloud对比:
 
 ![image-20211019205428803](springCloud.assets/image-20211019205428803.png)
 
-子module中指定使用父项目dependencyManagement中管理的哪些依赖（version默认为副项目中管理的版本）。
+子module中指定使用父项目dependencyManagement中管理的哪些依赖（version默认为父项目中管理的版本）。
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -836,6 +842,7 @@ server:
 
 # mybatis配置
 mybatis:
+  # 我：这里是子模块api中的包，和当前模块不是一个模块，但是在同一个父类下
   type-aliases-package: com.zhangyun.springcloud.pojo
   # 配置“mybatis核心配置文件”的地址。不过这个配置文件很久没写了。
   config-location: classpath:mybatis/mybatis-config.xml
@@ -861,6 +868,8 @@ spring:
 ![image-20211020115745718](springCloud.assets/image-20211020115745718.png)
 
 这里再演示一下从怎么写mybatis核心配置文件。
+
+- 20230522我：这些应该都不需要了。用mybatisplus中的wrapper可以解决几乎所有的查询需求，且不用编写复杂且易错的xml。
 
 1. 访问[mybatis官网](https://mybatis.net.cn/)
 
@@ -1362,6 +1371,7 @@ http://localhost/consumer/dept/getDeptById/6
 
 - rpc和http两种通信方式不一样。
   - rpc是服务端在注册中心（zk）注册服务，客户端在注册中心引用服务。
+    - 20230522我：springcloud alibaba用的服务通信框架就是rpc方式，用的dubbo实现。
   - http是客户端发送符合服务端请求格式的http请求。
 
 
@@ -1441,6 +1451,8 @@ Eureka基本架构
 ![image-20211021200837620](springCloud.assets/image-20211021200837620.png)
 
 pom，java，resource文件（夹）的颜色变正常了。不过pom文件名“pom”还是红色的，暂时不知道为什么，也没发现不良影响，先不管。
+
+- 20230522我：m是蓝色的说明pom文件被系统正常识别并使用了；pom文字是红色的因为没有git add这个pom文件。
 
 ![image-20211021201138538](springCloud.assets/image-20211021201138538.png)
 
@@ -1929,7 +1941,7 @@ Eureka保证的是AP
 
 
 
-## Ribbon客户端负载均衡
+## 1111111Ribbon客户端负载均衡
 
 ### Ribbon介绍
 
@@ -1962,6 +1974,8 @@ Ribbon能干嘛？
 
 
 ### 服务端集成ribbon实现负载均衡
+
+- 20230523我：服务使用者集成了ribbon
 
 springcloud-consumer-dept-80子module向pom.xml中添加Ribbon和Eureka依赖
 

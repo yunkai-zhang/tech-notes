@@ -2,6 +2,10 @@
 
 https://mp.weixin.qq.com/mp/homepage?__biz=Mzg2NTAzMTExNg==&hid=1&sn=3247dca1433a891523d9e4176c90c499&scene=18&uin=&key=&devicetype=Windows+10+x64&version=63030522&lang=zh_CN&ascene=7&fontgear=2
 
+- 本文档的使用重点：
+  - 看后端不看前端（本文档讲的前后端不分离基本被前后端分离代替了 看了前端相关也没啥用）
+  - 看使用不看源码（源码看了就忘 结合本文档去会议spring的各种功能实现方式才是重点）
+
 ## 前言简介
 
 ### java开发进化路线和核心点
@@ -22,6 +26,8 @@ ssm：框架：简化了我们的开发流程，配置也开始较为复杂；
 
 spring在再简化：springboot-jar：内嵌tomcat；微服务架构！
 
+- 20230520我：一个springboot是单体吧，springcloud才是微服务（多个springboot实现不同功能并通过zk做服务注册与发现也可以算微服务吧）。ssm的war包中没有容器，所以需要放到tomcat中去运行；springboot打包得到的jar包中自带tomcat容器，所以用`java -jar`就可以在linux中把项目跑起来。
+
 服务越来越多：springcloud；
 
 
@@ -29,6 +35,8 @@ spring在再简化：springboot-jar：内嵌tomcat；微服务架构！
 ### springboot+springcloud技术树
 
 springboot最核心的点：自动装配（重要，谈资）
+
+- 20230520我：实际上就是启动时，通过`@AutoConfig`自动加载了很多配置类
 
 springSecurity：shiro（使用了aop的思想）
 
@@ -370,7 +378,7 @@ server.port=8081
 
 **以后我们导入依赖默认是不需要写版本；但是如果导入的包没有在依赖中管理着就需要手动配置版本了；**
 
-
+- 20230520我：一般项目里没注意用到这个父依赖，没刻意设置过；一般都是用什么依赖往pom中复制什么。
 
 ### 启动器
 
@@ -474,6 +482,7 @@ public @interface Configuration {}
   web开发，提供3个@Component注解衍生注解（功能一样）取代@Component：
 
   - @Repository(“名称”)：dao层
+    - 我：一般使用`@Mapper`去注册dao层的bean，比@Repository更方便；并且@Autowired类似@Resource，不过我个人基本都用@Autowired；[参考](https://blog.csdn.net/yuanyuan11111111/article/details/114406210)。
   - @Service(“名称”)：service层
   - @Controller(“名称”)：web层
 
@@ -772,6 +781,8 @@ server：
 1、**空格**不能省略
 
 2、以缩进来控制层级关系，只要是左边对齐的一列数据都是同一个层级的。
+
+- 20230520我：有人调侃说yml的内容要用游标卡尺对齐才能看清楚；其实夸张了，因为对齐不正确的key是白色的，很容易一眼看出。
 
 3、属性和值的大小写都是十分敏感的。
 
@@ -1159,7 +1170,9 @@ settings-->FileEncodings 中配置；
 
 ![image-20210824162145047](springboot.assets/image-20210824162145047.png)
 
-
+- 20230520我（面试被问懵住）：
+  - 区分utf8 utf16 utf32：三者都是unicode的编码格式，unicode规定了世界上所有的字符，但是没有规定字符该怎么编码。utf8是英文1字节 常见汉字3字节 罕见汉字4字节；utf16是英文和常见汉字都2字节 罕见汉字4字节；utf32是任何符号都占用4字节。java的char默认使用utf16的2字节部分（舍弃了罕见的4字节内容），所以char是2字节大小。
+  - 区分utf8 utf8mb4：这两者的区别出现在mysql数据库编码中，都是unicode的utf8的编码；但是mysql的utf8是阉割版的utf8，最多只存占用3字节的字符；而utf8mb4是utf8的完整实现，即可以存储4字节的内容，比如存储表情符号😊。
 
 实例：
 
@@ -1249,6 +1262,8 @@ class DemoApplicationTests {
 
 这块内容是额外了解，核心要掌握yaml如何给bean注入值。
 
+- JSR是Java Specification Requests 的缩写，意思是Java 规范提案。
+
 ### JSR303
 
 #### 使用方式
@@ -1320,6 +1335,8 @@ file:./
 classpath:/config/    classpath是类（资源）路径，java和resource目录都是类路径的根目录，配置文件一般放resource中。
 classpath:/           默认的配置文件所存放的位置，优先级也是最低的
 ```
+
+- 20230522我：一般并不会使用多个yaml，目前看到的项目都是一个环境一个yml。
 
 各位置在项目中如下所示：
 
@@ -1592,6 +1609,7 @@ debug=true
 - 扩展springmvc
 - 增删改查
 - 拦截器
+  - 我：注意区分拦截器（springmvc的组件）和过滤器（servelet级别）。
 - 国际化（中英文切换）
 
 ### 静态资源
@@ -2159,6 +2177,8 @@ mvc的核心是dispathcerservlet的dodispatcher方法。
 #### 修改SpringBoot的默认配置
 
 这么多的自动配置，原理都是一样的，通过这个WebMVC的自动配置原理分析，我们要学会一种学习方式，通过源码探究，得出结论；这个结论一定是属于自己的，而且一通百通。
+
+- 20230522我：做项目其实不用懂源码，有项目经验后做项目就行。
 
 SpringBoot的底层，大量用到了这些设计细节思想，所以，没事需要多阅读源码！得出结论；
 
@@ -3051,6 +3071,8 @@ springboot之前已经学了：
 - crud
 - 国际化
 - 拦截器
+  - 20220522我：真实开发的时候，不一定会考虑用拦截器做拦截过滤；可能会用一些线程的工具或组件，也可能类似微服务用不同开源工具做不同模块，自己写业务代码即可。
+
 - 定制首页，错误页
 
 
@@ -3059,6 +3081,11 @@ springboot之前已经学了：
 
 - JDBC：数据库
 - **mybatis：数据库，重点**
+  - 我：一些公司会问有没有用过jpa，其实就类似mybatis。区分 jpa js jsp：
+    - jpa：功能类似mybatis，现在用的很少，一般是老公司在用
+    - js：是javascript的简称，是前端用与控制逻辑的语言
+    - jsp：JSP全称Java Server Pages，是一种动态网页开发技术。. 它使用JSP标签在HTML网页中插入Java代码。. 标签通常以<%开头以%>结束。我个人是没用过。
+
 - **druid：数据库，重点**
 - **shiro：安全，重点**
 - **spring security：安全，重点**
@@ -3268,6 +3295,8 @@ public String deleteUser(@PathVariable("id")int id){
 前言：
 
 - 有两种主要的数据源。druid集成了监控，hikari速度更快。按照公司要求使用不同的数据源.
+  - 20230522我：[Hikari连接池目前公认是性能最高的数据库连接池，同时也是SpringBoot2.0以后默认使用的数据库连接池](https://www.cnblogs.com/jackion5/p/14193025.html)。所以称hikari为[数据源](https://www.cnblogs.com/Liuyunsan/p/15590394.html)是一个偏笼统的叫法，hikari本身是一个数据库连接池。
+
 
 
 
@@ -3302,7 +3331,7 @@ void contextLoads() throws SQLException {
 
 ![image-20211004214643449](springboot.assets/image-20211004214643449.png)
 
-重新运行测试方法,查看数据源和连接。发现数据源变成了druid，但是底层（连接）还是jdbc。底层永远都是jdbc。
+重新运行测试方法,查看数据源和连接。发现数据源变成了druid，但是底层（连接）还是jdbc。**底层永远都是jdbc**。
 
 ![image-20211004214814371](springboot.assets/image-20211004214814371.png)
 
@@ -3650,6 +3679,8 @@ public interface UserMapper {
 </mapper>
 ```
 
+- 20230522我：真实开发的时候用的是mybatisplus，有wrapper去用java代码编写sql查询逻辑 并自动把数据库映射为pojo类，就不用自己配置xml模板，尤其是不用费时费力的去编写resultmap。
+
 再properties或yaml文件中配置一下mybatis
 
 ```properties
@@ -3771,7 +3802,7 @@ Mybatis整合进Spring步骤（概）：
 
 在web开发中，安全是第一位的。过滤器和拦截器可以参与实现安全.
 
-
+- 我：过滤器（基于servelet）和拦截器（基于spring）的区别需要留意。
 
 安全是功能性需求？：否，安全不是必须的。
 
@@ -3781,6 +3812,8 @@ Mybatis整合进Spring步骤（概）：
 
 - 漏洞会造成隐私泄露。
 - 在设计之初就考虑好。
+  - 我：比如简历项目的cookie处，就介绍了让cookie更安全的几种方式。
+
 
 
 
@@ -3797,9 +3830,9 @@ Mybatis整合进Spring步骤（概）：
 - 访问权限
 - 菜单权限
 
-之前要做权限管理需要用拦截器和过滤器，需要大量的原生代码，会有大量的原生代码，造成冗余。此时就引入了框架（shiro/springsecurity)，来简化开发。
+**之前要做权限管理需要用拦截器和过滤器，需要大量的原生代码**，会有大量的原生代码，造成冗余。此时就引入了**框架（shiro/springsecurity)，来简化开发**。
 
-
+- springsecurity是主流！
 
 ### SpringSecurity
 
@@ -6609,10 +6642,12 @@ public class HelloController {
 定时任务：
 
 - Timer类，在某个时间点执行某任务。
+  - 我：可以用spring的@Schedule实现定时执行某个功能，也可以用linux的cron实现定时执行某个任务。
+
 
 邮件发送：
 
-- sprigboot官方的。
+- springboot官方的。
 
 
 
@@ -7892,6 +7927,8 @@ public void test1(){
 
 ## 分布式Dubbo+ZooKeeper
 
+- [dubbo官方推荐使用zk作为dubbo的注册中心](https://blog.csdn.net/sinat_33640788/article/details/79778506)
+
 ### 分布式系统理论
 
 #### 什么是分布式系统
@@ -7909,6 +7946,7 @@ public void test1(){
 - 首先需要明确的是，只有当单个节点的处理能力无法满足日益增长的计算、存储任务的时候，且硬件的提升（加内存、加磁盘、使用更好的CPU）高昂到得不偿失的时候，应用程序也不能进一步优化的时候，我们才需要考虑分布式系统。因为，分布式系统要解决的问题本身就是和单机系统一样的，而由于分布式系统多节点、通过网络通信的拓扑结构，会引入很多单机系统没有的问题，为了解决这些问题又会引入更多的机制、协议，带来更多的问题。。。**总之不应该盲目第一选择分布式系统。**
 
   - 分布式系统产生问题的来源：网络不可靠。
+  - 20230522我：而且网络传输时本身就会有系统消耗和时间消耗，所以可以单体解决的话就没必要上微服务。
 
 - 例子：比如网购时，点击页面的请求处理占用资源少，几万个请求可以给一台服务器专门处理；但是支付时由于各种校验，占用资源多，需要给支付模块分配更多的服务器专门负责支付。横向弹性扩增系统。
 
@@ -7982,7 +8020,7 @@ public void test1(){
   - 基于网络的，无状态的，负责通信的协议
 - rpc
   - RPC【Remote Procedure Call】是指远程过程调用，是一种进程间通信方式，他是一种技术的思想，而不是规范。它允许程序调用另一个地址空间（通常是共享网络的另一台机器上）的过程或函数，而不用程序员显式编码这个远程调用的细节。即程序员无论是调用本地的还是远程的函数，本质上编写的调用代码基本相同。
-  - 也就是说两台服务器A，B，一个应用部署在A服务器上，想要调用B服务器上应用提供的函数/方法，由于不在一个内存空间，不能直接调用，需要通过网络来表达调用的语义和传达调用的数据。为什么要用RPC呢？就是无法在一个进程内，甚至一个计算机内通过本地调用的方式完成的需求，比如不同的系统间的通讯，甚至不同的组织间的通讯，由于计算能力需要横向扩展，需要在多台机器组成的集群上部署应用。RPC就是要像调用本地的函数一样去调远程函数
+  - 也就是说两台服务器A，B，一个应用部署在A服务器上，想要调用B服务器上应用提供的函数/方法，由于不在一个内存空间，不能直接调用，需要通过网络来表达调用的语义和传达调用的数据。为什么要用RPC呢？就是无法在一个进程内，甚至一个计算机内通过本地调用的方式完成的需求，比如不同的系统间的通讯，甚至不同的组织间的通讯，由于计算能力需要横向扩展，需要在多台机器组成的集群上部署应用。**RPC就是要像调用本地的函数一样去调远程函数**
 
 
 
@@ -8289,6 +8327,9 @@ mvn clean package -Dmaven.test.skip=true
 - dubbo-admin：
 
   dubbo-admin是一个**监控**管理后台，他可以**查看**我们注册了哪些服务，哪些服务被消费了。他在开发中可以不使用，因为他不影响我们的业务，只是辅助开发管理。
+
+  - 20230522我：[参考](https://developer.aliyun.com/article/819875)，dubbo 框架提供了极其丰富的服务治理的功能如流量控制、动态配置、服务 Mock、服务测试等功能，而 **dubbo-admin 的作用在于将 dubbo 框架提供的服务治理能力提供一个开箱即用的平台**。所以应该是dubboadmin包含了dubbo的功能，并附带了监管的功能。
+  - 20220522我：参加本文档后面的“服务注册发现实战”，项目中实际使用的时候没有下载dubboadmin，而是在springboot项目的pom中导入zk和dubbo的依赖；然后就可以使用dubbo去做远程服务调用了。
 
 - zookeeper：
 
@@ -8624,7 +8665,7 @@ class ConsumerServerApplicationTests {
 
     - 控制翻转
 
-    - 那约学习为例：
+    - 拿约学习为例：
 
       原来约学习：附近social找好学之徒-》加vx-》聊天-》约着学习。
 
@@ -8647,7 +8688,7 @@ class ConsumerServerApplicationTests {
 
   - 新一代javaEE的开发标准，开箱即用-->拿过来就能用。他自动帮我们配置了很多的东西，我们拿来即用。
   - springboot不是新东西，它是spring的升级版，简化版。
-  - 特点：约定大于配置（拿来即用的代价）
+  - 特点：**约定大于配置（拿来即用的代价）**
 
 
 
@@ -8697,13 +8738,16 @@ class ConsumerServerApplicationTests {
   不完善，正在孵化dubbo新一代，可能成为apache的顶级项目。
 
 - springcloud alibaba，第三套解决系统，一站式解决方案。
+
   - 刚孵化完，一堆人用。
 
 - 目前又提出一种方案：服务网格
+
   - 称其为下一代微服务标准，server mesh。
   - 代表解决方案：istio（未来可能需要掌握）
 
 - 万变不离其宗，一通百通。就是解决分布式架构的四个核心问题。把四个核心问题换一种说法，用解决思路描述：
+
   1. api网管，服务路由
   2. http，RPC框架，异步调用
   3. 服务注册与发现，高可用
@@ -8722,4 +8766,484 @@ class ConsumerServerApplicationTests {
 
 
 程序员，不要停止学习！
+
+
+
+## 自己深入学习dubbo
+
+### 学习方式
+
+1，先看dubbo官网
+
+- 简单项目开发
+- 怎么部署
+  - 碰到问题（可以问chatgpt）：
+    - 同一台机器上，能否实现两个服务者提供相同的服务，然后让消费者负载均衡去消费？（我一开始直接复制服务并解决端口冲突+QOS冲突后实现了 但是调整module的projectstructure后就各种报错无法解决 以后调整projectstructure可以先截图保存项目可用时的结构）
+
+2，带着看官网的疑问，迅速看一遍[雷老师dubbo课程](https://www.bilibili.com/video/BV1ns411c7jV?p=19&vd_source=8be62db2c8e19174231a64770292e191)的[高赞csdn笔记（已保存到ref/）](https://blog.csdn.net/qq_41157588/article/details/106737191)，笔记看不懂的就去视频对应位置看。
+
+3，下面的笔记重点记录csdn中没有的，或者有且需要额外补充注意的
+
+### zk
+
+1，是一个树形目录服务，会有根节点等节点，每个节点可以存储一定的数据。比如在创建节点的时候就可以往里面添加数据。dubbo主要是那它做注册中心。
+
+### dubboadmin查看服务者消费者
+
+#### 前言
+
+1，dubbo-admin是dubbo框架中的monitor的角色，不是必要的，但是可以帮助通过可视化的界面去维护多种服务。
+
+![image-20230524155343194](springboot.assets/image-20230524155343194.png)
+
+#### 独立interface模块
+
+1，”创建Maven项目=> gmail-interface 用于存放共同的服务接口“，是为了让consumer和provider都能拿到接口。并且也会存放共用的java。
+
+2，创建interface模块：
+
+![image-20230524161022255](springboot.assets/image-20230524161022255.png)
+
+3，把共用的service接口，pojo类，异常等，都放到这个模块。这里**直接就把本地其他模块（即consumer和procvider）用maven方式引入了本模块**，本模块就可以用到别的模块的接口定义了：
+
+![image-20230524161203180](springboot.assets/image-20230524161203180.png)
+
+- 我：真实开发中一般是吧interface模块放到maven仓库中，然后让consumer和provider在pom中引入
+
+4，目前存在的问题：
+
+- consumer中通过maven引入的interface模块中的接口的实现类在别的模块中（现实世界中是在别的节点中），是无法直接使用接口的；所以需要dubbo来远程调用。
+
+#### ssm方式实现远程调用-provider
+
+- provider和consumer在配置前要pom引入需要的依赖（csdn笔记）
+
+1，spring方式（即xml式）的配置provider：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://dubbo.apache.org/schema/dubbo http://dubbo.apache.org/schema/dubbo/dubbo.xsd
+		http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+    <!--1、指定当前服务/应用的名字(同样的服务名字相同，不要和别的服务同名)-->
+   <dubbo:application name="user-service-provider"></dubbo:application>
+    <!--2、指定注册中心的位置-->
+    <!--<dubbo:registry address="zookeeper://127.0.0.1:2181"></dubbo:registry>-->
+    <dubbo:registry protocol="zookeeper" address="127.0.0.1:2181"></dubbo:registry>
+    <!--3、指定通信规则（通信协议? 服务端口）-->
+    <dubbo:protocol name="dubbo" port="20880"></dubbo:protocol>
+    <!--4、暴露服务 让别人调用。interface指定暴露的接口 ref指向服务的真正实现对象即impl类-->
+    <dubbo:service interface="com.lemon.gmail.service.UserService" ref="userServiceImpl"></dubbo:service>
+
+    <!--服务的实现-->
+    <bean id="userServiceImpl" class="com.lemon.gmail.service.impl.UserServiceImpl"></bean>
+</beans>
+
+```
+
+- 我：springboot里，这些配置都在yml中完成。
+- 我：注意“同名服务的服务名字相同”，多个同名服务就能让负载均衡排上用场了
+- 我：”通信协议“：可以支持https dubbo等多种通信协议，这里选dubbo。
+- 我：“暴露服务”：说明一个服务针对一个接口只能提供一种实现。
+- 我：“服务的实现”：先用bean标签把userServiceImpl注册为bean，然后“暴露服务”的ref才能引用这个bean；这个bean也即是服务的实现。
+- 我：这里用的ssm方式做的配置，其实之前叫schema方式做的配置，官网已经不维护了schema的文档了，但是官网现在仍在维护[xml配置方式的文档](https://cn.dubbo.apache.org/zh-cn/docsv2.7/user/configuration/xml/)；boot常用注解做的配置。
+
+2，为provider模块编写启动类。spring启动ioc容器后，就会把服务注册到注册中心：
+
+```java
+public class MailApplication {
+    public static void main(String[] args) throws IOException {
+        ClassPathXmlApplicationContext applicationContext= new ClassPathXmlApplicationContext("provider.xml");
+        applicationContext.start();
+        System.in.read();
+    }
+}
+```
+
+- 我：springboot中用@Component把类当做bean注册到spring容器中。dubbo用xml把类注册到配置到的注册中心（即zk）。
+
+3，可以在dubboadmin看到服务注册的情况：
+
+点击“服务治理-提供者”，可以看到服务提供者的ip和端口号：
+
+![image-20230524164022878](springboot.assets/image-20230524164022878.png)
+
+点击“服务治理-应用”，可以看到有哪些应用被注册到注册中心，名字就是xml中配置的applicationname：
+
+![image-20230524164158874](springboot.assets/image-20230524164158874.png)
+
+点击“服务治理-服务”，可以看到有哪些接口（即服务）被注册到注册中心：
+
+![image-20230524164306736](springboot.assets/image-20230524164306736.png)
+
+- 我：192ip是一个机器（微服务节点），机器中有名为Provider的应用，provider中有名为UserService的一个服务。
+
+#### SSM方式实现远程调用-consumer
+
+1，配置xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://dubbo.apache.org/schema/dubbo"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://dubbo.apache.org/schema/dubbo http://dubbo.apache.org/schema/dubbo/dubbo.xsd
+		http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+   <!--包扫描 这是正常的spring项目都得配置的 但是springboot一般不同配置这个扫描而只需要在自己的类上用@Component注解即可-->
+    <context:component-scan base-package="com.lemon.gmail.service.impl"/>
+
+    <!--指定当前服务/应用的名字(同样的服务名字相同，不要和别的服务同名)-->
+    <dubbo:application name="order-service-consumer"></dubbo:application>
+    <!--指定注册中心的位置-->
+    <dubbo:registry address="zookeeper://127.0.0.1:2181"></dubbo:registry>
+
+    <!--调用远程暴露的服务，生成远程服务代理-->
+    <dubbo:reference interface="com.lemon.gmail.service.UserService" id="userService"></dubbo:reference>
+</beans>
+```
+
+- 我：` <dubbo:reference`会把provider提供的UserService服务注入到消费者所在的spring容器中，这样消费者使用UserService时就可以直接用Autowired去拿到UserService服务了。为这个服务在consumer的spring容器中也取一个名字，用beanid表示。
+
+2，编写消费者的启动类
+
+```java
+public class ConsumerApplication {
+    public static void main(String[] args) {
+        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("consumer.xml");
+        OrderService orderService = applicationContext.getBean(OrderService.class);
+
+        //调用方法查询出数据
+        orderService.initOrder("1");
+        System.out.println("调用完成...");
+	    System.in.read();
+    }
+}
+```
+
+- 我：Spring的启动类和spirngboot不一样。这里直接在启动类中调用consumer自己的orderService，orderService又远程调用provider的Userservice，最后成功展示结果。
+- 我：这里`System.in.read();`是为了io阻塞进程，这样方便在dubboadmin看到两个应用；否则远程调用完就程序结束，提供者就中断。
+
+3，dubboadmin查看应用。能看到有两个应用，分别是服务者和消费者；此时消费者正在消费服务者的服务：
+
+![image-20230524170407244](springboot.assets/image-20230524170407244.png)
+
+### monitor
+
+- dubboadmin是管理控制台，dubbomonitor是监控中心。
+
+1，检查git项目的properties：
+
+![image-20230524170826977](springboot.assets/image-20230524170826977.png)
+
+- 重点关注注册中心zk的地址
+- 7070是其他服务与monitor的通信接口
+- 8080是monitor的web页面的访问接口
+
+2，其他：参考csdn笔记。
+
+### 整合springboot
+
+- 之前都是在ssm中使用dubbo（xml配置就是spring的特点），现在我们在springboot（特点是使用注解代替xml）中使用dubbo。
+
+1，服务提供者配置文件的设置：
+
+```properties
+dubbo.application.name=boot-user-service-provider
+dubbo.registry.address=127.0.0.1:2181
+dubbo.registry.protocol=zookeeper
+
+dubbo.protocol.name=dubbo
+dubbo.protocol.port=20880
+
+#连接监控中心：registry表示让服务端去注册中心zk找监控中心的地址
+dubbo.monitor.protocol=registry
+```
+
+- ssm项目中用xml做如上的配置。springboot项目中用properties或yml文件做如上配置。
+
+2，服务提供者暴露服务：
+
+ssm中，provider用注解去暴露服务；但是每个服务都写注解很麻烦：
+
+![image-20230524202831740](springboot.assets/image-20230524202831740.png)
+
+springboot中用@Service（与springboot自身的@Service区分开）去暴露服务，新版dubbo把注解重命名为@DubboService：
+
+![image-20230524203131434](springboot.assets/image-20230524203131434.png)
+
+- 在使用老版本dubbo的@Service注解时，为了避免混淆，可以把Springboot的@Service注解换成@Component注解来注册当前bean。
+
+3，消费者引用服务：
+
+![image-20230524203916347](springboot.assets/image-20230524203916347.png)
+
+- 针对dubbo的使用，对比ssm和springboot消费者：
+  - ssm中是在项目启动时，通过dubbo把服务提供者的bean放入消费者的容器，然后消费者用@Autowired拿到bean，就像单体架构拿自己项目的bean似的。
+  - Springboot中的消费者使用@DubboReference拿到bean。加了@DubboReference注解后，消费者会自己去注册中心中拿到远程的服务。
+
+4，其他的内容参考官网，和csdn笔记
+
+- 我：csdn笔记中的注解比较老了，用的还是@Service和@Reference；现在注解更新为@DubboService和@DubboReference
+
+
+
+### xml实现dubbo配置
+
+#### 配置的加载顺序
+
+1，多种配置方式同时存在时，参数优先级递减规则：JVM 启动 -D 参数，XML或spring固有的application.properties，dubbo默认配置dubbo.Properties:
+
+![image-20230524210134112](springboot.assets/image-20230524210134112.png)
+
+- 我：这个csdn笔记有细说，我在这也简略强调下。
+- idea的绿色三角运行按钮，可以配置运行时的参数，也即configuration可以配置jvm启动时的参数。
+
+![在这里插入图片描述](springboot.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQxMTU3NTg4,size_16,color_FFFFFF,t_70.png)
+
+- 使用配置等级的思路：dubbo默认的配置可以放在dubbo.properties文件中；我们想在默认配置的基础上额外修改配置的话，可以进行xml配置；打成jar包后要运行的时候临时改配置的话就用-D的方式
+
+#### 启动时检查
+
+1，项目启动的时候，duubo默认会检查项目依赖的服务（即本项目的provider）是否可用；如果有provider不可用，当前项目启动就会报错。如果想关闭默认的检查就设置`check=false`。
+
+2，ssm中，针对某个**特定服务**让check为false的方式如下：
+
+![image-20230524212610309](springboot.assets/image-20230524212610309.png)
+
+- check是在服务的消费端做的配置，所以这里是reference标签处设置
+
+3，ssm中，**统一配置消费者的所有属性**，可以用`<dubbo:consumer标签`；这个标签中配置check=false后，不会检查消费者依赖的所有服务：
+
+![image-20230524213035153](springboot.assets/image-20230524213035153.png)
+
+4，ssm中，取消对注册中心的检查；即消费者启动时，如果注册中心不可用，也会让消费者正常启动：
+
+![image-20230524231224168](springboot.assets/image-20230524231224168.png)
+
+#### 超时限制
+
+1，如果服务调用超过一定时间还不响应，那么就报异常放弃，防止消费端过久的占用线程。
+
+2，超时限制设置的覆盖关系：
+
+![在这里插入图片描述](springboot.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQxMTU3NTg4,size_16,color_FFFFFF,t_70-1684942178811-4.png)
+
+- 超时配置的优先级降序：消费端对方法设置的超时，服务端对方法设置的超时，消费端对接口设置的超时，服务端对接口设置的超时，消费端设置的全局（针对所有接口的）超时，服务端设置的全局（针对所有接口的）超时。
+  - 总结来说就是：方法 大于 接口 大于 全局；如果scope的级别相同，那么消费者的配置 大于 服务者的配置。
+
+#### 重试次数
+
+- “重试次数”一般和“超时”搭配使用
+
+1，超时和重试，都可以配置在服务方或消费方。下图是配置在消费方：
+
+![image-20230526225700175](springboot.assets/image-20230526225700175.png)
+
+- 注意：在幂等方法（比如数据库的 查询 删除 修改）上可以设置重试次数，但是非幂等方法（比如数据库的 新增）不应该设置重试次数。
+
+2，**重点**：老师这用eclipse的项目多启动功能，在本机实现了三个相同服务。实现方式：
+
+1. 修改服务方模块的dubble protocol端口号，使得端口号不和上一次启动的本模块冲突
+2. 多启动本模块
+3. 重复步骤12多次，就可以得到多个相同的服务提供者。可以让不同服务提供者在提供服务时打印不同语句，这样消费者使用服务时，就可以发现因为负载均衡，每个服务提供者都会打印自己的语句，即每个服务都可能被使用。
+
+![image-20230526224546728](springboot.assets/image-20230526224546728.png)
+
+- 网友：idea多启动在edit configurations哪里 就是项目启动哪里设置 进去后项目名旁边Allow parallel run 勾掉就好了
+
+- 我：之前一直尝试在本机实现多个同名服务，现在才知道可以用这个方式实现（上网课比自己学还是有好处 事半功倍）。
+
+可以看到服务提供者有三个，端口号不同：
+
+![image-20230526224935316](springboot.assets/image-20230526224935316.png)
+
+#### 多版本
+
+- 网友：常用于灰度发布，ab测试
+
+1，为一个接口设置两个实现类，类名不同，相当于一个service接口有新旧功能：
+
+![image-20230526225930377](springboot.assets/image-20230526225930377.png)
+
+2，在服务暴露的时候，配置版本号；可以让较新版本号的接口服务会提供一些新的功能：
+
+![image-20230526230356753](springboot.assets/image-20230526230356753.png)
+
+3，消费者消费的时候，可以任选是用老版本还是新版本服务（这两个服务都被暴露并注册到注册中心了），从而拿到一个服务不同版本的功能：
+
+![image-20230526230610034](springboot.assets/image-20230526230610034.png)
+
+- 消费者可以让`version="*"`，这样就任意使用老版本或者新版本了。
+
+- 一般是新版本稳定后，就选择使用新版本了。使用version可以平滑的从旧版本过度到新版本，从而实现dubbo官网说的“灰度发布”
+- 可能出现的错误：消费者配置了version字段的话，如果服务端没有配置对应version，dubbo会报错没有可用的provider
+
+#### 本地存根
+
+1，使用XXXStub，可以在调用远程方法前做一些校验，防止无效调用远程资源，从而节约远程资源。
+
+- 我：这个的实现不是必须的，可以把校验写到服务端或者消费端里；但是用存根类似于解耦，符合高内聚低耦合。
+
+### springboot中实现dubbo配置
+
+- 超时限制 重试次数等配置，以springboot的方式（而非xml的方式）做配置也很简单。
+- 这里别看csdn笔记的内容，csdn笔记这没写好。
+
+#### 前言
+
+1，针对服务端，springboot中的`@DubboService`注解，其实就对应xml中的`<dubbo: service`标签；标签中能写的属性，在注解中都能配置：
+
+![image-20230526232352883](springboot.assets/image-20230526232352883.png)
+
+2，针对消费者，`<refrence`的相关配置，也可以在`@DubboReference`中配置。
+
+3，xml中可以在一个接口中，细化配置某个方法；但是注解无法实现这个功能：
+
+![image-20230526232554541](springboot.assets/image-20230526232554541.png)
+
+- 网友：@DubboService现在可以配方法了
+
+4，接下来将dubbo和springboot整合的三种方式
+
+#### 方式1-注解整合（我推荐）
+
+1，“整合springboot”章节讲过。步骤：
+
+1. 在启动类用@enabledubbo开启dubbo
+
+2. 在服务端用@DubboService暴露服务
+
+3. 在消费端用@DubboReference使用服务
+
+#### 方式2-xml整合
+
+1，“xml实现dubbo配置”讲过。略，详情见视频
+
+- 网友：dubbo官方推荐使用xml配置，但是springboot一般还是习惯用注解，注解还方便
+
+#### 方式3-api整合
+
+1，xml文件中的每个xml配置，在api中都是一个Config配置类。略，详情见视频
+
+- 我和网友：这个就有点麻烦了
+
+- 网友：其实个人多年开发感觉，是脱离了xml，但是这种配置类根本不好找不好跟踪代码和入口
+
+### 高可用
+
+- 通过高可用的设计，减少系统不能提供服务的时间
+
+#### 宕机
+
+1，参考csdn笔记
+
+- 消费者和服务者本地都缓存了对方的位置信息，即使注册中心挂掉了，之前联系过的消费者和服务者都可以通过本地缓存去直连对方并使用/提供服务。
+
+#### dubbo直连
+
+1，消费者可以绕过注册中心，直接通过服务所在机器地址去访问对应服务：
+
+![image-20230527001553740](springboot.assets/image-20230527001553740.png)
+
+- 网友问：直连还能实现分布式的功能吗？
+
+- 综合“宕机”和“dubbo直连”，可以知道：
+  - 注册中心挂了，服务者和消费者可以通过本地缓存互相通信
+  - 没有注册中心，可以通过dubbo直连使用服务
+
+#### 负载均衡
+
+- 网友：强烈建议这里看看源码，真的不难
+- 网友：负载均衡算法类似nginx，随机(dubbo中默认) 轮询 权重 一致性hash
+
+1，负载均衡的测试方法，在“重试次数”章节讲过了：
+
+- 在IDE中使用**多启动**的方式，每次只需要修改dubboprotocol版本号，就可以用一个服务提供者模块启动多个相同的服务。
+
+2，负载均衡可以在消费者或服务者配置，例如消费者的接口位置配置：
+
+![image-20230527003241153](springboot.assets/image-20230527003241153.png)
+
+- 网友：和springCloud的Feign差不多
+
+#### 服务降级
+
+1，服务降级可以在dubboadmin的web页面做配置，主要有两种手段：
+
+![image-20230527004338108](springboot.assets/image-20230527004338108.png)
+
+- 屏蔽：
+  - 效果：消费者被屏蔽后，将不会发起远程调用，直接在客户端返回空对象；
+  - 使用场景：服务器资源不够，tomcat总共就1000个线程，服务器有3000个并发请求；那么就可以在dubboadmin页面上手动屏蔽会调用某些不重要服务的消费者，让服务者所在的服务器减小压力。
+- 容错：
+  - 效果：消费者设置为容错后，发起远程调用失败的话（比如超过设置的timeout），才返回空对象；如果不返回空对象，在消费者看来就是出现了错误（比如页面可能会显示报错）。
+  - 我：个人感觉这个的使用场景不是为了服务降级，而是实现高可用，即调用失败也会有返回值，虽然返回值是空的。
+
+#### 集群容错&hystrix
+
+1，略。见csdn笔记和视频课程。
+
+- 网友：springCloud中feign组件集成了hystrix
+- 网友：提供者配置了容错，但是没有容错方法（即远程调用失败后消费者执行的方法）；容错方法是在消费者处配置的。
+
+### dubbo原理
+
+#### 前言-RPC和netty原理
+
+1，RPC概念
+
+![image-20230527105720482](springboot.assets/image-20230527105720482.png)
+
+一次完整的RPC调用流程（同步调用，异步另说）如下：
+
+1. **服务消费方（client）调用以本地调用方式调用服务；**
+2. client stub接收到调用后负责将方法、参数等组装成能够进行网络传输的消息体；
+3. client stub找到服务地址，并将消息发送到服务端；
+4. server stub收到消息后进行解码；
+5. server stub根据解码结果调用本地的服务；
+6. 本地服务执行并将结果返回给server stub；
+7. server stub将返回结果打包成消息并发送至消费方；
+8. client stub接收到消息，并进行解码；
+9. **服务消费方得到最终结果。**
+
+dubbo只用了两步1和8，中间的过程是透明的看不到的。**RPC框架的目标就是要2~8这些步骤都封装起来**，这些细节对用户来说是透明的，不可见的。
+
+
+
+2，netty。netty实现是基于java的nio。bio和nio对比如下：
+
+![image-20230527110711429](springboot.assets/image-20230527110711429.png)
+
+- bio：以网络io为例，每个请求进来，服务器都会开一个线程（开socket）来处理数据，来读取socket给我们传来的数据，然后会执行一些业务逻辑，最后返回；服务器可能会收到很多的请求来做操作；在业务逻辑没完成前，线程是不能释放的，因为大量线程都在阻塞等待业务逻辑的完成，所以服务器无法处理大量的请求。
+- nio：通过selector去监听多个socket；某个通道的任何一个状态准备好了（即发生了感兴趣的事件），就可以额外开一个线程去做这个事，避免线程阻塞浪费系统资源。
+
+#### 原理1-框架设计
+
+略，看官网或者视频
+
+- 看dubbo原理之前，感觉得先看懂spring原理比较好（手写简单的spring框架）
+
+#### 原理2-标签解析
+
+略，看官网或者视频
+
+#### 原理3-服务暴露
+
+略
+
+#### 原理4-服务引用
+
+略
+
+#### 原理5-服务调用
+
+略
+
+### 结束语
 

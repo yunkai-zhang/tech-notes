@@ -2736,7 +2736,7 @@ EXPOSE：
 
 CMD：
 
-- 指定这个容器启动的时候要运行的命令。只要最后一个会生效，可被替代。所以每个CMD只能写一条命令，想要写多个命令的话就得用到多个CMD。
+- 指定这个容器启动的时候要运行的命令。只有最后一个会生效，可被替代。所以每个CMD只能写一条命令，想要写多个命令的话就得用到多个CMD。
 
 ENTRYPOINT：
 
@@ -2770,7 +2770,7 @@ ENV：
 [root@rootuser dockerfile]# vim mydockerfile-centos
 ```
 
-2，编写dockerfile文件，问价名为mydockerfile-centos：
+2，编写dockerfile文件，文件名为mydockerfile-centos：
 
 ```bash
 # 基于centos官方镜像
@@ -6066,6 +6066,8 @@ OpenSSL version: OpenSSL 1.1.0l  10 Sep 2019
 
 ### 体验Compose
 
+- 20230529我：作用是同时运行多个镜像，让容器之间互相合作，形成微服务；如果镜像不存在，也支持在compose中通过dockerfile临时构造一个镜像。
+
 ####  准备
 
 [官网网址](https://docs.docker.com/compose/gettingstarted/)
@@ -7084,7 +7086,11 @@ EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app.jar"]
 ```
 
-
+- 20230529我：使用的逻辑顺序是：
+  1. 由于javaweb依赖于redis，所以运行javaweb镜像前会先运行redis镜像
+  2. compose根据dockerfile生成一个javaweb镜像
+  3. compose运行javaweb镜像
+  4. javaweb镜像的dockerfile说明了，当javaweb镜像被运行时，会执行java -jar启动jar包；即让web服务跑起来。至此compose中指定的所有服务都跑起来了。
 
 5，编写`docker-compose.yml`，其中设置redis服务+springbootweb服务：
 
